@@ -1,0 +1,15 @@
+spring:
+    application:
+        name: OG-ExpSafetyPlatform
+
+    datasource:
+        url: ${MYSQL_URL:jdbc:mysql://localhost:3306/og_exp_safety?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: ${MYSQL_USERNAME:root}
+        password: ${MYSQL_PASSWORD:}
+    jackson:
+        date-format: yyyy-MM-dd HH:mm:ss
+        time-zone: Asia/Shanghai
+mybatis-plus:
+    configuration:
+        log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
