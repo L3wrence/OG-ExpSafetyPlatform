@@ -1,0 +1,35 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IntelliJ IDEA local state
+.idea/workspace.xml
+.idea/shelf/
+.idea/httpRequests/
+.idea/dataSources/
+.idea/dataSources.local.xml
+
+# Java build output
+out/
+target/
+build/
+*.class
+*.log
+
+# Gradle
+.gradle/
+
+# Node/Vue dependencies and output
+node_modules/
+dist/
+.vite/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+*.bak
