@@ -1,0 +1,18 @@
+# IDEA local workspace files
+.idea/
+*.iml
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Build outputs
+target/
+dist/
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
