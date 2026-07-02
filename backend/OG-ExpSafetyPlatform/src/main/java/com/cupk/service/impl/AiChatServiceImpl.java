@@ -28,7 +28,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         // 保存记录
         AiChatRecord record = new AiChatRecord();
-        record.setUserId(1L); // TODO
+        record.setUserId(UserContext.getUserId());
         record.setScene(scene);
         record.setQuestion(question);
         record.setAnswer(answer);
@@ -47,7 +47,7 @@ public class AiChatServiceImpl implements AiChatService {
     public Page<AiChatRecord> getRecords(int pageNum, int pageSize, String scene) {
         Page<AiChatRecord> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<AiChatRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AiChatRecord::getUserId, 1L) // TODO
+        wrapper.eq(AiChatRecord::getUserId, UserContext.getUserId())
                .eq(scene != null && !scene.isEmpty(), AiChatRecord::getScene, scene)
                .orderByDesc(AiChatRecord::getCreateTime);
         return aiChatRecordMapper.selectPage(page, wrapper);

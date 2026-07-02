@@ -29,7 +29,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public Long createReport(Report report) {
-        report.setStudentId(1L); // TODO: 从LoginUserHolder获取
+        report.setStudentId(UserContext.getUserId());
         report.setStatus("DRAFT");
         report.setCreateTime(new Date());
         reportMapper.insert(report);
@@ -60,7 +60,7 @@ public class ReportServiceImpl implements ReportService {
     public Page<Report> getMyReports(int pageNum, int pageSize, String status) {
         Page<Report> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Report> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Report::getStudentId, 1L) // TODO
+        wrapper.eq(Report::getStudentId, UserContext.getUserId())
                .eq(status != null && !status.isEmpty(), Report::getStatus, status)
                .orderByDesc(Report::getCreateTime);
         return reportMapper.selectPage(page, wrapper);
@@ -107,7 +107,7 @@ public class ReportServiceImpl implements ReportService {
         // 创建新评分
         ReportScore newScore = new ReportScore();
         newScore.setReportId(reportId);
-        newScore.setTeacherId(2L); // TODO
+        newScore.setTeacherId(UserContext.getUserId());
         newScore.setScore(score);
         newScore.setComment(comment);
         newScore.setIsLatest(1);
@@ -135,7 +135,7 @@ public class ReportServiceImpl implements ReportService {
         // 创建退回记录
         ReportScore returnRecord = new ReportScore();
         returnRecord.setReportId(reportId);
-        returnRecord.setTeacherId(2L); // TODO
+        returnRecord.setTeacherId(UserContext.getUserId());
         returnRecord.setComment(comment);
         returnRecord.setIsLatest(1);
         returnRecord.setCreateTime(new Date());

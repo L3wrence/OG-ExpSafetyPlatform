@@ -369,3 +369,37 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-07-02 18:17:46
+
+-- ==================== 成员A：用户与Token表 ====================
+
+CREATE TABLE IF NOT EXISTS `t_user` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(50) NOT NULL COMMENT '用户名',
+    `password` VARCHAR(100) NOT NULL COMMENT '密码(MD5加密)',
+    `real_name` VARCHAR(50) DEFAULT NULL COMMENT '真实姓名',
+    `role` VARCHAR(20) NOT NULL DEFAULT 'STUDENT' COMMENT '角色: STUDENT/TEACHER/ADMIN',
+    `phone` VARCHAR(20) DEFAULT NULL,
+    `email` VARCHAR(100) DEFAULT NULL,
+    `status` INT DEFAULT 1 COMMENT '1启用 0禁用',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+CREATE TABLE IF NOT EXISTS `t_token` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `token` VARCHAR(100) NOT NULL COMMENT '令牌',
+    `expire_time` DATETIME DEFAULT NULL COMMENT '过期时间',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_token` (`token`),
+    KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Token令牌表';
+
+-- 插入测试账号（密码都是 123456）
+INSERT INTO `t_user` (`username`, `password`, `real_name`, `role`) VALUES
+('student01', 'c1fa30721fac959f2c546c2a14b9cf65', '测试学生', 'STUDENT'),
+('teacher01', 'c1fa30721fac959f2c546c2a14b9cf65', '测试教师', 'TEACHER'),
+('admin01', 'c1fa30721fac959f2c546c2a14b9cf65', '测试管理员', 'ADMIN');

@@ -98,7 +98,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Map<String, Object> createReservation(Reservation reservation) {
-        Long studentId = 1L; // TODO: 从LoginUserHolder获取
+        Long studentId = UserContext.getUserId();
         Long timeSlotId = reservation.getTimeSlotId();
 
         // 1. 并发控制：使用乐观锁更新已预约人数
@@ -137,7 +137,7 @@ public class ReservationServiceImpl implements ReservationService {
     public Page<Reservation> getMyReservations(int pageNum, int pageSize, String status) {
         Page<Reservation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Reservation::getStudentId, 1L) // TODO
+        wrapper.eq(Reservation::getStudentId, UserContext.getUserId())
                .eq(status != null && !status.isEmpty(), Reservation::getStatus, status)
                .orderByDesc(Reservation::getCreateTime);
         return reservationMapper.selectPage(page, wrapper);
@@ -178,7 +178,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
         reservation.setStatus(status);
         reservation.setReviewComment(reviewComment);
-        reservation.setTeacherId(2L); // TODO: 从LoginUserHolder获取
+        reservation.setTeacherId(UserContext.getUserId());
         reservation.setReviewTime(new java.util.Date());
         reservationMapper.updateById(reservation);
 

@@ -1,12 +1,10 @@
 package com.cupk.service.impl;
 
 import com.cupk.mapper.RecommendRecordMapper;
-import com.cupk.pojo.RecommendRecord;
 import com.cupk.service.RecommendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -20,7 +18,7 @@ public class RecommendServiceImpl implements RecommendService {
 
     @Override
     public Map<String, Object> getRecommendedResources(Long experimentId) {
-        Long studentId = 1L; // TODO: 从LoginUserHolder获取
+        Long studentId = UserContext.getUserId();
         List<Map<String, Object>> resources = new ArrayList<>();
 
         // TODO: 调用成员B的资源数据，计算推荐分

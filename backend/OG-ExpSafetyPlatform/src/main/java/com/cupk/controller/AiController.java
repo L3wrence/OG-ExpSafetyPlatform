@@ -19,23 +19,26 @@ public class AiController {
 
     /** AI问答 */
     @PostMapping("/ask")
-    public Map<String, Object> ask(@RequestBody Map<String, Object> body) {
-        // TODO
-        return null;
+    public Result<?> ask(@RequestBody Map<String, Object> body) {
+        String scene = (String) body.get("scene");
+        String question = (String) body.get("question");
+        Long experimentId = body.get("experimentId") != null
+                ? Long.valueOf(body.get("experimentId").toString()) : null;
+        return Result.success(aiChatService.ask(scene, question, experimentId));
     }
 
     /** 我的AI问答历史 */
     @GetMapping("/records")
-    public Map<String, Object> records(@RequestParam(defaultValue = "1") int pageNum,
-                                        @RequestParam(defaultValue = "10") int pageSize,
-                                        @RequestParam(required = false) String scene) {
-        // TODO
-        return null;
+    public Result<?> records(@RequestParam(defaultValue = "1") int pageNum,
+                              @RequestParam(defaultValue = "10") int pageSize,
+                              @RequestParam(required = false) String scene) {
+        return Result.success(aiChatService.getRecords(pageNum, pageSize, scene));
     }
 
     /** 记录人工修改 */
     @PutMapping("/records/{id}/feedback")
-    public void feedback(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        // TODO
+    public Result<?> feedback(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        aiChatService.updateFeedback(id, body.get("manualRevision"));
+        return Result.success();
     }
 }

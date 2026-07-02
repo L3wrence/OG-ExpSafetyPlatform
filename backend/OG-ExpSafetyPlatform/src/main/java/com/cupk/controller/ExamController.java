@@ -20,58 +20,53 @@ public class ExamController {
 
     /** 学生可参加的考试列表 */
     @GetMapping("/available")
-    public Map<String, Object> available(@RequestParam(defaultValue = "1") int pageNum,
-                                          @RequestParam(defaultValue = "10") int pageSize,
-                                          @RequestParam(required = false) Long courseId) {
-        // TODO
-        return null;
+    public Result<?> available(@RequestParam(defaultValue = "1") int pageNum,
+                                @RequestParam(defaultValue = "10") int pageSize,
+                                @RequestParam(required = false) Long courseId) {
+        return Result.success(examService.getAvailableExams(pageNum, pageSize, courseId));
     }
 
     /** 开始考试 */
     @PostMapping("/{paperId}/start")
-    public Map<String, Object> start(@PathVariable Long paperId) {
-        // TODO
-        return null;
+    public Result<?> start(@PathVariable Long paperId) {
+        return Result.success(examService.startExam(paperId));
     }
 
     /** 提交答案 */
     @PostMapping("/{recordId}/submit")
-    public Map<String, Object> submit(@PathVariable Long recordId,
-                                       @RequestBody Map<String, Object> body) {
-        // TODO
-        return null;
+    public Result<?> submit(@PathVariable Long recordId,
+                             @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> answers = (List<Map<String, Object>>) body.get("answers");
+        return Result.success(examService.submitExam(recordId, answers));
     }
 
     /** 我的考试记录列表 */
     @GetMapping("/records")
-    public Map<String, Object> myRecords(@RequestParam(defaultValue = "1") int pageNum,
-                                          @RequestParam(defaultValue = "10") int pageSize,
-                                          @RequestParam(required = false) String status) {
-        // TODO
-        return null;
+    public Result<?> myRecords(@RequestParam(defaultValue = "1") int pageNum,
+                                @RequestParam(defaultValue = "10") int pageSize,
+                                @RequestParam(required = false) String status) {
+        return Result.success(examService.getMyRecords(pageNum, pageSize, status));
     }
 
     /** 考试详情（含每题答题） */
     @GetMapping("/records/{id}")
-    public Map<String, Object> recordDetail(@PathVariable Long id) {
-        // TODO
-        return null;
+    public Result<?> recordDetail(@PathVariable Long id) {
+        return Result.success(examService.getRecordDetail(id));
     }
 
     /** 我的错题本 */
     @GetMapping("/wrong-questions")
-    public Map<String, Object> wrongQuestions(@RequestParam(defaultValue = "1") int pageNum,
-                                               @RequestParam(defaultValue = "10") int pageSize,
-                                               @RequestParam(required = false) String type,
-                                               @RequestParam(required = false) Long courseId) {
-        // TODO
-        return null;
+    public Result<?> wrongQuestions(@RequestParam(defaultValue = "1") int pageNum,
+                                     @RequestParam(defaultValue = "10") int pageSize,
+                                     @RequestParam(required = false) String type,
+                                     @RequestParam(required = false) Long courseId) {
+        return Result.success(examService.getWrongQuestions(pageNum, pageSize, type, courseId));
     }
 
     /** 错题知识点统计 */
     @GetMapping("/wrong-questions/stats")
-    public List<Map<String, Object>> wrongQuestionStats() {
-        // TODO
-        return null;
+    public Result<?> wrongQuestionStats() {
+        return Result.success(examService.getWrongQuestionStats());
     }
 }

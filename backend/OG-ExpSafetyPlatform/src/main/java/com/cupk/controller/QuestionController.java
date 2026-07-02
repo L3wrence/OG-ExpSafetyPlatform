@@ -21,46 +21,44 @@ public class QuestionController {
 
     /** 分页查询题库 */
     @GetMapping
-    public Map<String, Object> list(@RequestParam(defaultValue = "1") int pageNum,
-                                     @RequestParam(defaultValue = "10") int pageSize,
-                                     @RequestParam(required = false) String type,
-                                     @RequestParam(required = false) String difficulty,
-                                     @RequestParam(required = false) String keyword,
-                                     @RequestParam(required = false) Long courseId) {
-        // TODO
-        return null;
+    public Result<?> list(@RequestParam(defaultValue = "1") int pageNum,
+                          @RequestParam(defaultValue = "10") int pageSize,
+                          @RequestParam(required = false) String type,
+                          @RequestParam(required = false) String difficulty,
+                          @RequestParam(required = false) String keyword,
+                          @RequestParam(required = false) Long courseId) {
+        return Result.success(questionService.pageQuestions(pageNum, pageSize, type, difficulty, keyword, courseId));
     }
 
     /** 查看题目详情 */
     @GetMapping("/{id}")
-    public Question detail(@PathVariable Long id) {
-        // TODO
-        return null;
+    public Result<Question> detail(@PathVariable Long id) {
+        return Result.success(questionService.getQuestionById(id));
     }
 
     /** 新增单个题目 */
     @PostMapping
-    public Map<String, Long> add(@RequestBody Question question) {
-        // TODO
-        return null;
+    public Result<Map<String, Long>> add(@RequestBody Question question) {
+        return Result.success(Map.of("id", questionService.addQuestion(question)));
     }
 
     /** 批量导入题目 */
     @PostMapping("/batch")
-    public Map<String, Integer> batchAdd(@RequestBody List<Question> questions) {
-        // TODO
-        return null;
+    public Result<Map<String, Integer>> batchAdd(@RequestBody List<Question> questions) {
+        return Result.success(questionService.batchAddQuestions(questions));
     }
 
     /** 编辑题目 */
     @PutMapping("/{id}")
-    public void update(@PathVariable Long id, @RequestBody Question question) {
-        // TODO
+    public Result<?> update(@PathVariable Long id, @RequestBody Question question) {
+        questionService.updateQuestion(id, question);
+        return Result.success();
     }
 
     /** 逻辑删除题目 */
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        // TODO
+    public Result<?> delete(@PathVariable Long id) {
+        questionService.deleteQuestion(id);
+        return Result.success();
     }
 }

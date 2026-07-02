@@ -24,82 +24,80 @@ public class ReservationController {
 
     /** 分页查询时间段 */
     @GetMapping("/time-slots")
-    public Map<String, Object> timeSlots(@RequestParam(defaultValue = "1") int pageNum,
-                                          @RequestParam(defaultValue = "10") int pageSize,
-                                          @RequestParam(required = false) Long labId,
-                                          @RequestParam(required = false) String date,
-                                          @RequestParam(required = false) String status) {
-        // TODO
-        return null;
+    public Result<?> timeSlots(@RequestParam(defaultValue = "1") int pageNum,
+                                @RequestParam(defaultValue = "10") int pageSize,
+                                @RequestParam(required = false) Long labId,
+                                @RequestParam(required = false) String date,
+                                @RequestParam(required = false) String status) {
+        return Result.success(reservationService.pageTimeSlots(pageNum, pageSize, labId, date, status));
     }
 
     /** 批量创建时间段 */
     @PostMapping("/time-slots")
-    public Map<String, Integer> createTimeSlots(@RequestBody List<LabTimeSlot> slots) {
-        // TODO
-        return null;
+    public Result<Map<String, Integer>> createTimeSlots(@RequestBody List<LabTimeSlot> slots) {
+        return Result.success(reservationService.batchCreateTimeSlots(slots));
     }
 
     /** 修改时间段 */
     @PutMapping("/time-slots/{id}")
-    public void updateTimeSlot(@PathVariable Long id, @RequestBody LabTimeSlot slot) {
-        // TODO
+    public Result<?> updateTimeSlot(@PathVariable Long id, @RequestBody LabTimeSlot slot) {
+        reservationService.updateTimeSlot(id, slot);
+        return Result.success();
     }
 
     /** 删除时间段 */
     @DeleteMapping("/time-slots/{id}")
-    public void deleteTimeSlot(@PathVariable Long id) {
-        // TODO
+    public Result<?> deleteTimeSlot(@PathVariable Long id) {
+        reservationService.deleteTimeSlot(id);
+        return Result.success();
     }
 
     // ===== 学生预约 =====
 
     /** 可预约时间段 */
     @GetMapping("/available-slots")
-    public Map<String, Object> availableSlots(@RequestParam(required = false) Long labId,
-                                               @RequestParam(required = false) String date,
-                                               @RequestParam(defaultValue = "1") int pageNum,
-                                               @RequestParam(defaultValue = "10") int pageSize) {
-        // TODO
-        return null;
+    public Result<?> availableSlots(@RequestParam(required = false) Long labId,
+                                     @RequestParam(required = false) String date,
+                                     @RequestParam(defaultValue = "1") int pageNum,
+                                     @RequestParam(defaultValue = "10") int pageSize) {
+        return Result.success(reservationService.getAvailableSlots(labId, date, pageNum, pageSize));
     }
 
     /** 提交预约申请 */
     @PostMapping
-    public Map<String, Object> create(@RequestBody Reservation reservation) {
-        // TODO
-        return null;
+    public Result<?> create(@RequestBody Reservation reservation) {
+        return Result.success(reservationService.createReservation(reservation));
     }
 
     /** 我的预约列表 */
     @GetMapping("/my")
-    public Map<String, Object> myReservations(@RequestParam(defaultValue = "1") int pageNum,
-                                               @RequestParam(defaultValue = "10") int pageSize,
-                                               @RequestParam(required = false) String status) {
-        // TODO
-        return null;
+    public Result<?> myReservations(@RequestParam(defaultValue = "1") int pageNum,
+                                     @RequestParam(defaultValue = "10") int pageSize,
+                                     @RequestParam(required = false) String status) {
+        return Result.success(reservationService.getMyReservations(pageNum, pageSize, status));
     }
 
     /** 取消预约 */
     @PutMapping("/{id}/cancel")
-    public void cancel(@PathVariable Long id) {
-        // TODO
+    public Result<?> cancel(@PathVariable Long id) {
+        reservationService.cancelReservation(id);
+        return Result.success();
     }
 
     // ===== 教师审核 =====
 
     /** 待审核预约列表 */
     @GetMapping("/pending")
-    public Map<String, Object> pending(@RequestParam(defaultValue = "1") int pageNum,
-                                        @RequestParam(defaultValue = "10") int pageSize,
-                                        @RequestParam(required = false) Long labId) {
-        // TODO
-        return null;
+    public Result<?> pending(@RequestParam(defaultValue = "1") int pageNum,
+                              @RequestParam(defaultValue = "10") int pageSize,
+                              @RequestParam(required = false) Long labId) {
+        return Result.success(reservationService.getPendingReservations(pageNum, pageSize, labId));
     }
 
     /** 审核预约 */
     @PutMapping("/{id}/review")
-    public void review(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        // TODO
+    public Result<?> review(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        reservationService.reviewReservation(id, body.get("status"), body.get("reviewComment"));
+        return Result.success();
     }
 }

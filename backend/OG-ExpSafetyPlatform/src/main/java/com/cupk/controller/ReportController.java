@@ -22,59 +22,61 @@ public class ReportController {
 
     /** 创建/保存草稿 */
     @PostMapping
-    public Map<String, Long> create(@RequestBody Report report) {
-        // TODO
-        return null;
+    public Result<Map<String, Long>> create(@RequestBody Report report) {
+        return Result.success(Map.of("id", reportService.createReport(report)));
     }
 
     /** 修改报告 */
     @PutMapping("/{id}")
-    public void update(@PathVariable Long id, @RequestBody Report report) {
-        // TODO
+    public Result<?> update(@PathVariable Long id, @RequestBody Report report) {
+        reportService.updateReport(id, report);
+        return Result.success();
     }
 
     /** 正式提交报告 */
     @PutMapping("/{id}/submit")
-    public void submit(@PathVariable Long id) {
-        // TODO
+    public Result<?> submit(@PathVariable Long id) {
+        reportService.submitReport(id);
+        return Result.success();
     }
 
     /** 我的报告列表 */
     @GetMapping("/my")
-    public Map<String, Object> myReports(@RequestParam(defaultValue = "1") int pageNum,
-                                          @RequestParam(defaultValue = "10") int pageSize,
-                                          @RequestParam(required = false) String status) {
-        // TODO
-        return null;
+    public Result<?> myReports(@RequestParam(defaultValue = "1") int pageNum,
+                                @RequestParam(defaultValue = "10") int pageSize,
+                                @RequestParam(required = false) String status) {
+        return Result.success(reportService.getMyReports(pageNum, pageSize, status));
     }
 
     /** 报告详情 */
     @GetMapping("/{id}")
-    public Map<String, Object> detail(@PathVariable Long id) {
-        // TODO
-        return null;
+    public Result<?> detail(@PathVariable Long id) {
+        return Result.success(reportService.getReportDetail(id));
     }
 
     // ===== 教师端 =====
 
     /** 待批改报告列表 */
     @GetMapping("/pending")
-    public Map<String, Object> pending(@RequestParam(defaultValue = "1") int pageNum,
-                                        @RequestParam(defaultValue = "10") int pageSize,
-                                        @RequestParam(required = false) Long experimentId) {
-        // TODO
-        return null;
+    public Result<?> pending(@RequestParam(defaultValue = "1") int pageNum,
+                              @RequestParam(defaultValue = "10") int pageSize,
+                              @RequestParam(required = false) Long experimentId) {
+        return Result.success(reportService.getPendingReports(pageNum, pageSize, experimentId));
     }
 
     /** 评分+评语 */
     @PutMapping("/{id}/grade")
-    public void grade(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        // TODO
+    public Result<?> grade(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Integer score = (Integer) body.get("score");
+        String comment = (String) body.get("comment");
+        reportService.gradeReport(id, score, comment);
+        return Result.success();
     }
 
     /** 退回修改 */
     @PutMapping("/{id}/return")
-    public void returnReport(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        // TODO
+    public Result<?> returnReport(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        reportService.returnReport(id, body.get("comment"));
+        return Result.success();
     }
 }

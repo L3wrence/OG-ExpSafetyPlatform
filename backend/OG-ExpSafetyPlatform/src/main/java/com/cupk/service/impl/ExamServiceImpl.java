@@ -72,7 +72,7 @@ public class ExamServiceImpl implements ExamService {
 
         // 创建考试记录
         ExamRecord record = new ExamRecord();
-        record.setStudentId(1L); // TODO: 从LoginUserHolder获取
+        record.setStudentId(UserContext.getUserId());
         record.setPaperId(paperId);
         record.setStatus("IN_PROGRESS");
         record.setStartTime(new Date());
@@ -207,7 +207,7 @@ public class ExamServiceImpl implements ExamService {
     public Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status) {
         Page<ExamRecord> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ExamRecord::getStudentId, 1L) // TODO: 从LoginUserHolder获取
+        wrapper.eq(ExamRecord::getStudentId, UserContext.getUserId())
                .eq(status != null && !status.isEmpty(), ExamRecord::getStatus, status)
                .orderByDesc(ExamRecord::getCreateTime);
         return examRecordMapper.selectPage(page, wrapper);
@@ -244,7 +244,7 @@ public class ExamServiceImpl implements ExamService {
     public Page<Map<String, Object>> getWrongQuestions(int pageNum, int pageSize, String type, Long courseId) {
         // 查询当前学生答错的题目
         LambdaQueryWrapper<ExamRecord> recordWrapper = new LambdaQueryWrapper<>();
-        recordWrapper.eq(ExamRecord::getStudentId, 1L); // TODO
+        recordWrapper.eq(ExamRecord::getStudentId, UserContext.getUserId());
         List<ExamRecord> records = examRecordMapper.selectList(recordWrapper);
         List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
 
@@ -281,32 +281,216 @@ public class ExamServiceImpl implements ExamService {
 
     @Override
     public List<Map<String, Object>> getWrongQuestionStats() {
-        // TODO: 按知识点统计错题
-        return new ArrayList<>();
+        // 1. 查出当前学生所有考试记录
+        Long studentId = UserContext.getUserId();
+        LambdaQueryWrapper<ExamRecord> recordWrapper = new LambdaQueryWrapper<>();
+        recordWrapper.eq(ExamRecord::getStudentId, studentId);
+        List<ExamRecord> records = examRecordMapper.selectList(recordWrapper);
+        if (records.isEmpty()) return new ArrayList<>();
+
+        List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
+
+        // 2. 查出所有错题
+        LambdaQueryWrapper<ExamAnswer> answerWrapper = new LambdaQueryWrapper<>();
+        answerWrapper.in(ExamAnswer::getRecordId, recordIds)
+                      .eq(ExamAnswer::getIsCorrect, 0);
+        List<ExamAnswer> wrongAnswers = examAnswerMapper.selectList(answerWrapper);
+        if (wrongAnswers.isEmpty()) return new ArrayList<>();
+
+        // 3. 按知识点分组统计
+        Map<String, Integer> knowledgeCount = new LinkedHashMap<>();
+        for (ExamAnswer ans : wrongAnswers) {
+            Question q = questionMapper.selectById(ans.getQuestionId());
+            if (q != null && q.getKnowledgePoint() != null) {
+                knowledgeCount.merge(q.getKnowledgePoint(), 1, Integer::sum);
+            }
+        }
+
+        // 4. 按数量降序排列
+        return knowledgeCount.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .map(entry -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("knowledgePoint", entry.getKey());
+                    item.put("count", entry.getValue());
+                    return item;
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
     public Map<String, Object> getStatisticsOverview(Long paperId) {
-        // TODO
-        return new HashMap<>();
+        // 查询该试卷所有已提交的考试记录
+        LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ExamRecord::getPaperId, paperId)
+               .eq(ExamRecord::getStatus, "SUBMITTED");
+        List<ExamRecord> records = examRecordMapper.selectList(wrapper);
+
+        if (records.isEmpty()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("totalCount", 0);
+            empty.put("avgScore", 0);
+            empty.put("passRate", 0);
+            empty.put("maxScore", 0);
+            empty.put("minScore", 0);
+            return empty;
+        }
+
+        int totalCount = records.size();
+        double avgScore = records.stream().mapToInt(ExamRecord::getTotalScore).average().orElse(0);
+        int maxScore = records.stream().mapToInt(ExamRecord::getTotalScore).max().orElse(0);
+        int minScore = records.stream().mapToInt(ExamRecord::getTotalScore).min().orElse(0);
+        long passCount = records.stream().filter(r -> r.getPassed() == 1).count();
+        double passRate = (double) passCount / totalCount * 100;
+
+        // 获取试卷信息
+        ExamPaper paper = examPaperMapper.selectById(paperId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalCount", totalCount);
+        result.put("avgScore", Math.round(avgScore * 10.0) / 10.0);
+        result.put("passRate", Math.round(passRate * 10.0) / 10.0);
+        result.put("maxScore", maxScore);
+        result.put("minScore", minScore);
+        result.put("passScore", paper != null ? paper.getPassScore() : 0);
+        result.put("totalScore", paper != null ? paper.getTotalScore() : 0);
+        return result;
     }
 
     @Override
     public List<Map<String, Object>> getScoreDistribution(Long paperId) {
-        // TODO
-        return new ArrayList<>();
+        LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ExamRecord::getPaperId, paperId)
+               .eq(ExamRecord::getStatus, "SUBMITTED");
+        List<ExamRecord> records = examRecordMapper.selectList(wrapper);
+
+        // 定义分数段
+        int[][] ranges = {{0, 59}, {60, 69}, {70, 79}, {80, 89}, {90, 100}};
+        String[] labels = {"0-59", "60-69", "70-79", "80-89", "90-100"};
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < ranges.length; i++) {
+            int low = ranges[i][0], high = ranges[i][1];
+            long count = records.stream()
+                    .filter(r -> r.getTotalScore() != null && r.getTotalScore() >= low && r.getTotalScore() <= high)
+                    .count();
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("range", labels[i]);
+            item.put("count", (int) count);
+            result.add(item);
+        }
+        return result;
     }
 
     @Override
     public List<Map<String, Object>> getQuestionAnalysis(Long paperId) {
-        // TODO
-        return new ArrayList<>();
+        // 1. 获取试卷-题目关联（按排序号升序）
+        LambdaQueryWrapper<ExamPaperQuestion> eqWrapper = new LambdaQueryWrapper<>();
+        eqWrapper.eq(ExamPaperQuestion::getPaperId, paperId)
+                 .orderByAsc(ExamPaperQuestion::getOrderNum);
+        List<ExamPaperQuestion> eqList = examPaperQuestionMapper.selectList(eqWrapper);
+
+        // 2. 获取该试卷所有提交的考试记录
+        LambdaQueryWrapper<ExamRecord> recordWrapper = new LambdaQueryWrapper<>();
+        recordWrapper.eq(ExamRecord::getPaperId, paperId)
+                     .eq(ExamRecord::getStatus, "SUBMITTED");
+        List<ExamRecord> records = examRecordMapper.selectList(recordWrapper);
+        List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ExamPaperQuestion eq : eqList) {
+            Question q = questionMapper.selectById(eq.getQuestionId());
+            if (q == null) continue;
+
+            // 统计该题正确率
+            int totalAnswers = 0;
+            int correctAnswers = 0;
+            if (!recordIds.isEmpty()) {
+                LambdaQueryWrapper<ExamAnswer> answerWrapper = new LambdaQueryWrapper<>();
+                answerWrapper.eq(ExamAnswer::getQuestionId, eq.getQuestionId())
+                             .in(ExamAnswer::getRecordId, recordIds);
+                List<ExamAnswer> answers = examAnswerMapper.selectList(answerWrapper);
+                totalAnswers = answers.size();
+                correctAnswers = (int) answers.stream().filter(a -> a.getIsCorrect() != null && a.getIsCorrect() == 1).count();
+            }
+
+            double correctRate = totalAnswers > 0 ? (double) correctAnswers / totalAnswers * 100 : 0;
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("questionId", q.getId());
+            item.put("content", q.getContent());
+            item.put("type", q.getType());
+            item.put("difficulty", q.getDifficulty());
+            item.put("knowledgePoint", q.getKnowledgePoint());
+            item.put("totalAnswers", totalAnswers);
+            item.put("correctAnswers", correctAnswers);
+            item.put("correctRate", Math.round(correctRate * 10.0) / 10.0);
+            item.put("orderNum", eq.getOrderNum());
+            result.add(item);
+        }
+        return result;
     }
 
     @Override
     public List<Map<String, Object>> getKnowledgeAnalysis(Long courseId) {
-        // TODO
-        return new ArrayList<>();
+        // 1. 查询该课程下所有题目
+        LambdaQueryWrapper<Question> questionWrapper = new LambdaQueryWrapper<>();
+        questionWrapper.eq(courseId != null, Question::getCourseId, courseId)
+                       .isNotNull(Question::getKnowledgePoint);
+        List<Question> questions = questionMapper.selectList(questionWrapper);
+        List<Long> questionIds = questions.stream().map(Question::getId).collect(Collectors.toList());
+
+        if (questionIds.isEmpty()) return new ArrayList<>();
+
+        // 2. 获取所有已提交的考试记录ID
+        LambdaQueryWrapper<ExamRecord> recordWrapper = new LambdaQueryWrapper<>();
+        recordWrapper.eq(ExamRecord::getStatus, "SUBMITTED");
+        List<ExamRecord> records = examRecordMapper.selectList(recordWrapper);
+        List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
+
+        // 3. 统计每个知识点的正确率
+        // 先按知识点分组题目
+        Map<String, List<Long>> knowledgeQuestionMap = new LinkedHashMap<>();
+        for (Question q : questions) {
+            if (q.getKnowledgePoint() != null) {
+                knowledgeQuestionMap.computeIfAbsent(q.getKnowledgePoint(), k -> new ArrayList<>()).add(q.getId());
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Map.Entry<String, List<Long>> entry : knowledgeQuestionMap.entrySet()) {
+            String knowledge = entry.getKey();
+            List<Long> qIds = entry.getValue();
+
+            LambdaQueryWrapper<ExamAnswer> answerWrapper = new LambdaQueryWrapper<>();
+            answerWrapper.in(ExamAnswer::getQuestionId, qIds);
+            if (!recordIds.isEmpty()) {
+                answerWrapper.in(ExamAnswer::getRecordId, recordIds);
+            }
+            List<ExamAnswer> answers = examAnswerMapper.selectList(answerWrapper);
+
+            int total = answers.size();
+            int correct = (int) answers.stream().filter(a -> a.getIsCorrect() != null && a.getIsCorrect() == 1).count();
+
+            double correctRate = total > 0 ? (double) correct / total * 100 : 0;
+            double weakLevel = total > 0 ? 100 - correctRate : 0; // 薄弱程度，越高越薄弱
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("knowledgePoint", knowledge);
+            item.put("totalAnswers", total);
+            item.put("correctAnswers", correct);
+            item.put("correctRate", Math.round(correctRate * 10.0) / 10.0);
+            item.put("weakLevel", Math.round(weakLevel * 10.0) / 10.0);
+            item.put("questionCount", qIds.size());
+            result.add(item);
+        }
+
+        // 按薄弱程度降序排列
+        result.sort((a, b) -> Double.compare(
+                (double) b.get("weakLevel"), (double) a.get("weakLevel")));
+        return result;
     }
 
     // ===== 私有工具方法 =====
