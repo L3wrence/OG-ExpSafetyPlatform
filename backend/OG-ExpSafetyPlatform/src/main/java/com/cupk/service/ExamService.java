@@ -1,0 +1,48 @@
+package com.cupk.service;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cupk.pojo.ExamRecord;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 考试引擎服务接口（核心：含自动评分）
+ */
+public interface ExamService {
+
+    /** 学生可参加的考试列表（仅返回PUBLISHED且未考过的） */
+    Page<Map<String, Object>> getAvailableExams(int pageNum, int pageSize, Long courseId);
+
+    /** 开始考试，返回题目列表+计时信息 */
+    Map<String, Object> startExam(Long paperId);
+
+    /** 提交答案 + 自动评分 */
+    Map<String, Object> submitExam(Long recordId, List<Map<String, Object>> answers);
+
+    /** 我的考试记录列表 */
+    Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status);
+
+    /** 考试详情（含每题答题） */
+    Map<String, Object> getRecordDetail(Long recordId);
+
+    /** 我的错题本 */
+    Page<Map<String, Object>> getWrongQuestions(int pageNum, int pageSize, String type, Long courseId);
+
+    /** 错题知识点统计 */
+    List<Map<String, Object>> getWrongQuestionStats();
+
+    // ===== 考试统计（教师端） =====
+
+    /** 考试总览 */
+    Map<String, Object> getStatisticsOverview(Long paperId);
+
+    /** 分数段分布 */
+    List<Map<String, Object>> getScoreDistribution(Long paperId);
+
+    /** 每题正确率 */
+    List<Map<String, Object>> getQuestionAnalysis(Long paperId);
+
+    /** 知识点薄弱分析 */
+    List<Map<String, Object>> getKnowledgeAnalysis(Long courseId);
+}
