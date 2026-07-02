@@ -1,0 +1,8 @@
+com\cupk\amazingstudy\common\CommonResult.class
+com\cupk\amazingstudy\AmazingstudyApplication.class
+com\cupk\amazingstudy\config\MybatisPlusConfig.class
+com\cupk\amazingstudy\exception\GlobalExceptionHandler.class
+com\cupk\amazingstudy\controller\TestController.class
+com\cupk\amazingstudy\exception\BusinessException.class
+com\cupk\amazingstudy\config\WebMvcConfig.class
+com\cupk\amazingstudy\pojo\User.class
