@@ -76,7 +76,7 @@ public class ReservationServiceImpl implements ReservationService {
         wrapper.eq(labId != null, LabTimeSlot::getLabId, labId)
                .eq(date != null && !date.isEmpty(), LabTimeSlot::getDate, date)
                .eq(LabTimeSlot::getStatus, "AVAILABLE")
-               .lt(LabTimeSlot::getBookedCount, LabTimeSlot::getCapacity)
+               .apply("booked_count < capacity")
                .orderByAsc(LabTimeSlot::getDate)
                .orderByAsc(LabTimeSlot::getStartTime);
         Page<LabTimeSlot> slotPage = labTimeSlotMapper.selectPage(page, wrapper);
@@ -104,7 +104,7 @@ public class ReservationServiceImpl implements ReservationService {
         // 1. 并发控制：使用乐观锁更新已预约人数
         LambdaUpdateWrapper<LabTimeSlot> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(LabTimeSlot::getId, timeSlotId)
-                     .lt(LabTimeSlot::getBookedCount, LabTimeSlot::getCapacity)
+                     .apply("booked_count < capacity")
                      .eq(LabTimeSlot::getStatus, "AVAILABLE")
                      .setSql("booked_count = booked_count + 1");
         int updated = labTimeSlotMapper.update(updateWrapper);
