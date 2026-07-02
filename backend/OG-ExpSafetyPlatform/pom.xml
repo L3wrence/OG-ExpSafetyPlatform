@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.cupk</groupId>
-    <artifactId>BookManagerSystem</artifactId>
+    <artifactId>OG-ExpSafetyPlatform</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>BookManagerSystem</name>
-    <description>BookManagerSystem</description>
+    <name>OG-ExpSafetyPlatform</name>
+    <description>OG-ExpSafetyPlatform</description>
     <url/>
     <licenses>
         <license/>
