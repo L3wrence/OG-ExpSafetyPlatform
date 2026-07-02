@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.mapper.AiChatRecordMapper;
 import com.cupk.pojo.AiChatRecord;
 import com.cupk.service.AiChatService;
+import com.cupk.common.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.cupk.common.UserContext;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;

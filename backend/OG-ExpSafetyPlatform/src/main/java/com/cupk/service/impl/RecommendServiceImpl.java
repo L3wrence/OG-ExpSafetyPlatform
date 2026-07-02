@@ -2,7 +2,9 @@ package com.cupk.service.impl;
 
 import com.cupk.mapper.RecommendRecordMapper;
 import com.cupk.service.RecommendService;
+import com.cupk.common.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.cupk.common.UserContext;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

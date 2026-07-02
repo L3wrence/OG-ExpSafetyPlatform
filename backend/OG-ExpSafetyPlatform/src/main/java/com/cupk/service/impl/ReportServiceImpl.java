@@ -7,8 +7,11 @@ import com.cupk.mapper.ReportScoreMapper;
 import com.cupk.pojo.Report;
 import com.cupk.pojo.ReportScore;
 import com.cupk.service.ReportService;
+import com.cupk.common.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.cupk.common.UserContext;
 import org.springframework.stereotype.Service;
+import com.cupk.common.UserContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;

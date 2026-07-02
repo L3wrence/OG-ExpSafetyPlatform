@@ -1,5 +1,6 @@
 package com.cupk.controller;
 
+import com.cupk.common.Result;
 import com.cupk.service.RecommendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

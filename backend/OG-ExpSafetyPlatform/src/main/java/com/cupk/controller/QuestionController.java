@@ -1,6 +1,7 @@
 package com.cupk.controller;
 
 import com.cupk.pojo.Question;
+import com.cupk.common.Result;
 import com.cupk.service.QuestionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

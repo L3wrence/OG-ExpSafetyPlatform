@@ -1,6 +1,7 @@
 package com.cupk.controller;
 
 import com.cupk.pojo.Report;
+import com.cupk.common.Result;
 import com.cupk.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
