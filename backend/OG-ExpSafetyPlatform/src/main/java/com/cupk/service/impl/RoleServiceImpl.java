@@ -1,0 +1,11 @@
+package com.cupk.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cupk.mapper.RoleMapper;
+import com.cupk.pojo.Role;
+import com.cupk.service.RoleService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements RoleService {
+}
