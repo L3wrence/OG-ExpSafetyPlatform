@@ -1,11 +1,13 @@
 package com.cupk.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.cupk.pojo.ExamRecord;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 @Mapper
-public interface ExamRecordMapper {
+public interface ExamRecordMapper extends BaseMapper<ExamRecord> {
     @Select("""
         SELECT COUNT(*)
         FROM t_exam_record er
