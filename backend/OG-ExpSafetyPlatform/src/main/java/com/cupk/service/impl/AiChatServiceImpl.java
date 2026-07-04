@@ -8,6 +8,7 @@ import com.cupk.pojo.AiChatRecord;
 import com.cupk.pojo.Question;
 import com.cupk.service.AiChatService;
 import com.cupk.common.UserContext;
+import com.cupk.util.AiClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,9 @@ public class AiChatServiceImpl implements AiChatService {
     @Autowired
     private QuestionMapper questionMapper;
 
+    @Autowired
+    private AiClient aiClient;
+
     /** 场景对应的系统提示词（附录B） */
     private static final Map<String, String> SCENE_PROMPTS = Map.of(
         "SAFETY_QA", "你是油气工程实验安全专家，请基于安全知识库回答以下问题：",
@@ -45,8 +49,22 @@ public class AiChatServiceImpl implements AiChatService {
         String context = buildContext(relevantKnowledge);
         String systemPrompt = SCENE_PROMPTS.getOrDefault(scene, "请回答以下问题：");
 
-        // 3. 生成回答（TODO: 接入真实AI模型，当前使用知识库匹配+模板）
-        String answer = generateAnswer(scene, question, relevantKnowledge, context, systemPrompt);
+        // 3. 生成回答（优先使用真实AI模型，未配置则降级为本地模板）
+        String toolName;
+        String answer;
+
+        // 先尝试调用真实AI模型
+        String aiPrompt = systemPrompt + "\n\n" + context + "\n\n用户问题：" + question;
+        String aiResponse = aiClient.chat(systemPrompt, aiPrompt);
+
+        if (aiResponse != null && !aiResponse.isEmpty()) {
+            answer = "【AI辅助生成，仅供参考】\n\n" + aiResponse;
+            toolName = aiClient.getModelName();
+        } else {
+            // 降级为本地知识库模板回答
+            answer = generateAnswer(scene, question, relevantKnowledge, context, systemPrompt);
+            toolName = "LocalKB+Template";
+        }
 
         // 4. 提取关联知识点
         List<String> relatedKnowledge = relevantKnowledge.stream()
@@ -62,7 +80,7 @@ public class AiChatServiceImpl implements AiChatService {
         record.setScene(scene);
         record.setQuestion(question);
         record.setAnswer(answer);
-        record.setToolName("LocalKB+Template");
+        record.setToolName(toolName);
         record.setExperimentId(experimentId);
         record.setCreateTime(new Date());
         aiChatRecordMapper.insert(record);
