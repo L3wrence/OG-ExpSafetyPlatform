@@ -70,6 +70,16 @@
             <artifactId>mybatis-plus-jsqlparser</artifactId>
             <version>3.5.16</version>
         </dependency>
+        <!-- Validation（成员A交付：用于DTO参数校验） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <!-- AOP依赖（成员A交付：用于权限切面 @RequirePermission） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

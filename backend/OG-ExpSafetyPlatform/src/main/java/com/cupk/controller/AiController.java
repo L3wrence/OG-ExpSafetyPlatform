@@ -1,7 +1,9 @@
 package com.cupk.controller;
 
 import com.cupk.common.Result;
+import com.cupk.dto.ai.AiAskDTO;
 import com.cupk.service.AiChatService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,12 +22,8 @@ public class AiController {
 
     /** AI问答 */
     @PostMapping("/ask")
-    public Result<?> ask(@RequestBody Map<String, Object> body) {
-        String scene = (String) body.get("scene");
-        String question = (String) body.get("question");
-        Long experimentId = body.get("experimentId") != null
-                ? Long.valueOf(body.get("experimentId").toString()) : null;
-        return Result.success(aiChatService.ask(scene, question, experimentId));
+    public Result<?> ask(@Valid @RequestBody AiAskDTO dto) {
+        return Result.success(aiChatService.ask(dto.getScene(), dto.getQuestion(), dto.getExperimentId()));
     }
 
     /** 我的AI问答历史 */

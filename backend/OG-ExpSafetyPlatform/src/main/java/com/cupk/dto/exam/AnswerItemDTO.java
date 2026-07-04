@@ -1,5 +1,6 @@
 package com.cupk.dto.exam;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -7,9 +8,8 @@ import lombok.Data;
  */
 @Data
 public class AnswerItemDTO {
-    /** 题目ID */
+    @NotNull(message = "题目ID不能为空")
     private Long questionId;
 
-    /** 学生答案。单选/判断："A"；多选："A,C"；简答：文本 */
-    private String answer;
+    private String answer; // 单选/判断："A"；多选："A,C"；简答：文本
 }

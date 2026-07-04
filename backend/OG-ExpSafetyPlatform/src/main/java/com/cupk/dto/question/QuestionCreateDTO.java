@@ -1,5 +1,6 @@
 package com.cupk.dto.question;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -7,30 +8,17 @@ import lombok.Data;
  */
 @Data
 public class QuestionCreateDTO {
-    /** 题型：SINGLE / MULTIPLE / JUDGE / SHORT_ANSWER */
-    private String type;
+    @NotBlank(message = "题型不能为空")
+    private String type;          // SINGLE / MULTIPLE / JUDGE / SHORT_ANSWER
 
-    /** 题目内容 */
+    @NotBlank(message = "题目内容不能为空")
     private String content;
 
-    /** 选项JSON */
-    private String options;
-
-    /** 正确答案 */
-    private String answer;
-
-    /** 默认分值 */
-    private Integer score;
-
-    /** 答案解析 */
-    private String analysis;
-
-    /** 知识点名称 */
+    private String options;       // 选项JSON，简答题为null
+    private String answer;        // 正确答案
+    private Integer score;        // 默认分值
+    private String analysis;      // 答案解析
     private String knowledgePoint;
-
-    /** 难度 */
-    private String difficulty;
-
-    /** 关联课程ID */
+    private String difficulty;    // EASY / MEDIUM / HARD
     private Long courseId;
 }

@@ -7,5 +7,6 @@ import lombok.Data;
  */
 @Data
 public class RecommendQueryDTO {
+    /** 关联实验ID（可选，传了则按实验维度推荐） */
     private Long experimentId;
 }

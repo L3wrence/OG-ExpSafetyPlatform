@@ -5,11 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.mapper.*;
 import com.cupk.pojo.*;
 import com.cupk.service.ExamService;
+import com.cupk.exception.BusinessException;
 import com.cupk.common.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.cupk.common.UserContext;
 import org.springframework.stereotype.Service;
-import com.cupk.common.UserContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -70,7 +69,7 @@ public class ExamServiceImpl implements ExamService {
     public Map<String, Object> startExam(Long paperId) {
         ExamPaper paper = examPaperMapper.selectById(paperId);
         if (paper == null || !"PUBLISHED".equals(paper.getStatus())) {
-            throw new RuntimeException("试卷不可用");
+            throw new BusinessException(400, "试卷不可用");
         }
 
         // 创建考试记录
@@ -120,7 +119,7 @@ public class ExamServiceImpl implements ExamService {
     public Map<String, Object> submitExam(Long recordId, List<Map<String, Object>> answers) {
         ExamRecord record = examRecordMapper.selectById(recordId);
         if (record == null || !"IN_PROGRESS".equals(record.getStatus())) {
-            throw new RuntimeException("考试状态异常");
+            throw new BusinessException(400, "考试状态异常");
         }
 
         ExamPaper paper = examPaperMapper.selectById(record.getPaperId());
@@ -132,7 +131,7 @@ public class ExamServiceImpl implements ExamService {
             record.setStatus("SUBMITTED");
             record.setSubmitTime(new Date());
             examRecordMapper.updateById(record);
-            throw new RuntimeException("考试已超时，无法提交");
+            throw new BusinessException(400, "考试已超时，无法提交");
         }
 
         int objectiveScore = 0;
@@ -144,6 +143,7 @@ public class ExamServiceImpl implements ExamService {
             String studentAnswer = (String) ans.get("answer");
 
             Question question = questionMapper.selectById(questionId);
+            if (question == null) continue; // 跳过不存在的题目
             ExamAnswer examAnswer = new ExamAnswer();
             examAnswer.setRecordId(recordId);
             examAnswer.setQuestionId(questionId);
@@ -494,6 +494,101 @@ public class ExamServiceImpl implements ExamService {
         result.sort((a, b) -> Double.compare(
                 (double) b.get("weakLevel"), (double) a.get("weakLevel")));
         return result;
+    }
+
+    // ===== 简答题批改（教师端） =====
+
+    @Override
+    public Page<Map<String, Object>> getPendingGradingRecords(int pageNum, int pageSize, Long paperId) {
+        // 查找含有简答题（isCorrect IS NULL）的已提交考试记录
+        LambdaQueryWrapper<ExamAnswer> answerWrapper = new LambdaQueryWrapper<>();
+        answerWrapper.isNull(ExamAnswer::getIsCorrect)
+                     .select(ExamAnswer::getRecordId);
+        List<Long> recordIds = examAnswerMapper.selectList(answerWrapper).stream()
+                .map(ExamAnswer::getRecordId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Page<ExamRecord> page = new Page<>(pageNum, pageSize);
+        if (recordIds.isEmpty()) {
+            page.setTotal(0);
+            page.setRecords(Collections.emptyList());
+            return convertToMapPage(page);
+        }
+
+        LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(ExamRecord::getId, recordIds)
+               .eq(ExamRecord::getStatus, "SUBMITTED")
+               .eq(paperId != null, ExamRecord::getPaperId, paperId)
+               .orderByAsc(ExamRecord::getSubmitTime);
+        Page<ExamRecord> recordPage = examRecordMapper.selectPage(page, wrapper);
+
+        Page<Map<String, Object>> result = new Page<>(pageNum, pageSize, recordPage.getTotal());
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (ExamRecord r : recordPage.getRecords()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("recordId", r.getId());
+            item.put("studentId", r.getStudentId());
+            item.put("paperId", r.getPaperId());
+            item.put("objectiveScore", r.getObjectiveScore());
+            item.put("totalScore", r.getTotalScore());
+            item.put("submitTime", r.getSubmitTime());
+            // 统计待批改数量
+            LambdaQueryWrapper<ExamAnswer> countWrapper = new LambdaQueryWrapper<>();
+            countWrapper.eq(ExamAnswer::getRecordId, r.getId())
+                       .isNull(ExamAnswer::getIsCorrect);
+            item.put("pendingCount", examAnswerMapper.selectCount(countWrapper));
+            items.add(item);
+        }
+        result.setRecords(items);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> gradeShortAnswer(Long recordId, List<Map<String, Object>> grades) {
+        ExamRecord record = examRecordMapper.selectById(recordId);
+        if (record == null || !"SUBMITTED".equals(record.getStatus())) {
+            throw new BusinessException(400, "考试记录状态异常，无法批改");
+        }
+
+        ExamPaper paper = examPaperMapper.selectById(record.getPaperId());
+        int subjectiveScore = 0;
+
+        for (Map<String, Object> g : grades) {
+            Long answerId = Long.valueOf(g.get("answerId").toString());
+            int score = Integer.parseInt(g.get("score").toString());
+
+            ExamAnswer answer = examAnswerMapper.selectById(answerId);
+            if (answer == null || !answer.getRecordId().equals(recordId)) {
+                throw new BusinessException(400, "答题记录不存在: " + answerId);
+            }
+
+            answer.setIsCorrect(score > 0 ? 1 : 0);
+            answer.setScore(score);
+            examAnswerMapper.updateById(answer);
+            subjectiveScore += score;
+        }
+
+        // 重算总分和通过状态
+        int totalScore = (record.getObjectiveScore() != null ? record.getObjectiveScore() : 0) + subjectiveScore;
+        record.setSubjectiveScore(subjectiveScore);
+        record.setTotalScore(totalScore);
+        record.setPassed(totalScore >= paper.getPassScore() ? 1 : 0);
+        examRecordMapper.updateById(record);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("recordId", recordId);
+        result.put("subjectiveScore", subjectiveScore);
+        result.put("totalScore", totalScore);
+        result.put("passed", record.getPassed() == 1);
+        return result;
+    }
+
+    private Page<Map<String, Object>> convertToMapPage(Page<ExamRecord> source) {
+        Page<Map<String, Object>> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
+        // simplified - just return empty
+        return target;
     }
 
     // ===== 私有工具方法 =====

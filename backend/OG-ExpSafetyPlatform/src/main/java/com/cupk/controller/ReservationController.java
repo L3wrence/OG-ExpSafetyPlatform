@@ -2,8 +2,14 @@ package com.cupk.controller;
 
 import com.cupk.pojo.LabTimeSlot;
 import com.cupk.pojo.Reservation;
+import com.cupk.common.RequirePermission;
 import com.cupk.common.Result;
+import com.cupk.common.UserContext;
+import com.cupk.dto.reservation.ReservationCreateDTO;
+import com.cupk.dto.reservation.ReviewDTO;
 import com.cupk.service.ReservationService;
+import jakarta.validation.Valid;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,12 +40,14 @@ public class ReservationController {
     }
 
     /** 批量创建时间段 */
+    @RequirePermission("reservation:manage")
     @PostMapping("/time-slots")
     public Result<Map<String, Integer>> createTimeSlots(@RequestBody List<LabTimeSlot> slots) {
         return Result.success(reservationService.batchCreateTimeSlots(slots));
     }
 
     /** 修改时间段 */
+    @RequirePermission("reservation:manage")
     @PutMapping("/time-slots/{id}")
     public Result<?> updateTimeSlot(@PathVariable Long id, @RequestBody LabTimeSlot slot) {
         reservationService.updateTimeSlot(id, slot);
@@ -47,6 +55,7 @@ public class ReservationController {
     }
 
     /** 删除时间段 */
+    @RequirePermission("reservation:manage")
     @DeleteMapping("/time-slots/{id}")
     public Result<?> deleteTimeSlot(@PathVariable Long id) {
         reservationService.deleteTimeSlot(id);
@@ -66,7 +75,10 @@ public class ReservationController {
 
     /** 提交预约申请 */
     @PostMapping
-    public Result<?> create(@RequestBody Reservation reservation) {
+    public Result<?> create(@Valid @RequestBody ReservationCreateDTO dto) {
+        Reservation reservation = new Reservation();
+        BeanUtils.copyProperties(dto, reservation);
+        reservation.setStudentId(UserContext.getUserId());
         return Result.success(reservationService.createReservation(reservation));
     }
 
@@ -88,6 +100,7 @@ public class ReservationController {
     // ===== 教师审核 =====
 
     /** 待审核预约列表 */
+    @RequirePermission("reservation:review")
     @GetMapping("/pending")
     public Result<?> pending(@RequestParam(defaultValue = "1") int pageNum,
                               @RequestParam(defaultValue = "10") int pageSize,
@@ -96,9 +109,10 @@ public class ReservationController {
     }
 
     /** 审核预约 */
+    @RequirePermission("reservation:review")
     @PutMapping("/{id}/review")
-    public Result<?> review(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        reservationService.reviewReservation(id, body.get("status"), body.get("reviewComment"));
+    public Result<?> review(@PathVariable Long id, @Valid @RequestBody ReviewDTO dto) {
+        reservationService.reviewReservation(id, dto.getStatus(), dto.getReviewComment());
         return Result.success();
     }
 }

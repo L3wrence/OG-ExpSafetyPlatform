@@ -7,11 +7,10 @@ import com.cupk.mapper.ReportScoreMapper;
 import com.cupk.pojo.Report;
 import com.cupk.pojo.ReportScore;
 import com.cupk.service.ReportService;
+import com.cupk.exception.BusinessException;
 import com.cupk.common.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.cupk.common.UserContext;
 import org.springframework.stereotype.Service;
-import com.cupk.common.UserContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
@@ -50,7 +49,7 @@ public class ReportServiceImpl implements ReportService {
     public void submitReport(Long id) {
         Report report = reportMapper.selectById(id);
         if (report == null || !"DRAFT".equals(report.getStatus())) {
-            throw new RuntimeException("报告状态不允许提交");
+            throw new BusinessException(400, "报告状态不允许提交");
         }
         report.setStatus("SUBMITTED");
         Date now = new Date();
@@ -139,6 +138,7 @@ public class ReportServiceImpl implements ReportService {
         ReportScore returnRecord = new ReportScore();
         returnRecord.setReportId(reportId);
         returnRecord.setTeacherId(UserContext.getUserId());
+        returnRecord.setScore(0);
         returnRecord.setComment(comment);
         returnRecord.setIsLatest(1);
         returnRecord.setCreateTime(new Date());

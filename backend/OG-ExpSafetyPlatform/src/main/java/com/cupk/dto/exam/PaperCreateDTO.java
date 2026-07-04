@@ -1,7 +1,7 @@
 package com.cupk.dto.exam;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-
 import java.util.Date;
 
 /**
@@ -9,7 +9,9 @@ import java.util.Date;
  */
 @Data
 public class PaperCreateDTO {
+    @NotBlank(message = "试卷标题不能为空")
     private String title;
+
     private String description;
     private Long courseId;
     private Integer totalScore;

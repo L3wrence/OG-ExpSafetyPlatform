@@ -1,10 +1,13 @@
 package com.cupk.controller;
 
 import com.cupk.common.Result;
+import com.cupk.dto.exam.ExamSubmitDTO;
 import com.cupk.service.ExamService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,9 +39,14 @@ public class ExamController {
     /** 提交答案 */
     @PostMapping("/{recordId}/submit")
     public Result<?> submit(@PathVariable Long recordId,
-                             @RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> answers = (List<Map<String, Object>>) body.get("answers");
+                             @Valid @RequestBody ExamSubmitDTO dto) {
+        // 将 DTO 转为 ExamServiceImpl 所需的 List<Map> 格式
+        List<Map<String, Object>> answers = dto.getAnswers().stream().map(a -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("questionId", a.getQuestionId());
+            m.put("answer", a.getAnswer());
+            return m;
+        }).toList();
         return Result.success(examService.submitExam(recordId, answers));
     }
 

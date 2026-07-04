@@ -3,7 +3,8 @@ package com.cupk.common;
 import lombok.Data;
 
 /**
- * 统一响应结果（占位符，等成员A交付正式版本替换）
+ * 统一响应结果
+ * 成员A交付（已整合 backend(1) CommonResult 的完整方法）
  */
 @Data
 public class Result<T> {
@@ -17,6 +18,7 @@ public class Result<T> {
         this.data = data;
     }
 
+    // ===== 成功 =====
     public static <T> Result<T> success() {
         return new Result<>(200, "操作成功", null);
     }
@@ -29,6 +31,7 @@ public class Result<T> {
         return new Result<>(200, message, data);
     }
 
+    // ===== 失败 =====
     public static <T> Result<T> fail(int code, String message) {
         return new Result<>(code, message, null);
     }
@@ -39,5 +42,13 @@ public class Result<T> {
 
     public static <T> Result<T> badRequest(String message) {
         return new Result<>(400, message, null);
+    }
+
+    public static <T> Result<T> unauthorized(String message) {
+        return new Result<>(401, message, null);
+    }
+
+    public static <T> Result<T> forbidden(String message) {
+        return new Result<>(403, message, null);
     }
 }

@@ -45,4 +45,12 @@ public interface ExamService {
 
     /** 知识点薄弱分析 */
     List<Map<String, Object>> getKnowledgeAnalysis(Long courseId);
+
+    // ===== 简答题批改（教师端） =====
+
+    /** 待批改简答题的考试记录列表 */
+    Page<Map<String, Object>> getPendingGradingRecords(int pageNum, int pageSize, Long paperId);
+
+    /** 逐题批改简答题，批完后重算总分和通过状态 */
+    Map<String, Object> gradeShortAnswer(Long recordId, List<Map<String, Object>> grades);
 }

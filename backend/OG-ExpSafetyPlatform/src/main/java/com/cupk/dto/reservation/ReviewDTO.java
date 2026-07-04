@@ -1,5 +1,6 @@
 package com.cupk.dto.reservation;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -7,7 +8,8 @@ import lombok.Data;
  */
 @Data
 public class ReviewDTO {
-    /** APPROVED / REJECTED */
-    private String status;
-    private String reviewComment;
+    @NotBlank(message = "审核状态不能为空")
+    private String status;          // APPROVED / REJECTED
+
+    private String reviewComment;   // 审核意见
 }

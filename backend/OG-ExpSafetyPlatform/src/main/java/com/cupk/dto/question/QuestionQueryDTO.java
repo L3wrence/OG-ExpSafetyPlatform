@@ -3,7 +3,7 @@ package com.cupk.dto.question;
 import lombok.Data;
 
 /**
- * 题目分页查询DTO
+ * 题目分页查询DTO（GET 参数绑定）
  */
 @Data
 public class QuestionQueryDTO {
