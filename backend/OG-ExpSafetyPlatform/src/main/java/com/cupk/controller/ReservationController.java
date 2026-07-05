@@ -30,6 +30,7 @@ public class ReservationController {
     // ===== 鏃堕棿娈电鐞嗭紙鏁欏笀绔級 =====
 
     /** 鍒嗛〉鏌ヨ鏃堕棿娈?*/
+    @RequirePermission("reservation:view")
     @GetMapping("/time-slots")
     public Result<?> timeSlots(@RequestParam(defaultValue = "1") int pageNum,
                                 @RequestParam(defaultValue = "10") int pageSize,
@@ -65,6 +66,7 @@ public class ReservationController {
     // ===== 瀛︾敓棰勭害 =====
 
     /** 鍙绾︽椂闂存 */
+    @RequirePermission("reservation:view")
     @GetMapping("/available-slots")
     public Result<?> availableSlots(@RequestParam(required = false) Long labId,
                                      @RequestParam(required = false) String date,
@@ -74,6 +76,7 @@ public class ReservationController {
     }
 
     /** 鎻愪氦棰勭害鐢宠 */
+    @RequirePermission("reservation:view")
     @PostMapping
     public Result<?> create(@Valid @RequestBody ReservationCreateDTO dto) {
         Reservation reservation = new Reservation();
@@ -83,6 +86,7 @@ public class ReservationController {
     }
 
     /** 鎴戠殑棰勭害鍒楄〃 */
+    @RequirePermission("reservation:view")
     @GetMapping("/my")
     public Result<?> myReservations(@RequestParam(defaultValue = "1") int pageNum,
                                      @RequestParam(defaultValue = "10") int pageSize,
@@ -91,6 +95,7 @@ public class ReservationController {
     }
 
     /** 鍙栨秷棰勭害 */
+    @RequirePermission("reservation:view")
     @PutMapping("/{id}/cancel")
     public Result<?> cancel(@PathVariable Long id) {
         reservationService.cancelReservation(id);

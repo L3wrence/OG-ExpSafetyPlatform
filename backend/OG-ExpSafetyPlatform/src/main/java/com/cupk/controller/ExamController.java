@@ -1,5 +1,6 @@
 package com.cupk.controller;
 
+import com.cupk.common.RequirePermission;
 import com.cupk.common.Result;
 import com.cupk.dto.exam.ExamSubmitDTO;
 import com.cupk.service.ExamService;
@@ -23,6 +24,7 @@ public class ExamController {
     private ExamService examService;
 
     /** 学生可参加的考试列表 */
+    @RequirePermission("exam:take")
     @GetMapping("/available")
     public Result<?> available(@RequestParam(defaultValue = "1") int pageNum,
                                 @RequestParam(defaultValue = "10") int pageSize,
@@ -31,12 +33,14 @@ public class ExamController {
     }
 
     /** 开始考试 */
+    @RequirePermission("exam:take")
     @PostMapping("/{paperId}/start")
     public Result<?> start(@PathVariable Long paperId) {
         return Result.success(examService.startExam(paperId));
     }
 
     /** 提交答案 */
+    @RequirePermission("exam:take")
     @PostMapping("/{recordId}/submit")
     public Result<?> submit(@PathVariable Long recordId,
                              @Valid @RequestBody ExamSubmitDTO dto) {
@@ -51,6 +55,7 @@ public class ExamController {
     }
 
     /** 我的考试记录列表 */
+    @RequirePermission("exam:take")
     @GetMapping("/records")
     public Result<?> myRecords(@RequestParam(defaultValue = "1") int pageNum,
                                 @RequestParam(defaultValue = "10") int pageSize,
@@ -59,12 +64,14 @@ public class ExamController {
     }
 
     /** 考试详情（含每题答题） */
+    @RequirePermission("exam:take")
     @GetMapping("/records/{id}")
     public Result<?> recordDetail(@PathVariable Long id) {
         return Result.success(examService.getRecordDetail(id));
     }
 
     /** 我的错题本 */
+    @RequirePermission("exam:take")
     @GetMapping("/wrong-questions")
     public Result<?> wrongQuestions(@RequestParam(defaultValue = "1") int pageNum,
                                      @RequestParam(defaultValue = "10") int pageSize,
@@ -74,6 +81,7 @@ public class ExamController {
     }
 
     /** 错题知识点统计 */
+    @RequirePermission("exam:take")
     @GetMapping("/wrong-questions/stats")
     public Result<?> wrongQuestionStats() {
         return Result.success(examService.getWrongQuestionStats());

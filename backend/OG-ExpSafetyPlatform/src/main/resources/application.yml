@@ -3,10 +3,10 @@ spring:
         name: OG-ExpSafetyPlatform
 
     datasource:
-        url: jdbc:mysql://localhost:3306/ogexpsafetyplatform?userUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+        url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ogexpsafetyplatform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
         driver-class-name: com.mysql.cj.jdbc.Driver
-        username: root
-        password: gnah060725
+        username: ${MYSQL_USERNAME:root}
+        password: ${MYSQL_PASSWORD:gnah060725}
     jackson:
         date-format: yyyy-MM-dd HH:mm:ss
         time-zone: Asia/Shanghai

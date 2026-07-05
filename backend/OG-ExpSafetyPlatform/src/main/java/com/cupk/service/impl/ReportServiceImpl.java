@@ -40,16 +40,24 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public void updateReport(Long id, Report report) {
+        Report existing = requireReport(id);
+        requireOwner(existing, "不能修改他人的报告");
+        if (!"DRAFT".equals(existing.getStatus()) && !"RETURNED".equals(existing.getStatus())) {
+            throw new BusinessException(400, "报告状态不允许修改");
+        }
         report.setId(id);
+        report.setStudentId(existing.getStudentId());
+        report.setStatus("RETURNED".equals(existing.getStatus()) ? "DRAFT" : existing.getStatus());
         report.setUpdateTime(new Date());
         reportMapper.updateById(report);
     }
 
     @Override
     public void submitReport(Long id) {
-        Report report = reportMapper.selectById(id);
-        if (report == null || !"DRAFT".equals(report.getStatus())) {
-            throw new BusinessException(400, "鎶ュ憡鐘舵€佷笉鍏佽鎻愪氦");
+        Report report = requireReport(id);
+        requireOwner(report, "不能提交他人的报告");
+        if (!"DRAFT".equals(report.getStatus()) && !"RETURNED".equals(report.getStatus())) {
+            throw new BusinessException(400, "报告状态不允许提交");
         }
         report.setStatus("SUBMITTED");
         Date now = new Date();
@@ -70,7 +78,10 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public Map<String, Object> getReportDetail(Long id) {
-        Report report = reportMapper.selectById(id);
+        Report report = requireReport(id);
+        if (UserContext.isStudent() && !UserContext.getUserId().equals(report.getStudentId())) {
+            throw new BusinessException(403, "不能查看他人的报告");
+        }
 
         // 鏌ヨ鏈€鏂拌瘎鍒?
         LambdaQueryWrapper<ReportScore> scoreWrapper = new LambdaQueryWrapper<>();
@@ -98,6 +109,10 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public void gradeReport(Long reportId, Integer score, String comment) {
+        Report target = requireReport(reportId);
+        if (!"SUBMITTED".equals(target.getStatus())) {
+            throw new BusinessException(400, "只有已提交的报告可以评分");
+        }
         // 灏嗘棫璇勫垎鏍囪涓洪潪鏈€鏂?
         LambdaQueryWrapper<ReportScore> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ReportScore::getReportId, reportId)
@@ -127,6 +142,10 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public void returnReport(Long reportId, String comment) {
+        Report target = requireReport(reportId);
+        if (!"SUBMITTED".equals(target.getStatus())) {
+            throw new BusinessException(400, "只有已提交的报告可以退回");
+        }
         // 灏嗘棫璇勫垎鏍囪涓洪潪鏈€鏂?
         LambdaQueryWrapper<ReportScore> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ReportScore::getReportId, reportId)
@@ -151,5 +170,19 @@ public class ReportServiceImpl implements ReportService {
         report.setId(reportId);
         report.setStatus("RETURNED");
         reportMapper.updateById(report);
+    }
+
+    private Report requireReport(Long id) {
+        Report report = reportMapper.selectById(id);
+        if (report == null) {
+            throw new BusinessException(404, "报告不存在");
+        }
+        return report;
+    }
+
+    private void requireOwner(Report report, String message) {
+        if (!UserContext.getUserId().equals(report.getStudentId())) {
+            throw new BusinessException(403, message);
+        }
     }
 }

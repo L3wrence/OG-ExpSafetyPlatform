@@ -2,6 +2,7 @@ package com.cupk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cupk.exception.BusinessException;
 import com.cupk.interceptor.UserContext;
 import com.cupk.mapper.AiChatRecordMapper;
 import com.cupk.mapper.QuestionMapper;
@@ -83,6 +84,13 @@ public class AiChatServiceImpl implements AiChatService {
 
     @Override
     public void updateFeedback(Long id, String manualRevision) {
+        AiChatRecord existing = aiChatRecordMapper.selectById(id);
+        if (existing == null) {
+            throw new BusinessException(404, "AI问答记录不存在");
+        }
+        if (!UserContext.getUserId().equals(existing.getUserId())) {
+            throw new BusinessException(403, "不能修改他人的AI问答记录");
+        }
         AiChatRecord record = new AiChatRecord();
         record.setId(id);
         record.setManualRevision(manualRevision);

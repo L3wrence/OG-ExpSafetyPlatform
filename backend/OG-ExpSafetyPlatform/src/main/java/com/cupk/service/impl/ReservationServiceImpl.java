@@ -37,6 +37,7 @@ public class ReservationServiceImpl implements ReservationService {
         Page<LabTimeSlot> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<LabTimeSlot> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(labId != null, LabTimeSlot::getLabId, labId)
+               .eq(date != null && !date.isEmpty(), LabTimeSlot::getDate, date)
                .eq(status != null && !status.isEmpty(), LabTimeSlot::getStatus, status)
                .orderByDesc(LabTimeSlot::getDate)
                .orderByAsc(LabTimeSlot::getStartTime);
@@ -45,12 +46,21 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public Map<String, Integer> batchCreateTimeSlots(List<LabTimeSlot> slots) {
+        if (slots == null || slots.isEmpty()) {
+            throw new BusinessException(400, "时间段列表不能为空");
+        }
         int successCount = 0;
         int failCount = 0;
         for (LabTimeSlot slot : slots) {
             try {
+                if (slot.getLabId() == null || slot.getDate() == null || slot.getStartTime() == null
+                        || slot.getEndTime() == null || slot.getCapacity() == null || slot.getCapacity() <= 0) {
+                    throw new BusinessException(400, "时间段信息不完整");
+                }
                 slot.setBookedCount(0);
                 slot.setStatus("AVAILABLE");
+                slot.setCreateBy(UserContext.getUserId());
+                slot.setCreateTime(new java.util.Date());
                 labTimeSlotMapper.insert(slot);
                 successCount++;
             } catch (Exception e) {
@@ -71,6 +81,12 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public void deleteTimeSlot(Long id) {
+        Long activeReservations = reservationMapper.selectCount(new LambdaQueryWrapper<Reservation>()
+                .eq(Reservation::getTimeSlotId, id)
+                .in(Reservation::getStatus, "PENDING", "APPROVED"));
+        if (activeReservations > 0) {
+            throw new BusinessException(409, "该时间段已有预约记录，不能删除");
+        }
         labTimeSlotMapper.deleteById(id);
     }
 
@@ -92,7 +108,7 @@ public class ReservationServiceImpl implements ReservationService {
             Map<String, Object> item = new HashMap<>();
             item.put("timeSlot", slot);
             LabCourse lab = labCourseMapper.selectById(slot.getLabId());
-            item.put("labName", lab != null ? lab.getCourseName() : "?????");
+            item.put("labName", lab != null ? lab.getCourseName() : "未知实验室");
             item.put("remaining", slot.getCapacity() - slot.getBookedCount());
             records.add(item);
         }
@@ -106,7 +122,29 @@ public class ReservationServiceImpl implements ReservationService {
         Long studentId = UserContext.getUserId();
         Long timeSlotId = reservation.getTimeSlotId();
 
-        // 1. 骞跺彂鎺у埗锛氫娇鐢ㄤ箰瑙傞攣鏇存柊宸查绾︿汉鏁?
+        LabTimeSlot slot = labTimeSlotMapper.selectById(timeSlotId);
+        if (slot == null) {
+            throw new BusinessException(404, "时间段不存在");
+        }
+
+        LambdaQueryWrapper<Reservation> conflictWrapper = new LambdaQueryWrapper<>();
+        conflictWrapper.eq(Reservation::getStudentId, studentId)
+                       .eq(Reservation::getTimeSlotId, timeSlotId)
+                       .in(Reservation::getStatus, "PENDING", "APPROVED");
+        if (reservationMapper.selectCount(conflictWrapper) > 0) {
+            throw new BusinessException(400, "您已预约过该时间段");
+        }
+
+        Long targetExperimentId = slot.getExperimentId() != null ? slot.getExperimentId() : reservation.getExperimentId();
+        LambdaQueryWrapper<ExamRecord> examWrapper = new LambdaQueryWrapper<>();
+        examWrapper.eq(ExamRecord::getStudentId, studentId)
+                   .eq(ExamRecord::getPassed, 1)
+                   .in(ExamRecord::getStatus, "SUBMITTED", "REVIEWED")
+                   .eq(targetExperimentId != null, ExamRecord::getExperimentId, targetExperimentId);
+        if (examRecordMapper.selectCount(examWrapper) == 0) {
+            throw new BusinessException(403, "请先通过对应安全考试后再预约实验");
+        }
+
         LambdaUpdateWrapper<LabTimeSlot> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(LabTimeSlot::getId, timeSlotId)
                      .apply("booked_count < capacity")
@@ -114,34 +152,12 @@ public class ReservationServiceImpl implements ReservationService {
                      .setSql("booked_count = booked_count + 1");
         int updated = labTimeSlotMapper.update(updateWrapper);
         if (updated == 0) {
-            throw new BusinessException(400, "???????????");
+            throw new BusinessException(400, "名额已满或时间段不可用");
         }
 
-        // 2. 鍐茬獊妫€鏌ワ細涓嶈兘閲嶅棰勭害鍚屼竴鏃堕棿娈?
-        LambdaQueryWrapper<Reservation> conflictWrapper = new LambdaQueryWrapper<>();
-        conflictWrapper.eq(Reservation::getStudentId, studentId)
-                       .eq(Reservation::getTimeSlotId, timeSlotId)
-                       .in(Reservation::getStatus, "PENDING", "APPROVED");
-        if (reservationMapper.selectCount(conflictWrapper) > 0) {
-            throw new BusinessException(400, "?????????");
-        }
-
-        // 3. 鈽?璧勬牸鏍￠獙锛氬繀椤婚€氳繃瀹夊叏鑰冭瘯鎵嶈兘棰勭害瀹為獙
-        LambdaQueryWrapper<ExamRecord> examWrapper = new LambdaQueryWrapper<>();
-        examWrapper.eq(ExamRecord::getStudentId, studentId)
-                   .eq(ExamRecord::getPassed, 1)
-                   .eq(ExamRecord::getStatus, "SUBMITTED");
-        if (examRecordMapper.selectCount(examWrapper) == 0) {
-            // 鍥炴粴瀹归噺
-            LambdaUpdateWrapper<LabTimeSlot> rollbackWrapper = new LambdaUpdateWrapper<>();
-            rollbackWrapper.eq(LabTimeSlot::getId, timeSlotId)
-                          .setSql("booked_count = booked_count - 1");
-            labTimeSlotMapper.update(rollbackWrapper);
-            throw new BusinessException(403, "璇峰厛閫氳繃瀹夊叏鑰冭瘯鍚庡啀棰勭害瀹為獙");
-        }
-
-        // 4. 鍒涘缓棰勭害璁板綍
         reservation.setStudentId(studentId);
+        reservation.setLabId(slot.getLabId());
+        reservation.setExperimentId(targetExperimentId);
         reservation.setStatus("PENDING");
         reservation.setCreateTime(new java.util.Date());
         reservationMapper.insert(reservation);
@@ -167,7 +183,10 @@ public class ReservationServiceImpl implements ReservationService {
     public void cancelReservation(Long id) {
         Reservation reservation = reservationMapper.selectById(id);
         if (reservation == null || !"PENDING".equals(reservation.getStatus())) {
-            throw new BusinessException(400, "棰勭害鐘舵€佷笉鍏佽鍙栨秷");
+            throw new BusinessException(400, "预约状态不允许取消");
+        }
+        if (!UserContext.getUserId().equals(reservation.getStudentId())) {
+            throw new BusinessException(403, "不能取消他人的预约");
         }
         reservation.setStatus("CANCELLED");
         reservationMapper.updateById(reservation);
@@ -175,6 +194,7 @@ public class ReservationServiceImpl implements ReservationService {
         // 閲婃斁鍚嶉
         LambdaUpdateWrapper<LabTimeSlot> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(LabTimeSlot::getId, reservation.getTimeSlotId())
+                     .apply("booked_count > 0")
                      .setSql("booked_count = booked_count - 1");
         labTimeSlotMapper.update(updateWrapper);
     }
@@ -190,10 +210,14 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     public void reviewReservation(Long id, String status, String reviewComment) {
+        if (!"APPROVED".equals(status) && !"REJECTED".equals(status)) {
+            throw new BusinessException(400, "审核状态只能为APPROVED或REJECTED");
+        }
         Reservation reservation = reservationMapper.selectById(id);
         if (reservation == null || !"PENDING".equals(reservation.getStatus())) {
-            throw new BusinessException(400, "棰勭害鐘舵€佷笉鍏佽瀹℃牳");
+            throw new BusinessException(400, "预约状态不允许审核");
         }
         reservation.setStatus(status);
         reservation.setReviewComment(reviewComment);
@@ -205,6 +229,7 @@ public class ReservationServiceImpl implements ReservationService {
         if ("REJECTED".equals(status)) {
             LambdaUpdateWrapper<LabTimeSlot> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(LabTimeSlot::getId, reservation.getTimeSlotId())
+                         .apply("booked_count > 0")
                          .setSql("booked_count = booked_count - 1");
             labTimeSlotMapper.update(updateWrapper);
         }

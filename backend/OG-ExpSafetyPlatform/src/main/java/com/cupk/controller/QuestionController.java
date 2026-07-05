@@ -27,6 +27,7 @@ public class QuestionController {
     private QuestionService questionService;
 
     /** 鍒嗛〉鏌ヨ棰樺簱 */
+    @RequirePermission("question:view")
     @GetMapping
     public Result<?> list(@Valid QuestionQueryDTO query) {
         return Result.success(questionService.pageQuestions(
@@ -36,6 +37,7 @@ public class QuestionController {
     }
 
     /** 鏌ョ湅棰樼洰璇︽儏 */
+    @RequirePermission("question:view")
     @GetMapping("/{id}")
     public Result<Question> detail(@PathVariable Long id) {
         return Result.success(questionService.getQuestionById(id));

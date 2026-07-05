@@ -28,6 +28,7 @@ public class ReportController {
     // ===== 瀛︾敓绔?=====
 
     /** 鍒涘缓/淇濆瓨鑽夌 */
+    @RequirePermission("report:submit")
     @PostMapping
     public Result<Map<String, Long>> create(@Valid @RequestBody ReportCreateDTO dto) {
         Report report = new Report();
@@ -37,6 +38,7 @@ public class ReportController {
     }
 
     /** 淇敼鎶ュ憡 */
+    @RequirePermission("report:submit")
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody ReportCreateDTO dto) {
         Report report = new Report();
@@ -47,6 +49,7 @@ public class ReportController {
     }
 
     /** 姝ｅ紡鎻愪氦鎶ュ憡 */
+    @RequirePermission("report:submit")
     @PutMapping("/{id}/submit")
     public Result<?> submit(@PathVariable Long id) {
         reportService.submitReport(id);
@@ -54,6 +57,7 @@ public class ReportController {
     }
 
     /** 鎴戠殑鎶ュ憡鍒楄〃 */
+    @RequirePermission("report:view")
     @GetMapping("/my")
     public Result<?> myReports(@RequestParam(defaultValue = "1") int pageNum,
                                 @RequestParam(defaultValue = "10") int pageSize,
@@ -62,6 +66,7 @@ public class ReportController {
     }
 
     /** 鎶ュ憡璇︽儏 */
+    @RequirePermission("report:view")
     @GetMapping("/{id}")
     public Result<?> detail(@PathVariable Long id) {
         return Result.success(reportService.getReportDetail(id));
@@ -79,7 +84,7 @@ public class ReportController {
     }
 
     /** 璇勫垎+璇勮 */
-    @RequirePermission("report:review")
+    @RequirePermission("report:grade")
     @PutMapping("/{id}/grade")
     public Result<?> grade(@PathVariable Long id, @Valid @RequestBody GradeDTO dto) {
         reportService.gradeReport(id, dto.getScore(), dto.getComment());

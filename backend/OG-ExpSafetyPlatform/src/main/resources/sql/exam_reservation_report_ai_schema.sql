@@ -197,7 +197,7 @@ FROM (
     UNION ALL SELECT '实验预约审核', 'reservation:review', 433
     UNION ALL SELECT '实验报告查看', 'report:view', 441
     UNION ALL SELECT '实验报告提交', 'report:submit', 442
-    UNION ALL SELECT '实验报告批改', 'report:grade', 443
+    UNION ALL SELECT '实验报告评分', 'report:grade', 443
     UNION ALL SELECT '实验报告审核', 'report:review', 444
     UNION ALL SELECT '推荐查看', 'recommend:view', 451
     UNION ALL SELECT '推荐反馈', 'recommend:feedback', 452

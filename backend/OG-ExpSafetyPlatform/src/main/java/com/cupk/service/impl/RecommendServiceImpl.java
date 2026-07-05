@@ -267,28 +267,28 @@ public class RecommendServiceImpl implements RecommendService {
             // 鎵惧嚭鍏蜂綋閿欓鐭ヨ瘑鐐?
             Set<String> weakPoints = getStudentWeakKnowledgePoints(studentId);
             if (!weakPoints.isEmpty()) {
-                reason.append("???? ")
-                      .append(String.join("?", weakPoints.stream().limit(3).collect(Collectors.toList())))
-                      .append(" ??????????????? ");
+                reason.append("因为您在 ")
+                      .append(String.join("、", weakPoints.stream().limit(3).collect(Collectors.toList())))
+                      .append(" 知识点存在错题，建议优先学习。");
             }
         }
 
         // 鍩轰簬鏈涔犵▼搴︾敓鎴愮悊鐢?
         double newness = calcNewness(studentId, resourceId);
         if (newness > 80) {
-            reason.append("??????????????????? ");
+            reason.append("该资源尚未学习，适合作为新的补充材料。");
         }
 
         // 鍩轰簬鐭ヨ瘑鐐瑰尮閰?
         double knowledge = calcKnowledgeMatch(resourceId, experimentId);
         if (knowledge > 60) {
-            reason.append("涓庡綋鍓嶅疄楠屽唴瀹归珮搴﹀尮閰嶏紝");
+            reason.append("与当前实验内容匹配度较高。");
         }
 
         if (reason.length() == 0) {
-            reason.append("鏍规嵁鎮ㄧ殑瀛︿範鎯呭喌鑷姩鎺ㄨ崘");
+            reason.append("根据您的学习情况自动推荐。");
         } else {
-            reason.append("寤鸿浼樺厛瀛︿範");
+            reason.append("建议优先学习。");
         }
 
         return reason.toString();

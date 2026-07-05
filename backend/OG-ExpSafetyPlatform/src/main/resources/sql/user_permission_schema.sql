@@ -66,7 +66,7 @@ SELECT '学生', 'STUDENT', '学习实验课程并查看个人数据'
 WHERE NOT EXISTS (SELECT 1 FROM t_role WHERE role_code = 'STUDENT');
 
 INSERT INTO t_role (role_name, role_code, description)
-SELECT '实验室管理员', 'LAB_ADMIN', '查看实验室运行统计'
+SELECT '实验室管理员', 'LAB_ADMIN', '查看实验室运行统计并管理预约'
 WHERE NOT EXISTS (SELECT 1 FROM t_role WHERE role_code = 'LAB_ADMIN');
 
 INSERT INTO t_permission (name, code, type, parent_id, path, icon, sort)

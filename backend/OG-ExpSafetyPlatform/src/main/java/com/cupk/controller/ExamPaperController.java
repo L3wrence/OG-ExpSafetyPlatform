@@ -26,6 +26,7 @@ public class ExamPaperController {
     private ExamPaperService examPaperService;
 
     /** 鍒嗛〉鏌ヨ璇曞嵎 */
+    @RequirePermission("exam-paper:view")
     @GetMapping
     public Result<?> list(@RequestParam(defaultValue = "1") int pageNum,
                           @RequestParam(defaultValue = "10") int pageSize,
@@ -36,6 +37,7 @@ public class ExamPaperController {
     }
 
     /** 璇曞嵎璇︽儏锛堝惈棰樼洰鍒楄〃锛?*/
+    @RequirePermission("exam-paper:view")
     @GetMapping("/{id}")
     public Result<?> detail(@PathVariable Long id) {
         return Result.success(examPaperService.getPaperDetail(id));

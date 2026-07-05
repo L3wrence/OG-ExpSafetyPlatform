@@ -121,46 +121,26 @@ CREATE TABLE IF NOT EXISTS t_learning_record (
 );
 
 INSERT INTO t_permission (name, code, type, parent_id, path, sort, create_time)
-SELECT '课程查看', 'course:view', 2, NULL, NULL, 100, NOW()
-WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_permission')
-  AND NOT EXISTS (SELECT 1 FROM t_permission WHERE code = 'course:view');
-
-INSERT INTO t_permission (name, code, type, parent_id, path, sort, create_time)
-SELECT '实验查看', 'experiment:view', 2, NULL, NULL, 110, NOW()
-WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_permission')
-  AND NOT EXISTS (SELECT 1 FROM t_permission WHERE code = 'experiment:view');
-
-INSERT INTO t_permission (name, code, type, parent_id, path, sort, create_time)
-SELECT '资源查看', 'resource:view', 2, NULL, NULL, 120, NOW()
-WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_permission')
-  AND NOT EXISTS (SELECT 1 FROM t_permission WHERE code = 'resource:view');
-
-INSERT INTO t_permission (name, code, type, parent_id, path, sort, create_time)
-SELECT '学习进度更新', 'learning:update:self', 2, NULL, NULL, 130, NOW()
-WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_permission')
-  AND NOT EXISTS (SELECT 1 FROM t_permission WHERE code = 'learning:update:self');
-
-INSERT INTO t_permission (name, code, type, parent_id, path, sort, create_time)
-SELECT '统计看板', 'dashboard:view', 2, NULL, NULL, 140, NOW()
-WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_permission')
-  AND NOT EXISTS (SELECT 1 FROM t_permission WHERE code = 'dashboard:view');
-
-INSERT INTO t_permission (name, code, type, parent_id, path, sort, create_time)
-SELECT p.name, p.code, 2, NULL, NULL, p.sort, NOW()
+SELECT p.name, p.code, 2, 0, NULL, p.sort, NOW()
 FROM (
-    SELECT '课程新增' AS name, 'course:create' AS code, 101 AS sort
+    SELECT '课程查看' AS name, 'course:view' AS code, 100 AS sort
+    UNION ALL SELECT '课程新增', 'course:create', 101
     UNION ALL SELECT '课程修改', 'course:update', 102
     UNION ALL SELECT '课程删除', 'course:delete', 103
+    UNION ALL SELECT '实验查看', 'experiment:view', 110
     UNION ALL SELECT '实验新增', 'experiment:create', 111
     UNION ALL SELECT '实验修改', 'experiment:update', 112
     UNION ALL SELECT '实验删除', 'experiment:delete', 113
+    UNION ALL SELECT '资源查看', 'resource:view', 120
     UNION ALL SELECT '资源新增', 'resource:create', 121
     UNION ALL SELECT '资源修改', 'resource:update', 122
     UNION ALL SELECT '资源删除', 'resource:delete', 123
+    UNION ALL SELECT '学习进度更新', 'learning:update:self', 130
     UNION ALL SELECT '安全知识查看', 'safety:view', 131
     UNION ALL SELECT '安全知识新增', 'safety:create', 132
     UNION ALL SELECT '安全知识修改', 'safety:update', 133
     UNION ALL SELECT '安全知识删除', 'safety:delete', 134
+    UNION ALL SELECT '统计看板', 'dashboard:view', 140
 ) p
 WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_permission')
   AND NOT EXISTS (SELECT 1 FROM t_permission tp WHERE tp.code = p.code);

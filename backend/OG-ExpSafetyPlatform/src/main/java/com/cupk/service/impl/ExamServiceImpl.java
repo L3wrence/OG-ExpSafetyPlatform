@@ -38,14 +38,24 @@ public class ExamServiceImpl implements ExamService {
     @Override
     public Page<Map<String, Object>> getAvailableExams(int pageNum, int pageSize, Long courseId) {
         // 鏌ヨ宸插彂甯冪殑璇曞嵎
+        Long studentId = UserContext.getUserId();
+        List<Long> existingPaperIds = examRecordMapper.selectList(new LambdaQueryWrapper<ExamRecord>()
+                        .eq(ExamRecord::getStudentId, studentId)
+                        .in(ExamRecord::getStatus, "IN_PROGRESS", "SUBMITTED"))
+                .stream()
+                .map(ExamRecord::getPaperId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         LambdaQueryWrapper<ExamPaper> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ExamPaper::getStatus, "PUBLISHED")
                .eq(courseId != null, ExamPaper::getCourseId, courseId)
+               .notIn(!existingPaperIds.isEmpty(), ExamPaper::getId, existingPaperIds)
                .orderByDesc(ExamPaper::getCreateTime);
 
         Page<ExamPaper> paperPage = examPaperMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
 
-        // 杞崲涓篗ap锛岃繃婊ゅ凡鑰冭繃鐨勮瘯鍗凤紙TODO: 闇€瑕佸綋鍓嶇敤鎴稩D锛?
+        // 转换为前端需要的考试列表结构。
         Page<Map<String, Object>> result = new Page<>(pageNum, pageSize, paperPage.getTotal());
         List<Map<String, Object>> records = new ArrayList<>();
         for (ExamPaper paper : paperPage.getRecords()) {
@@ -69,12 +79,20 @@ public class ExamServiceImpl implements ExamService {
     public Map<String, Object> startExam(Long paperId) {
         ExamPaper paper = examPaperMapper.selectById(paperId);
         if (paper == null || !"PUBLISHED".equals(paper.getStatus())) {
-            throw new BusinessException(400, "?????");
+            throw new BusinessException(400, "试卷不可用");
+        }
+        Long studentId = UserContext.getUserId();
+        Long existing = examRecordMapper.selectCount(new LambdaQueryWrapper<ExamRecord>()
+                .eq(ExamRecord::getStudentId, studentId)
+                .eq(ExamRecord::getPaperId, paperId)
+                .in(ExamRecord::getStatus, "IN_PROGRESS", "SUBMITTED"));
+        if (existing > 0) {
+            throw new BusinessException(409, "已存在该试卷的考试记录");
         }
 
         // 鍒涘缓鑰冭瘯璁板綍
         ExamRecord record = new ExamRecord();
-        record.setStudentId(UserContext.getUserId());
+        record.setStudentId(studentId);
         record.setPaperId(paperId);
         record.setExperimentId(paper.getExperimentId());
         record.setStatus("IN_PROGRESS");
@@ -120,10 +138,16 @@ public class ExamServiceImpl implements ExamService {
     public Map<String, Object> submitExam(Long recordId, List<Map<String, Object>> answers) {
         ExamRecord record = examRecordMapper.selectById(recordId);
         if (record == null || !"IN_PROGRESS".equals(record.getStatus())) {
-            throw new BusinessException(400, "??????");
+            throw new BusinessException(400, "考试状态异常");
+        }
+        if (!UserContext.getUserId().equals(record.getStudentId())) {
+            throw new BusinessException(403, "不能提交他人的考试记录");
         }
 
         ExamPaper paper = examPaperMapper.selectById(record.getPaperId());
+        if (paper == null) {
+            throw new BusinessException(404, "试卷不存在");
+        }
 
         // 鏍￠獙鏄惁瓒呮椂
         long now = System.currentTimeMillis();
@@ -132,7 +156,7 @@ public class ExamServiceImpl implements ExamService {
             record.setStatus("SUBMITTED");
             record.setSubmitTime(new Date());
             examRecordMapper.updateById(record);
-            throw new BusinessException(400, "鑰冭瘯宸茶秴鏃讹紝鏃犳硶鎻愪氦");
+            throw new BusinessException(400, "考试已超时，无法提交");
         }
 
         int objectiveScore = 0;
@@ -224,6 +248,12 @@ public class ExamServiceImpl implements ExamService {
     @Override
     public Map<String, Object> getRecordDetail(Long recordId) {
         ExamRecord record = examRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new BusinessException(404, "考试记录不存在");
+        }
+        if (!UserContext.getUserId().equals(record.getStudentId())) {
+            throw new BusinessException(403, "不能查看他人的考试记录");
+        }
 
         LambdaQueryWrapper<ExamAnswer> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ExamAnswer::getRecordId, recordId);
@@ -554,7 +584,7 @@ public class ExamServiceImpl implements ExamService {
     public Map<String, Object> gradeShortAnswer(Long recordId, List<Map<String, Object>> grades) {
         ExamRecord record = examRecordMapper.selectById(recordId);
         if (record == null || !"SUBMITTED".equals(record.getStatus())) {
-            throw new BusinessException(400, "鑰冭瘯璁板綍鐘舵€佸紓甯革紝鏃犳硶鎵规敼");
+            throw new BusinessException(400, "考试记录状态异常，无法批改");
         }
 
         ExamPaper paper = examPaperMapper.selectById(record.getPaperId());
@@ -566,7 +596,7 @@ public class ExamServiceImpl implements ExamService {
 
             ExamAnswer answer = examAnswerMapper.selectById(answerId);
             if (answer == null || !answer.getRecordId().equals(recordId)) {
-                throw new BusinessException(400, "绛旈璁板綍涓嶅瓨鍦? " + answerId);
+                throw new BusinessException(400, "答题记录不存在：" + answerId);
             }
 
             answer.setIsCorrect(score > 0 ? 1 : 0);
