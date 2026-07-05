@@ -221,7 +221,7 @@ public interface DashboardMapper {
                  / NULLIF(COUNT(*), 0), 2), 0) AS pass_rate
           FROM (
                 SELECT er.experiment_id, er.paper_id, er.student_id,
-                       MAX(er.score) AS best_score,
+                       MAX(er.total_score) AS best_score,
                        MAX(CASE WHEN er.passed = 1 THEN 1 ELSE 0 END) AS best_passed
                   FROM t_exam_record er
                  WHERE er.deleted = 0
@@ -247,8 +247,8 @@ public interface DashboardMapper {
                                             @Param("endTime") LocalDateTime endTime);
 
     @Select("""
-        SELECT ea.knowledge_id,
-               COALESCE(sk.knowledge_point, CONCAT('知识点', ea.knowledge_id)) AS knowledge_point,
+        SELECT COALESCE(ea.knowledge_id, ea.question_id) AS knowledge_id,
+               COALESCE(q.knowledge_point, sk.knowledge_point, CONCAT('知识点', COALESCE(ea.knowledge_id, ea.question_id))) AS knowledge_point,
                SUM(CASE WHEN ea.correct_flag = 0 THEN 1 ELSE 0 END) AS wrong_count,
                COUNT(*) AS answer_count,
                COALESCE(ROUND(100 * SUM(CASE WHEN ea.correct_flag = 0 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 2), 0) AS wrong_rate
@@ -256,6 +256,7 @@ public interface DashboardMapper {
           JOIN t_exam_record er ON er.id = ea.record_id AND er.deleted = 0
           JOIN t_experiment e ON e.id = er.experiment_id AND e.deleted = 0
           JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
+          LEFT JOIN t_question q ON q.id = ea.question_id AND q.is_deleted = 0
           LEFT JOIN t_safety_knowledge sk ON sk.id = ea.knowledge_id AND sk.deleted = 0
          WHERE (#{teacherId} IS NULL OR c.teacher_id = #{teacherId})
            AND (#{studentId} IS NULL OR er.student_id = #{studentId})
@@ -263,7 +264,8 @@ public interface DashboardMapper {
            AND (#{experimentId} IS NULL OR e.id = #{experimentId})
            AND (#{startTime} IS NULL OR er.submit_time >= #{startTime})
            AND (#{endTime} IS NULL OR er.submit_time < #{endTime})
-         GROUP BY ea.knowledge_id, sk.knowledge_point
+         GROUP BY COALESCE(ea.knowledge_id, ea.question_id),
+                  COALESCE(q.knowledge_point, sk.knowledge_point, CONCAT('知识点', COALESCE(ea.knowledge_id, ea.question_id)))
          HAVING wrong_count > 0
          ORDER BY wrong_count DESC, wrong_rate DESC
          LIMIT #{limit}
