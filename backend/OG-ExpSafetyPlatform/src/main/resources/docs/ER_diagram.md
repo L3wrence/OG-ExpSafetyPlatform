@@ -1,552 +1,430 @@
 # 油气工程实验教学与安全考核平台 — ER 图
 
-> 基于 3 个建表 SQL 生成，共 **24 张表**，分为 **6 个模块**。
->
-> 字段说明见下方【表字段详解】。
+> 共 24 张表，分为 6 个模块。每个模块单独一张 ER 图。
+
+---
+
+## 1. 🔐 用户权限模块（6张表）
 
 ```mermaid
 erDiagram
-    %% ==================== 用户权限模块 ====================
     t_user {
-        bigint id PK
-        varchar username UK
-        varchar password
-        varchar real_name
-        varchar phone
-        tinyint status
-        datetime create_time
-        datetime update_time
+        bigint 用户ID PK
+        varchar 用户名 UK
+        varchar 密码
+        varchar 真实姓名
+        varchar 手机号
+        tinyint 状态
     }
 
     t_role {
-        bigint id PK
-        varchar role_name
-        varchar role_code UK
-        varchar description
+        bigint 角色ID PK
+        varchar 角色名称
+        varchar 角色编码 UK
+        varchar 描述
     }
 
     t_permission {
-        bigint id PK
-        varchar name
-        varchar code UK
-        tinyint type
-        bigint parent_id FK
-        varchar path
-        varchar icon
-        int sort
-        datetime create_time
+        bigint 权限ID PK
+        varchar 权限名称
+        varchar 权限编码 UK
+        tinyint 类型
+        bigint 父权限ID FK
+        varchar 路由路径
+        varchar 图标
+        int 排序
     }
 
     t_user_role {
-        bigint user_id PK_FK
-        bigint role_id PK_FK
+        bigint 用户ID PK_FK
+        bigint 角色ID PK_FK
     }
 
     t_role_permission {
-        bigint role_id PK_FK
-        bigint permission_id PK_FK
+        bigint 角色ID PK_FK
+        bigint 权限ID PK_FK
     }
 
     t_token {
-        bigint id PK
-        bigint user_id FK
-        varchar token UK
-        datetime expire_time
-        datetime create_time
+        bigint token_ID PK
+        bigint 用户ID FK
+        varchar 令牌 UK
+        datetime 过期时间
     }
 
-    %% ==================== 实验教学模块 ====================
+    t_user ||--o{ t_user_role : 拥有
+    t_role ||--o{ t_user_role : 分配
+    t_role ||--o{ t_role_permission : 拥有
+    t_permission ||--o{ t_role_permission : 被分配
+    t_permission ||--o{ t_permission : 父子菜单
+    t_user ||--o{ t_token : 登录凭证
+```
+
+| 表 | 说明 |
+|----|------|
+| `t_user` | 用户账号，密码MD5加密，status=1启用 |
+| `t_role` | 角色：ADMIN / TEACHER / STUDENT / LAB_ADMIN |
+| `t_permission` | 权限：type=1菜单 type=2按钮，parent_id构建树 |
+| `t_user_role` | 用户↔角色 多对多 |
+| `t_role_permission` | 角色↔权限 多对多 |
+| `t_token` | 登录Token，UUID去横线，默认1天过期 |
+
+---
+
+## 2. 📚 实验教学模块（7张表）
+
+```mermaid
+erDiagram
     t_lab_course {
-        bigint id PK
-        varchar course_code UK
-        varchar course_name
-        varchar direction
-        bigint teacher_id FK
-        varchar semester
-        text description
-        varchar cover_url
-        tinyint status
-        int sort
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 课程ID PK
+        varchar 课程编码 UK
+        varchar 课程名称
+        varchar 专业方向
+        bigint 授课教师ID FK
+        varchar 学期
+        text 课程描述
+        tinyint 状态
+        int 排序
+        tinyint 逻辑删除
     }
 
     t_course_student {
-        bigint id PK
-        bigint course_id FK
-        bigint student_id FK
-        varchar semester
-        tinyint status
-        datetime join_time
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 选课ID PK
+        bigint 课程ID FK
+        bigint 学生ID FK
+        varchar 学期
+        tinyint 状态
+        datetime 加入时间
+        tinyint 逻辑删除
     }
 
     t_experiment {
-        bigint id PK
-        bigint course_id FK
-        varchar exp_code UK
-        varchar exp_name
-        text objective
-        text principle
-        text equipment
-        varchar risk_level
-        int duration_minutes
-        int safety_pass_score
-        tinyint reservation_enabled
-        tinyint status
-        int sort
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 实验ID PK
+        bigint 课程ID FK
+        varchar 实验编码 UK
+        varchar 实验名称
+        text 实验目的
+        text 实验原理
+        text 实验设备
+        varchar 风险等级
+        int 时长分钟
+        int 安全准入及格分
+        tinyint 开放预约
+        tinyint 状态
+        int 排序
+        tinyint 逻辑删除
     }
 
     t_experiment_step {
-        bigint id PK
-        bigint experiment_id FK
-        int step_no
-        varchar title
-        text content
-        text safety_tip
-        tinyint required_flag
-        int estimated_minutes
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 步骤ID PK
+        bigint 实验ID FK
+        int 步骤序号
+        varchar 步骤标题
+        text 步骤内容
+        text 安全提示
+        tinyint 是否必做
+        int 预计分钟
+        tinyint 逻辑删除
     }
 
     t_resource {
-        bigint id PK
-        bigint experiment_id FK
-        varchar title
-        varchar resource_type
-        varchar url
-        varchar file_path
-        bigint file_size
-        tinyint required_flag
-        int view_count
-        tinyint status
-        int sort
-        bigint upload_user_id FK
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 资源ID PK
+        bigint 实验ID FK
+        varchar 资源标题
+        varchar 资源类型
+        varchar URL
+        bigint 文件大小
+        tinyint 是否必修
+        int 查看次数
+        bigint 上传者ID FK
+        tinyint 逻辑删除
     }
 
     t_safety_knowledge {
-        bigint id PK
-        bigint experiment_id FK
-        varchar knowledge_point
-        varchar risk_type
-        text content
-        bigint related_step_id FK
-        tinyint status
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 知识ID PK
+        bigint 实验ID FK
+        varchar 知识点
+        varchar 风险类型
+        text 知识内容
+        bigint 关联步骤ID FK
+        tinyint 逻辑删除
     }
 
     t_learning_record {
-        bigint id PK
-        bigint student_id FK
-        bigint resource_id FK
-        bigint experiment_id FK
-        decimal progress
-        int duration_seconds
-        tinyint finish_flag
-        datetime first_time
-        datetime last_time
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 记录ID PK
+        bigint 学生ID FK
+        bigint 资源ID FK
+        bigint 实验ID FK
+        decimal 学习进度
+        int 学习时长秒
+        tinyint 是否完成
+        datetime 首次学习
+        datetime 最近学习
+        tinyint 逻辑删除
     }
 
-    %% ==================== 考试模块 ====================
+    t_user ||--o{ t_lab_course : 授课
+    t_user ||--o{ t_course_student : 选课
+    t_lab_course ||--o{ t_course_student : 包含
+    t_lab_course ||--o{ t_experiment : 包含
+    t_experiment ||--o{ t_experiment_step : 包含步骤
+    t_experiment ||--o{ t_resource : 包含资源
+    t_user ||--o{ t_resource : 上传
+    t_experiment ||--o{ t_safety_knowledge : 关联安全知识
+    t_experiment_step ||--o{ t_safety_knowledge : 关联
+    t_user ||--o{ t_learning_record : 学习记录
+    t_resource ||--o{ t_learning_record : 学习记录
+    t_experiment ||--o{ t_learning_record : 学习记录
+```
+
+| 表 | 说明 |
+|----|------|
+| `t_lab_course` | 实验课程，teacher_id关联授课教师 |
+| `t_course_student` | 学生选课关系表 |
+| `t_experiment` | 实验项目，risk_level: LOW/MEDIUM/HIGH |
+| `t_experiment_step` | 实验操作步骤，含安全提示 |
+| `t_resource` | 教学资源(DOCUMENT/VIDEO)，view_count累计点击 |
+| `t_safety_knowledge` | 安全知识库，可按实验/步骤关联 |
+| `t_learning_record` | 学生学习进度追踪，progress 0-100 |
+
+---
+
+## 3. 📝 考试模块（5张表）
+
+```mermaid
+erDiagram
     t_question {
-        bigint id PK
-        varchar type
-        text content
-        json options
-        varchar answer
-        int score
-        varchar analysis
-        varchar knowledge_point
-        varchar difficulty
-        bigint course_id FK
-        bigint create_by FK
-        datetime create_time
-        datetime update_time
-        tinyint is_deleted
+        bigint 题目ID PK
+        varchar 题型
+        text 题目内容
+        json 选项JSON
+        varchar 正确答案
+        int 分值
+        varchar 解析
+        varchar 知识点
+        varchar 难度
+        bigint 课程ID FK
+        bigint 出题人ID FK
+        tinyint 逻辑删除
     }
 
     t_exam_paper {
-        bigint id PK
-        varchar title
-        varchar description
-        bigint course_id FK
-        bigint experiment_id FK
-        int total_score
-        int pass_score
-        int duration
-        bigint teacher_id FK
-        varchar status
-        datetime start_time
-        datetime end_time
-        datetime create_time
-        datetime update_time
-        tinyint is_deleted
+        bigint 试卷ID PK
+        varchar 试卷标题
+        varchar 描述
+        bigint 课程ID FK
+        bigint 实验ID FK
+        int 总分
+        int 及格分
+        int 考试时长
+        bigint 出卷教师ID FK
+        varchar 状态
+        datetime 开始时间
+        datetime 结束时间
+        tinyint 逻辑删除
     }
 
     t_exam_paper_question {
-        bigint id PK
-        bigint paper_id FK
-        bigint question_id FK
-        int score
-        int order_num
+        bigint 关联ID PK
+        bigint 试卷ID FK
+        bigint 题目ID FK
+        int 分值
+        int 排序
     }
 
     t_exam_record {
-        bigint id PK
-        bigint student_id FK
-        bigint paper_id FK
-        bigint experiment_id FK
-        int total_score
-        int objective_score
-        int subjective_score
-        varchar status
-        tinyint passed
-        datetime start_time
-        datetime submit_time
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 考试记录ID PK
+        bigint 学生ID FK
+        bigint 试卷ID FK
+        bigint 实验ID FK
+        int 总分
+        int 客观题得分
+        int 主观题得分
+        varchar 状态
+        tinyint 是否通过
+        datetime 开始时间
+        datetime 提交时间
+        tinyint 逻辑删除
     }
 
     t_exam_answer {
-        bigint id PK
-        bigint record_id FK
-        bigint question_id FK
-        bigint knowledge_id FK
-        varchar student_answer
-        tinyint is_correct
-        tinyint correct_flag
-        int score
+        bigint 作答ID PK
+        bigint 考试记录ID FK
+        bigint 题目ID FK
+        varchar 学生答案
+        tinyint 是否正确
+        tinyint 批改标记
+        int 得分
     }
 
-    %% ==================== 预约模块 ====================
+    t_lab_course ||--o{ t_question : 题库
+    t_user ||--o{ t_question : 出题
+    t_lab_course ||--o{ t_exam_paper : 试卷
+    t_experiment ||--o{ t_exam_paper : 试卷
+    t_user ||--o{ t_exam_paper : 出卷
+    t_exam_paper ||--o{ t_exam_paper_question : 组卷
+    t_question ||--o{ t_exam_paper_question : 选题
+    t_user ||--o{ t_exam_record : 考试
+    t_exam_paper ||--o{ t_exam_record : 答卷
+    t_exam_record ||--o{ t_exam_answer : 作答明细
+    t_question ||--o{ t_exam_answer : 作答题目
+```
+
+| 表 | 说明 |
+|----|------|
+| `t_question` | 题库：SINGLE/MULTIPLE/JUDGE/SHORT |
+| `t_exam_paper` | 试卷：DRAFT→PUBLISHED→CLOSED |
+| `t_exam_paper_question` | 试卷↔题目 多对多，含每题分值 |
+| `t_exam_record` | 考试记录：IN_PROGRESS→SUBMITTED→GRADED |
+| `t_exam_answer` | 每道题的作答详情 |
+
+---
+
+## 4. 📅 预约模块（2张表）
+
+```mermaid
+erDiagram
     t_lab_time_slot {
-        bigint id PK
-        bigint lab_id
-        bigint experiment_id FK
-        date date
-        time start_time
-        time end_time
-        int capacity
-        int booked_count
-        varchar status
-        bigint create_by FK
-        datetime create_time
-        datetime update_time
+        bigint 时间段ID PK
+        bigint 实验室编号
+        bigint 实验ID FK
+        date 日期
+        time 开始时间
+        time 结束时间
+        int 容量
+        int 已预约数
+        varchar 状态
+        bigint 创建者ID FK
     }
 
     t_reservation {
-        bigint id PK
-        bigint student_id FK
-        bigint time_slot_id FK
-        bigint lab_id
-        bigint experiment_id FK
-        varchar purpose
-        varchar status
-        bigint teacher_id FK
-        varchar review_comment
-        datetime review_time
-        datetime create_time
-        datetime update_time
-        tinyint deleted
+        bigint 预约ID PK
+        bigint 学生ID FK
+        bigint 时间段ID FK
+        bigint 实验室编号
+        bigint 实验ID FK
+        varchar 预约目的
+        varchar 状态
+        bigint 审核教师ID FK
+        varchar 审核意见
+        datetime 审核时间
+        tinyint 逻辑删除
     }
 
-    %% ==================== 报告模块 ====================
+    t_experiment ||--o{ t_lab_time_slot : 可预约时段
+    t_user ||--o{ t_lab_time_slot : 创建时段
+    t_user ||--o{ t_reservation : 学生预约
+    t_lab_time_slot ||--o{ t_reservation : 预约时段
+    t_user ||--o{ t_reservation : 教师审核
+```
+
+| 表 | 说明 |
+|----|------|
+| `t_lab_time_slot` | 实验室开放时段，booked_count随预约更新 |
+| `t_reservation` | 预约记录：PENDING→APPROVED/REJECTED/CANCELLED |
+
+---
+
+## 5. 📄 报告模块（2张表）
+
+```mermaid
+erDiagram
     t_report {
-        bigint id PK
-        bigint student_id FK
-        bigint experiment_id FK
-        varchar title
-        text content
-        varchar file_url
-        varchar status
-        datetime submit_time
-        datetime latest_submit_time
-        datetime create_time
-        datetime update_time
-        tinyint is_deleted
+        bigint 报告ID PK
+        bigint 学生ID FK
+        bigint 实验ID FK
+        varchar 报告标题
+        text 报告内容
+        varchar 附件URL
+        varchar 状态
+        datetime 提交时间
+        datetime 最近提交
+        tinyint 逻辑删除
     }
 
     t_report_score {
-        bigint id PK
-        bigint report_id FK
-        bigint teacher_id FK
-        int score
-        varchar comment
-        tinyint is_latest
-        datetime create_time
-        datetime grade_time
+        bigint 评分ID PK
+        bigint 报告ID FK
+        bigint 教师ID FK
+        int 分数
+        varchar 评语
+        tinyint 是否最新评分
+        datetime 评分时间
     }
 
-    %% ==================== 推荐与AI模块 ====================
+    t_user ||--o{ t_report : 撰写报告
+    t_experiment ||--o{ t_report : 实验报告
+    t_report ||--o{ t_report_score : 评分记录
+    t_user ||--o{ t_report_score : 教师评分
+```
+
+| 表 | 说明 |
+|----|------|
+| `t_report` | 实验报告：DRAFT→SUBMITTED→GRADED |
+| `t_report_score` | 多次评分保留历史，is_latest=1为最新 |
+
+---
+
+## 6. 🤖 推荐与AI模块（2张表）
+
+```mermaid
+erDiagram
     t_recommend_record {
-        bigint id PK
-        bigint student_id FK
-        bigint experiment_id FK
-        bigint resource_id FK
-        decimal total_score
-        json score_breakdown
-        varchar reason
-        tinyint clicked
-        datetime create_time
+        bigint 推荐ID PK
+        bigint 学生ID FK
+        bigint 实验ID FK
+        bigint 资源ID FK
+        decimal 推荐总分
+        json 评分明细JSON
+        varchar 推荐理由
+        tinyint 是否点击
+        datetime 推荐时间
     }
 
     t_ai_chat_record {
-        bigint id PK
-        bigint user_id FK
-        varchar scene
-        text question
-        text answer
-        varchar tool_name
-        bigint experiment_id FK
-        text manual_revision
-        datetime create_time
+        bigint 对话ID PK
+        bigint 用户ID FK
+        varchar 场景
+        text 用户问题
+        text AI回答
+        varchar 工具名称
+        bigint 实验ID FK
+        text 人工修订
+        datetime 对话时间
     }
 
-    %% ==================== 表关系 ====================
-
-    %% 用户权限
-    t_user ||--o{ t_user_role : ""
-    t_role ||--o{ t_user_role : ""
-    t_role ||--o{ t_role_permission : ""
-    t_permission ||--o{ t_role_permission : ""
-    t_permission ||--o{ t_permission : ""
-    t_user ||--o{ t_token : ""
-
-    %% 实验教学
-    t_user ||--o{ t_lab_course : ""
-    t_lab_course ||--o{ t_course_student : ""
-    t_user ||--o{ t_course_student : ""
-    t_lab_course ||--o{ t_experiment : ""
-    t_experiment ||--o{ t_experiment_step : ""
-    t_experiment ||--o{ t_resource : ""
-    t_user ||--o{ t_resource : ""
-    t_experiment ||--o{ t_safety_knowledge : ""
-    t_experiment_step ||--o{ t_safety_knowledge : ""
-    t_user ||--o{ t_learning_record : ""
-    t_resource ||--o{ t_learning_record : ""
-    t_experiment ||--o{ t_learning_record : ""
-
-    %% 考试
-    t_lab_course ||--o{ t_question : ""
-    t_user ||--o{ t_question : ""
-    t_lab_course ||--o{ t_exam_paper : ""
-    t_experiment ||--o{ t_exam_paper : ""
-    t_user ||--o{ t_exam_paper : ""
-    t_exam_paper ||--o{ t_exam_paper_question : ""
-    t_question ||--o{ t_exam_paper_question : ""
-    t_user ||--o{ t_exam_record : ""
-    t_exam_paper ||--o{ t_exam_record : ""
-    t_experiment ||--o{ t_exam_record : ""
-    t_exam_record ||--o{ t_exam_answer : ""
-    t_question ||--o{ t_exam_answer : ""
-
-    %% 预约
-    t_experiment ||--o{ t_lab_time_slot : ""
-    t_user ||--o{ t_lab_time_slot : ""
-    t_user ||--o{ t_reservation : ""
-    t_lab_time_slot ||--o{ t_reservation : ""
-    t_experiment ||--o{ t_reservation : ""
-    t_user ||--o{ t_reservation : ""
-
-    %% 报告
-    t_user ||--o{ t_report : ""
-    t_experiment ||--o{ t_report : ""
-    t_report ||--o{ t_report_score : ""
-    t_user ||--o{ t_report_score : ""
-
-    %% 推荐与AI
-    t_user ||--o{ t_recommend_record : ""
-    t_experiment ||--o{ t_recommend_record : ""
-    t_resource ||--o{ t_recommend_record : ""
-    t_user ||--o{ t_ai_chat_record : ""
-    t_experiment ||--o{ t_ai_chat_record : ""
+    t_user ||--o{ t_recommend_record : 推荐给
+    t_experiment ||--o{ t_recommend_record : 关联实验
+    t_resource ||--o{ t_recommend_record : 推荐资源
+    t_user ||--o{ t_ai_chat_record : AI对话
+    t_experiment ||--o{ t_ai_chat_record : 关联实验
 ```
 
-## 模块总览
+| 表 | 说明 |
+|----|------|
+| `t_recommend_record` | 资源推荐记录，score_breakdown存各维度评分 |
+| `t_ai_chat_record` | AI问答记录，scene: SAFETY_QA / ERROR_EXPLAIN / REPORT_SUGGEST |
 
-| 模块 | 表数 | 表名 |
-|------|------|------|
-| 🔐 用户权限 | 6 | `t_user` · `t_role` · `t_permission` · `t_user_role` · `t_role_permission` · `t_token` |
-| 📚 实验教学 | 7 | `t_lab_course` · `t_course_student` · `t_experiment` · `t_experiment_step` · `t_resource` · `t_safety_knowledge` · `t_learning_record` |
-| 📝 考试 | 5 | `t_question` · `t_exam_paper` · `t_exam_paper_question` · `t_exam_record` · `t_exam_answer` |
-| 📅 预约 | 2 | `t_lab_time_slot` · `t_reservation` |
-| 📄 报告 | 2 | `t_report` · `t_report_score` |
-| 🤖 推荐与AI | 2 | `t_recommend_record` · `t_ai_chat_record` |
+---
 
-## 核心关系说明
+## 模块关系总览
 
 ```
-t_user ──→ t_user_role ←── t_role ──→ t_role_permission ←── t_permission
-  │                                                             │
-  │  teacher_id / student_id / create_by                       parent_id (菜单树)
-  │                                                             │
-  ▼                                                             ▼
-t_lab_course ──→ t_experiment ──→ t_experiment_step    菜单栏 + 按钮权限
-  │                  │
-  │                  ├──→ t_resource ──→ t_learning_record
-  │                  ├──→ t_safety_knowledge
-  │                  ├──→ t_exam_paper ──→ t_exam_paper_question ←── t_question
-  │                  │       │
-  │                  │       └──→ t_exam_record ──→ t_exam_answer
-  │                  │
-  │                  ├──→ t_lab_time_slot ──→ t_reservation
-  │                  │
-  │                  ├──→ t_report ──→ t_report_score
-  │                  │
-  │                  └──→ t_recommend_record (← t_resource)
-  │
-  └──→ t_course_student ←── t_user
+ t_user ────→ t_user_role ←──── t_role ────→ t_role_permission ←──── t_permission
+   │  │                                          
+   │  └──→ t_token (登录)                          
+   │                                               
+   ├──→ t_lab_course ──→ t_experiment ──→ t_experiment_step
+   │        │                 │
+   │        │                 ├──→ t_resource ←── t_learning_record ── t_user
+   │        │                 ├──→ t_safety_knowledge
+   │        │                 ├──→ t_exam_paper ──→ t_question ──→ t_exam_record
+   │        │                 ├──→ t_lab_time_slot ──→ t_reservation
+   │        │                 ├──→ t_report ──→ t_report_score
+   │        │                 ├──→ t_recommend_record
+   │        │                 └──→ t_ai_chat_record
+   │        │
+   │        └──→ t_course_student ←── t_user (选课)
+   │
+   └──→ (所有表的 student_id / teacher_id / create_by 都指向 t_user)
 ```
-
-## 表字段详解
-
-### 🔐 用户权限模块
-
-**t_user — 用户表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| id \| bigint \| 主键 \|
-\| username \| varchar(50) \| 用户名/学工号，唯一 \|
-\| password \| varchar(64) \| MD5加密密码 \|
-\| real_name \| varchar(50) \| 真实姓名 \|
-\| phone \| varchar(30) \| 手机号 \|
-\| status \| tinyint \| 状态：1启用 0禁用 \|
-
-**t_role — 角色表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| id \| bigint \| 主键 \|
-\| role_name \| varchar(50) \| 角色名称 \|
-\| role_code \| varchar(50) \| 角色编码：ADMIN / TEACHER / STUDENT / LAB_ADMIN \|
-\| description \| varchar(255) \| 描述 \|
-
-**t_permission — 权限表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| id \| bigint \| 主键 \|
-\| name \| varchar(100) \| 权限名称 \|
-\| code \| varchar(100) \| 权限编码，如 course:create \|
-\| type \| tinyint \| 1=菜单 2=按钮/接口权限 \|
-\| parent_id \| bigint \| 父权限ID，构建菜单树 \|
-\| path \| varchar(255) \| 前端路由路径 \|
-\| icon \| varchar(100) \| 图标 \|
-\| sort \| int \| 排序 \|
-
-### 📚 实验教学模块
-
-**t_lab_course — 课程表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| course_code \| varchar(50) \| 课程编码，唯一 \|
-\| course_name \| varchar(100) \| 课程名称 \|
-\| direction \| varchar(50) \| 专业方向 \|
-\| teacher_id \| bigint \| 授课教师ID → t_user \|
-\| semester \| varchar(20) \| 学期 \|
-
-**t_experiment — 实验表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| course_id \| bigint \| 所属课程ID → t_lab_course \|
-\| exp_code \| varchar(50) \| 实验编码 \|
-\| exp_name \| varchar(120) \| 实验名称 \|
-\| risk_level \| varchar(20) \| 风险等级：LOW / MEDIUM / HIGH \|
-\| safety_pass_score \| int \| 安全准入考试及格分 \|
-\| reservation_enabled \| tinyint \| 是否开放预约 \|
-
-### 📝 考试模块
-
-**t_question — 题库表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| type \| varchar(20) \| 题型：SINGLE / MULTIPLE / JUDGE / SHORT \|
-\| content \| text \| 题目内容 \|
-\| options \| json \| 选项JSON（选择题） \|
-\| answer \| varchar(500) \| 正确答案 \|
-\| difficulty \| varchar(20) \| 难度：EASY / MEDIUM / HARD \|
-\| knowledge_point \| varchar(200) \| 知识点标签 \|
-
-**t_exam_paper — 试卷表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| total_score \| int \| 总分 \|
-\| pass_score \| int \| 及格线 \|
-\| duration \| int \| 考试时长（分钟） \|
-\| status \| varchar(20) \| DRAFT / PUBLISHED / CLOSED \|
-
-**t_exam_record — 考试记录表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| student_id \| bigint \| 考生ID → t_user \|
-\| paper_id \| bigint \| 试卷ID → t_exam_paper \|
-\| objective_score \| int \| 客观题得分 \|
-\| subjective_score \| int \| 主观题得分 \|
-\| passed \| tinyint \| 是否通过 \|
-
-### 📅 预约模块
-
-**t_lab_time_slot — 实验室时间段表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| lab_id \| bigint \| 实验室编号 \|
-\| date \| date \| 日期 \|
-\| start_time \| time \| 开始时间 \|
-\| end_time \| time \| 结束时间 \|
-\| capacity \| int \| 容量 \|
-\| booked_count \| int \| 已预约人数 \|
-
-**t_reservation — 预约表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| status \| varchar(20) \| PENDING / APPROVED / REJECTED / CANCELLED \|
-\| teacher_id \| bigint \| 审核教师 → t_user \|
-\| review_comment \| varchar(500) \| 审核意见 \|
-
-### 📄 报告模块
-
-**t_report — 实验报告表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| status \| varchar(20) \| DRAFT / SUBMITTED / GRADED \|
-\| submit_time \| datetime \| 提交时间 \|
-
-**t_report_score — 报告评分表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| score \| int \| 分数 \|
-\| comment \| varchar(500) \| 评语 \|
-\| is_latest \| tinyint \| 是否最新评分（支持多次批改） \|
-
-### 🤖 推荐与AI模块
-
-**t_recommend_record — 推荐记录表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| total_score \| decimal \| 推荐总分 \|
-\| score_breakdown \| json \| 各维度评分明细JSON \|
-\| reason \| varchar(500) \| 推荐理由 \|
-\| clicked \| tinyint \| 用户是否点击 \|
-
-**t_ai_chat_record — AI对话记录表**
-\| 字段 \| 类型 \| 说明 \|
-\|------\|------\|------\|
-\| scene \| varchar(50) \| 场景：SAFETY_QA / ERROR_EXPLAIN / REPORT_SUGGEST \|
-\| question \| text \| 用户问题 \|
-\| answer \| text \| AI回答 \|
-\| manual_revision \| text \| 人工修订内容 \|
