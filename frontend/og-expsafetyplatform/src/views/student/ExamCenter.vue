@@ -9,6 +9,19 @@
       <el-button :icon="Refresh" @click="reloadActiveTab">刷新</el-button>
     </section>
 
+    <el-alert
+      v-if="inProgressExam?.recordId"
+      class="resume-alert"
+      type="warning"
+      :closable="false"
+      show-icon
+    >
+      <template #title>
+        你有一场未完成的考试，剩余 {{ inProgressCountdownText }}，点击继续考试。
+      </template>
+      <el-button size="small" type="warning" @click="resumeInProgressExam">继续考试</el-button>
+    </el-alert>
+
     <el-tabs v-model="activeTab" class="tabs" @tab-change="reloadActiveTab">
       <el-tab-pane label="可参加考试" name="available">
         <section class="panel">
@@ -22,6 +35,9 @@
             <el-table-column prop="totalScore" label="总分" width="80" />
             <el-table-column prop="passScore" label="及格分" width="90" />
             <el-table-column prop="duration" label="时长(分钟)" width="110" />
+            <el-table-column label="剩余次数" width="100">
+              <template #default="{ row }">{{ row.remainingAttempts ?? '-' }}</template>
+            </el-table-column>
             <el-table-column label="操作" width="130" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" :icon="VideoPlay" @click="handleStart(row)">开始考试</el-button>
@@ -37,8 +53,9 @@
           <div class="toolbar">
             <el-select v-model="recordStatus" clearable placeholder="考试状态">
               <el-option label="进行中" value="IN_PROGRESS" />
-              <el-option label="已提交" value="SUBMITTED" />
-              <el-option label="已复核" value="REVIEWED" />
+              <el-option label="待批改" value="PENDING_REVIEW" />
+              <el-option label="已评分" value="GRADED" />
+              <el-option label="已超时" value="EXPIRED" />
             </el-select>
             <el-button type="primary" :icon="Search" @click="loadRecords">查询</el-button>
           </div>
@@ -97,11 +114,24 @@
     <el-dialog v-model="examVisible" :title="currentPaper?.title || '考试答题'" width="860px" top="4vh">
       <div class="exam-meta">
         <el-tag type="primary">记录ID {{ examSession.recordId }}</el-tag>
-        <el-tag type="warning">时长 {{ examSession.duration || 0 }} 分钟</el-tag>
+        <el-tag type="warning">试卷ID {{ examSession.paperId || '-' }}</el-tag>
+        <el-tag :type="remainingSeconds <= 60 ? 'danger' : 'success'">剩余 {{ countdownText }}</el-tag>
+        <el-tag v-if="lastSaveTime" type="info">已保存 {{ lastSaveTime }}</el-tag>
         <span>结束时间：{{ examSession.endTime || '-' }}</span>
       </div>
+      <div class="answer-card">
+        <el-button
+          v-for="(question, index) in examSession.questions"
+          :key="question.id"
+          size="small"
+          :type="hasAnswer(question.id) ? 'primary' : 'default'"
+          @click="scrollToQuestion(question.id)"
+        >
+          {{ index + 1 }}
+        </el-button>
+      </div>
       <div class="question-list">
-        <div v-for="(question, index) in examSession.questions" :key="question.id" class="question-box">
+        <div v-for="(question, index) in examSession.questions" :id="`question-${question.id}`" :key="question.id" class="question-box">
           <div class="question-title">
             <strong>{{ index + 1 }}. {{ question.content }}</strong>
             <el-tag size="small">{{ questionTypeLabel(question.type) }} / {{ question.score || 0 }} 分</el-tag>
@@ -126,7 +156,8 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="examVisible = false">稍后提交</el-button>
+        <el-button @click="saveCurrentAnswers">保存</el-button>
+        <el-button @click="postponeExam">稍后提交</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">提交试卷</el-button>
       </template>
     </el-dialog>
@@ -159,14 +190,17 @@
 </template>
 
 <script setup>
-import { h, onMounted, reactive, ref, resolveComponent } from 'vue'
+import { computed, h, onMounted, onUnmounted, reactive, ref, resolveComponent } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Search, VideoPlay, View } from '@element-plus/icons-vue'
 import {
+  getAdmissionStatus,
   getAvailableExams,
   getExamRecordDetail,
   getExamRecords,
+  getInProgressExam,
   getWrongQuestions,
+  saveExamAnswers,
   startExam,
   submitExam,
 } from '@/api/exam'
@@ -200,6 +234,13 @@ const recordsLoading = ref(false)
 const wrongLoading = ref(false)
 const recordDetailLoading = ref(false)
 const submitting = ref(false)
+const remainingSeconds = ref(0)
+const inProgressExam = ref(null)
+const inProgressRemainingSeconds = ref(0)
+const lastSaveTime = ref('')
+let countdownTimer = null
+let autosaveTimer = null
+let inProgressTimer = null
 
 const availablePapers = ref([])
 const records = ref([])
@@ -215,10 +256,32 @@ const wrongTotal = ref(0)
 
 const examVisible = ref(false)
 const recordVisible = ref(false)
-const examSession = reactive({ recordId: null, questions: [], duration: 0, endTime: '' })
+const examSession = reactive({ recordId: null, paperId: null, paperTitle: '', questions: [], endTime: '' })
 const answers = reactive({})
 
-onMounted(loadAvailable)
+onMounted(() => {
+  loadAvailable()
+  checkInProgressExam()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+onUnmounted(() => {
+  saveCurrentAnswers().catch(() => {})
+  stopExamTimers()
+  stopInProgressTimer()
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+const countdownText = computed(() => {
+  const minutes = Math.floor(remainingSeconds.value / 60)
+  const seconds = remainingSeconds.value % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
+
+const inProgressCountdownText = computed(() => {
+  const minutes = Math.floor(inProgressRemainingSeconds.value / 60)
+  const seconds = inProgressRemainingSeconds.value % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
 
 async function reloadActiveTab() {
   if (activeTab.value === 'available') await loadAvailable()
@@ -275,37 +338,145 @@ async function loadWrongQuestions() {
 async function handleStart(paper) {
   currentPaper.value = paper
   const result = await startExam(paper.id)
+  if (!result) {
+    await Promise.allSettled([loadAvailable(), loadRecords(), checkInProgressExam()])
+    return
+  }
+  openExamSession(result, paper)
+}
+
+function openExamSession(result, paper = null) {
+  currentPaper.value = paper || { title: result?.paperTitle }
   Object.assign(examSession, {
     recordId: result?.recordId,
+    paperId: result?.paperId || paper?.id,
+    paperTitle: result?.paperTitle || paper?.title,
     questions: result?.questions || [],
-    duration: result?.duration || paper.duration,
     endTime: result?.endTime,
   })
   Object.keys(answers).forEach((key) => delete answers[key])
   examSession.questions.forEach((question) => {
-    answers[question.id] = question.type === 'MULTIPLE' ? [] : ''
+    const saved = result?.answers?.[question.id] ?? result?.answers?.[String(question.id)]
+    answers[question.id] = question.type === 'MULTIPLE'
+      ? String(saved || '').split(',').filter(Boolean)
+      : saved || ''
   })
+  startExamTimers(result?.endTime)
   examVisible.value = true
 }
 
+async function checkInProgressExam() {
+  const result = await getInProgressExam().catch(() => null)
+  inProgressExam.value = result || null
+  startInProgressTimer(result?.endTime)
+}
+
+function resumeInProgressExam() {
+  if (!inProgressExam.value) return
+  openExamSession(inProgressExam.value)
+}
+
 async function handleSubmit() {
+  await ElMessageBox.confirm('确认提交试卷吗？提交后不能重复提交。', '提交确认', { type: 'warning' })
+  await doSubmit(false)
+}
+
+async function doSubmit(autoSubmit) {
   const payload = examSession.questions.map((question) => ({
     questionId: question.id,
     answer: Array.isArray(answers[question.id]) ? answers[question.id].join(',') : answers[question.id],
   }))
   submitting.value = true
   try {
-    const result = await submitExam(examSession.recordId, { answers: payload })
+    const result = await submitExam(examSession.recordId, { answers: payload, autoSubmit })
+    stopExamTimers()
+    stopInProgressTimer()
+    inProgressExam.value = null
     examVisible.value = false
-    ElMessageBox.alert(
-      `总分：${result?.totalScore || 0}，正确题数：${result?.correctCount || 0}/${result?.totalCount || 0}，结果：${result?.passed ? '通过' : '未通过'}`,
-      '提交成功',
-      { type: result?.passed ? 'success' : 'warning' },
-    )
+    await showSubmitResult(result)
     await Promise.allSettled([loadAvailable(), loadRecords()])
   } finally {
     submitting.value = false
   }
+}
+
+async function saveCurrentAnswers() {
+  if (!examSession.recordId) return
+  const payload = examSession.questions.map((question) => ({
+    questionId: question.id,
+    answer: Array.isArray(answers[question.id]) ? answers[question.id].join(',') : answers[question.id],
+  }))
+  await saveExamAnswers(examSession.recordId, { answers: payload })
+  lastSaveTime.value = new Date().toLocaleTimeString()
+}
+
+async function postponeExam() {
+  await saveCurrentAnswers()
+  examVisible.value = false
+  ElMessage.success('已保存当前答案')
+}
+
+function startExamTimers(endTime) {
+  stopExamTimers()
+  const end = new Date(endTime).getTime()
+  const tick = async () => {
+    remainingSeconds.value = Math.max(0, Math.floor((end - Date.now()) / 1000))
+    if (remainingSeconds.value <= 0) {
+      stopExamTimers()
+      if (examSession.recordId && !submitting.value) {
+        ElMessage.warning('考试时间已到，系统正在自动交卷')
+        await doSubmit(true)
+      }
+    }
+  }
+  tick()
+  countdownTimer = window.setInterval(tick, 1000)
+  autosaveTimer = window.setInterval(() => {
+    saveCurrentAnswers().catch(() => {})
+  }, 30000)
+}
+
+function startInProgressTimer(endTime) {
+  stopInProgressTimer()
+  if (!endTime) return
+  const end = new Date(endTime).getTime()
+  const tick = () => {
+    inProgressRemainingSeconds.value = Math.max(0, Math.floor((end - Date.now()) / 1000))
+  }
+  tick()
+  inProgressTimer = window.setInterval(tick, 1000)
+}
+
+function stopInProgressTimer() {
+  if (inProgressTimer) window.clearInterval(inProgressTimer)
+  inProgressTimer = null
+}
+
+function handleBeforeUnload() {
+  saveCurrentAnswers().catch(() => {})
+}
+
+function stopExamTimers() {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+  if (autosaveTimer) window.clearInterval(autosaveTimer)
+  countdownTimer = null
+  autosaveTimer = null
+}
+
+async function showSubmitResult(result) {
+  const pendingReview = result?.status === 'PENDING_REVIEW'
+  let admissionText = ''
+  if (result?.admission?.experimentId) {
+    const admission = await getAdmissionStatus(result.admission.experimentId).catch(() => null)
+    admissionText = admission?.qualified ? `\n准入资格：已获得，有效期至 ${admission.validUntil || '-'}` : `\n准入资格：${admission?.reason || '未获得'}`
+  }
+  const weakItems = (result?.answerDetails || []).filter((item) => item.isCorrect === false).map((item) => `#${item.questionId}`).slice(0, 6)
+  const weakText = !result?.passed && weakItems.length ? `\n需复习错题：${weakItems.join('、')}` : ''
+  ElMessageBox.alert(
+    `总分：${result?.totalScore || 0}，正确题数：${result?.correctCount || 0}/${result?.totalCount || 0}，结果：${pendingReview ? '待教师批改' : (result?.passed ? '通过' : '未通过')}${weakText}${admissionText}`,
+    result?.autoSubmit ? '已自动交卷' : '提交成功',
+    { type: result?.passed ? 'success' : 'warning' },
+  )
 }
 
 async function openRecord(row) {
@@ -321,7 +492,7 @@ async function openRecord(row) {
 
 function normalizedOptions(question) {
   if (question.type === 'JUDGE') {
-    return [{ value: 'true', label: '正确' }, { value: 'false', label: '错误' }]
+    return [{ value: 'TRUE', label: '正确' }, { value: 'FALSE', label: '错误' }]
   }
   const raw = question.options
   if (!raw) return []
@@ -344,6 +515,15 @@ function optionFromValue(item, index) {
   return { value, label: String(item) }
 }
 
+function hasAnswer(questionId) {
+  const value = answers[questionId]
+  return Array.isArray(value) ? value.length > 0 : Boolean(value)
+}
+
+function scrollToQuestion(questionId) {
+  document.getElementById(`question-${questionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function questionTypeLabel(type) {
   return { SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', SHORT_ANSWER: '简答题' }[type] || type || '题目'
 }
@@ -351,6 +531,9 @@ function questionTypeLabel(type) {
 function examStatusMeta(status) {
   return {
     IN_PROGRESS: { label: '进行中', type: 'warning' },
+    PENDING_REVIEW: { label: '待批改', type: 'primary' },
+    GRADED: { label: '已评分', type: 'success' },
+    EXPIRED: { label: '已超时', type: 'danger' },
     SUBMITTED: { label: '已提交', type: 'primary' },
     REVIEWED: { label: '已复核', type: 'success' },
   }[status] || { label: status || '未知', type: 'info' }
@@ -363,12 +546,15 @@ function examStatusMeta(status) {
 .eyebrow { color: #6b7c8f; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
 .page-head h1 { color: #13233a; font-size: 26px; line-height: 1.2; margin-bottom: 8px; }
 .page-desc { color: #667085; line-height: 1.6; }
+.resume-alert { margin-bottom: 14px; }
+.resume-alert :deep(.el-alert__content) { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 .tabs { background: #fff; border: 1px solid #e7ebf0; border-radius: 8px; padding: 14px; }
 .panel { min-height: 320px; }
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
 .toolbar .el-input, .toolbar .el-select { max-width: 220px; }
 .pagination-row { display: flex; justify-content: space-between; align-items: center; color: #667085; padding-top: 14px; }
 .exam-meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.answer-card { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #edf1f5; }
 .question-list { max-height: 58vh; overflow: auto; padding-right: 6px; }
 .question-box { border: 1px solid #e7ebf0; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
 .question-title { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: #13233a; }

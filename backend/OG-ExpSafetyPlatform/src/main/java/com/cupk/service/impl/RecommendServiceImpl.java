@@ -41,50 +41,63 @@ public class RecommendServiceImpl implements RecommendService {
     @Autowired
     private LearningRecordMapper learningRecordMapper;
 
-    // ===== 浜斿洜瀛愭潈閲嶏紙鏉ヨ嚜宸ヤ綔鎻愮翰闄勫綍A锛?=====
-    private static final double W_KNOWLEDGE    = 0.35;
-    private static final double W_ERROR        = 0.25;
-    private static final double W_NEWNESS      = 0.20;
-    private static final double W_POPULARITY   = 0.10;
-    private static final double W_DIFFICULTY   = 0.10;
+    @Autowired
+    private CourseStudentMapper courseStudentMapper;
+
     private static final int    TOP_N          = 10;
 
     @Override
     public Map<String, Object> getRecommendedResources(Long experimentId) {
         Long studentId = UserContext.getUserId();
+        List<Long> courseIds = enrolledCourseIds(studentId);
+        if (courseIds.isEmpty()) {
+            return Map.of("resources", List.of(), "generatedAt", new Date(), "totalEvaluated", 0);
+        }
+        if (experimentId != null) {
+            Experiment experiment = experimentMapper.selectById(experimentId);
+            if (experiment == null || !courseIds.contains(experiment.getCourseId())) {
+                return Map.of("resources", List.of(), "generatedAt", new Date(), "totalEvaluated", 0);
+            }
+        }
+
+        Set<String> weakPoints = getStudentWeakKnowledgePoints(studentId);
+        LambdaQueryWrapper<TeachingResource> resourceWrapper = new LambdaQueryWrapper<TeachingResource>()
+                .eq(TeachingResource::getStatus, 1);
+        if (experimentId != null) {
+            resourceWrapper.and(w -> w.in(TeachingResource::getCourseId, courseIds)
+                    .or()
+                    .eq(TeachingResource::getExperimentId, experimentId));
+        } else {
+            resourceWrapper.in(TeachingResource::getCourseId, courseIds);
+        }
+        List<TeachingResource> candidates = teachingResourceMapper.selectList(resourceWrapper);
         List<ScoreRecord> scored = new ArrayList<>();
 
-        // 浠?t_resource 琛ㄨ幏鍙栨墍鏈夊彲鐢ㄨ祫婧怚D
-        List<Long> allResourceIds = getAvailableResourceIds();
-
-        // 閫愯祫婧愭墦鍒?
-        for (Long resourceId : allResourceIds) {
-            double totalScore = calculateScore(studentId, resourceId, experimentId);
-            String reason = buildReason(studentId, resourceId, totalScore, experimentId);
+        for (TeachingResource resource : candidates) {
+            double totalScore = priorityScore(studentId, resource, experimentId, weakPoints);
+            String reason = priorityReason(studentId, resource, experimentId, weakPoints);
 
             ScoreRecord sr = new ScoreRecord();
-            sr.resourceId = resourceId;
+            sr.resourceId = resource.getId();
             sr.totalScore = totalScore;
             sr.reason = reason;
             scored.add(sr);
-
-            // 淇濆瓨鎺ㄨ崘璁板綍
-            saveRecommendRecord(studentId, resourceId, experimentId, totalScore, reason);
         }
 
-        // 鎸夋€诲垎闄嶅簭锛屽彇 Top N
         List<Map<String, Object>> resources = scored.stream()
                 .sorted((a, b) -> Double.compare(b.totalScore, a.totalScore))
                 .limit(TOP_N)
                 .map(sr -> {
+                    saveRecommendRecord(studentId, sr.resourceId, experimentId, sr.totalScore, sr.reason);
                     Map<String, Object> item = new HashMap<>();
                     item.put("resourceId", sr.resourceId);
                     item.put("score", Math.round(sr.totalScore * 100.0) / 100.0);
                     item.put("reason", sr.reason);
-                    // 濉厖璧勬簮璇︽儏
                     TeachingResource res = teachingResourceMapper.selectById(sr.resourceId);
-                    item.put("resourceName", res != null ? res.getTitle() : "璧勬簮" + sr.resourceId);
+                    item.put("resourceName", res != null ? res.getTitle() : "资源" + sr.resourceId);
+                    item.put("title", res != null ? res.getTitle() : "资源" + sr.resourceId);
                     item.put("resourceType", res != null ? res.getResourceType() : null);
+                    item.put("experimentId", res != null ? res.getExperimentId() : null);
                     return item;
                 })
                 .collect(Collectors.toList());
@@ -98,20 +111,61 @@ public class RecommendServiceImpl implements RecommendService {
 
     @Override
     public double calculateScore(Long studentId, Long resourceId, Long experimentId) {
-        double knowledgeMatch  = calcKnowledgeMatch(resourceId, experimentId);
-        double errorRelevance  = calcErrorRelevance(studentId, resourceId);
-        double newness         = calcNewness(studentId, resourceId);
-        double popularity      = calcPopularity(resourceId);
-        double difficultyMatch = calcDifficultyMatch(resourceId, experimentId);
+        TeachingResource resource = teachingResourceMapper.selectById(resourceId);
+        return resource == null ? 0 : priorityScore(studentId, resource, experimentId, getStudentWeakKnowledgePoints(studentId));
+    }
 
-        double total = W_KNOWLEDGE  * knowledgeMatch
-                     + W_ERROR      * errorRelevance
-                     + W_NEWNESS    * newness
-                     + W_POPULARITY * popularity
-                     + W_DIFFICULTY * difficultyMatch;
+    private double priorityScore(Long studentId, TeachingResource resource, Long experimentId, Set<String> weakPoints) {
+        double score = 0;
+        if (experimentId != null && experimentId.equals(resource.getExperimentId())
+                && Integer.valueOf(1).equals(resource.getRequiredFlag()) && !resourceFinished(studentId, resource.getId())) {
+            score += 1000;
+        }
+        if (resource.getKnowledgePoint() != null && weakPoints.contains(resource.getKnowledgePoint())) {
+            score += 600;
+        }
+        if (Integer.valueOf(1).equals(resource.getRequiredFlag()) || "REQUIRED".equals(resource.getCategory())) {
+            score += 300;
+        }
+        if (!resourceFinished(studentId, resource.getId())) {
+            score += 200;
+        }
+        score += Math.min(resource.getViewCount() == null ? 0 : resource.getViewCount(), 100) / 10.0;
+        return score;
+    }
 
-        // 褰掍竴鍖栧埌 0-100
-        return Math.min(100, Math.max(0, total));
+    private String priorityReason(Long studentId, TeachingResource resource, Long experimentId, Set<String> weakPoints) {
+        List<String> reasons = new ArrayList<>();
+        if (experimentId != null && experimentId.equals(resource.getExperimentId())
+                && Integer.valueOf(1).equals(resource.getRequiredFlag()) && !resourceFinished(studentId, resource.getId())) {
+            reasons.add("当前实验仍未完成的必学资源");
+        }
+        if (resource.getKnowledgePoint() != null && weakPoints.contains(resource.getKnowledgePoint())) {
+            reasons.add("关联你的错题知识点：" + resource.getKnowledgePoint());
+        }
+        if (Integer.valueOf(1).equals(resource.getRequiredFlag()) || "REQUIRED".equals(resource.getCategory())) {
+            reasons.add("教师配置的必学资源");
+        }
+        if (!resourceFinished(studentId, resource.getId())) {
+            reasons.add("尚未完成学习");
+        }
+        return reasons.isEmpty() ? "根据当前课程学习进度推荐。" : String.join("；", reasons) + "。";
+    }
+
+    private boolean resourceFinished(Long studentId, Long resourceId) {
+        Long count = learningRecordMapper.selectCount(new LambdaQueryWrapper<LearningRecord>()
+                .eq(LearningRecord::getStudentId, studentId)
+                .eq(LearningRecord::getResourceId, resourceId)
+                .eq(LearningRecord::getFinishFlag, 1));
+        return count != null && count > 0;
+    }
+
+    private List<Long> enrolledCourseIds(Long studentId) {
+        return courseStudentMapper.selectList(new LambdaQueryWrapper<CourseStudent>()
+                        .select(CourseStudent::getCourseId)
+                        .eq(CourseStudent::getStudentId, studentId)
+                        .eq(CourseStudent::getStatus, 1))
+                .stream().map(CourseStudent::getCourseId).toList();
     }
 
     // ==================== 浜斿洜瀛愯绠?====================
@@ -329,15 +383,7 @@ public class RecommendServiceImpl implements RecommendService {
         record.setResourceId(resourceId);
         record.setExperimentId(experimentId);
         record.setTotalScore(new java.math.BigDecimal(String.format("%.2f", totalScore)));
-        // score_breakdown 瀛樺偍涓篔SON
-        String breakdown = String.format(
-            "{\"knowledgeMatch\":%.1f,\"errorRelevance\":%.1f,\"newness\":%.1f,\"popularity\":%.1f,\"difficultyMatch\":%.1f}",
-            calcKnowledgeMatch(resourceId, experimentId),
-            calcErrorRelevance(studentId, resourceId),
-            calcNewness(studentId, resourceId),
-            calcPopularity(resourceId),
-            calcDifficultyMatch(resourceId, experimentId)
-        );
+        String breakdown = String.format("{\"priorityScore\":%.1f}", totalScore);
         record.setScoreBreakdown(breakdown);
         record.setReason(reason);
         record.setClicked(0);

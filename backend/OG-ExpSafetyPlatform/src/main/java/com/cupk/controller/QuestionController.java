@@ -33,7 +33,9 @@ public class QuestionController {
         return Result.success(questionService.pageQuestions(
                 query.getPageNum(), query.getPageSize(),
                 query.getType(), query.getDifficulty(),
-                query.getKeyword(), query.getCourseId()));
+                query.getKeyword(), query.getCourseId(),
+                query.getExperimentId(), query.getKnowledgeId(),
+                query.getKnowledgePoint(), query.getRiskType()));
     }
 
     /** 鏌ョ湅棰樼洰璇︽儏 */

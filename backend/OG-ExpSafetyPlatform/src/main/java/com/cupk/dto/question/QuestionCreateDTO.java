@@ -19,6 +19,10 @@ public class QuestionCreateDTO {
     private Integer score;        // 默认分值
     private String analysis;      // 答案解析
     private String knowledgePoint;
+    private Long knowledgeId;
+    private Long experimentId;
+    private String riskType;
+    private Long relatedResourceId;
     private String difficulty;    // EASY / MEDIUM / HARD
     private Long courseId;
 }

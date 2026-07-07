@@ -13,4 +13,8 @@ public class QuestionQueryDTO {
     private String difficulty;
     private String keyword;
     private Long courseId;
+    private Long experimentId;
+    private Long knowledgeId;
+    private String knowledgePoint;
+    private String riskType;
 }

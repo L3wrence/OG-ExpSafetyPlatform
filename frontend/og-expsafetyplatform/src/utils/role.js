@@ -1,6 +1,7 @@
 export const ROLE_HOME_PATHS = {
   student: '/student/home',
   teacher: '/teacher/home',
+  lab_admin: '/lab/home',
   admin: '/admin/home',
 }
 
@@ -11,6 +12,10 @@ const ROLE_ALIASES = {
   student: 'student',
   teacher: 'teacher',
   admin: 'admin',
+  lab_admin: 'lab_admin',
+  labadmin: 'lab_admin',
+  'lab-admin': 'lab_admin',
+  role_lab_admin: 'lab_admin',
   administrator: 'admin',
   role_student: 'student',
   role_teacher: 'teacher',
@@ -22,6 +27,8 @@ const ROLE_ALIASES = {
   '教师': 'teacher',
   '老师': 'teacher',
   '管理员': 'admin',
+  '实验室管理员': 'lab_admin',
+  '实验员': 'lab_admin',
 }
 
 function collectMenuCodes(menus = []) {
@@ -36,6 +43,7 @@ function collectMenuCodes(menus = []) {
 export function normalizeRole(value) {
   const role = String(value || '').trim().toLowerCase()
   if (ROLE_ALIASES[role]) return ROLE_ALIASES[role]
+  if (role.includes('lab') || role.includes('实验室')) return 'lab_admin'
   if (role.includes('admin') || role.includes('管理员')) return 'admin'
   if (role.includes('teacher') || role.includes('教师') || role.includes('老师')) return 'teacher'
   if (role.includes('student') || role.includes('学生')) return 'student'
@@ -82,6 +90,8 @@ export function inferRoleFromLoginResult(result = {}) {
     ...collectMenuCodes(result.menus || []),
   ].join(' ').toLowerCase()
 
+  if (directRole) return directRole
+  if (roleText.includes('lab_admin') || roleText.includes('实验室')) return 'lab_admin'
   if (
     roleText.includes('admin')
     || roleText.includes('管理员')
@@ -94,7 +104,6 @@ export function inferRoleFromLoginResult(result = {}) {
     || roleText.includes('权限管理')
   ) return 'admin'
 
-  if (directRole) return directRole
   if (roleText.includes('teacher') || roleText.includes('course:') || roleText.includes('exam:')) return 'teacher'
   if (roleText.includes('student')) return 'student'
 

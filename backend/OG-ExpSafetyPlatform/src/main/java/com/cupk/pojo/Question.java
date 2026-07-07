@@ -39,6 +39,10 @@ public class Question {
 
     /** 关联的安全知识点名称 */
     private String knowledgePoint;
+    private Long knowledgeId;
+    private Long experimentId;
+    private String riskType;
+    private Long relatedResourceId;
 
     /** 难度：EASY / MEDIUM / HARD */
     private String difficulty;

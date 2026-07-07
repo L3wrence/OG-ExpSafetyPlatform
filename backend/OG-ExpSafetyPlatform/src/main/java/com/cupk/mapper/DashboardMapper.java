@@ -89,6 +89,16 @@ public interface DashboardMapper {
               AND (#{courseId} IS NULL OR c.id = #{courseId})
               AND (#{experimentId} IS NULL OR e.id = #{experimentId})
               AND (#{studentId} IS NULL OR rp.student_id = #{studentId})) AS pending_report_count,
+          (SELECT COUNT(DISTINCT er.id)
+             FROM t_exam_record er
+             JOIN t_exam_paper ep ON ep.id = er.paper_id AND ep.deleted = 0
+             JOIN t_lab_course c ON c.id = ep.course_id AND c.deleted = 0
+            WHERE er.deleted = 0
+              AND er.status = 'PENDING_REVIEW'
+              AND (#{teacherId} IS NULL OR c.teacher_id = #{teacherId})
+              AND (#{courseId} IS NULL OR c.id = #{courseId})
+              AND (#{experimentId} IS NULL OR er.experiment_id = #{experimentId})
+              AND (#{studentId} IS NULL OR er.student_id = #{studentId})) AS pending_subjective_count,
           (SELECT COALESCE(ROUND(100 * SUM(CASE WHEN er.passed = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 2), 0)
              FROM t_exam_record er
              JOIN t_experiment e ON e.id = er.experiment_id AND e.deleted = 0

@@ -5,8 +5,32 @@
  
  const request = axios.create({
    baseURL: '/api',
-   timeout: 15000,
+   timeout: 10000,
  })
+
+ function isLoginRequest(config) {
+   return String(config?.url || '').includes('/auth/login')
+ }
+
+ function getBusinessMessage(payload, fallback = '请求失败') {
+   return payload?.message || payload?.msg || fallback
+ }
+
+ function getNetworkMessage(error) {
+   if (error.code === 'ECONNABORTED') {
+     return '请求超时，请检查后端服务或网络连接'
+   }
+   return getBusinessMessage(error.response?.data, error.message || '网络错误')
+ }
+
+ function handleUnauthorized(config) {
+   if (isLoginRequest(config)) return
+   const authStore = useAuthStore()
+   authStore.logout()
+   if (router.currentRoute.value.path !== '/login') {
+     router.push('/login').catch(() => {})
+   }
+ }
  
  // Request interceptor
  request.interceptors.request.use(
@@ -22,31 +46,32 @@
  
  // Response interceptor
  request.interceptors.response.use(
-   (response) => {
-     const { code, message, data } = response.data
+  (response) => {
+    if (response.config?.responseType === 'blob') {
+      return response.data
+    }
+    const { code, data } = response.data || {}
      if (code === 0 || code === 200) {
        return data
      }
      if (code === 401) {
-       const authStore = useAuthStore()
-       authStore.logout()
-       router.push('/login')
+       handleUnauthorized(response.config)
      }
+     const message = getBusinessMessage(response.data)
      if (!response.config?.silent) {
-       ElMessage.error(message || '请求失败')
+       ElMessage.error(message)
      }
-     return Promise.reject(new Error(message || '请求失败'))
+     return Promise.reject(new Error(message))
    },
    (error) => {
      if (error.response?.status === 401) {
-       const authStore = useAuthStore()
-       authStore.logout()
-       router.push('/login')
+       handleUnauthorized(error.config)
      }
+     const message = getNetworkMessage(error)
      if (!error.config?.silent) {
-       ElMessage.error(error.response?.data?.message || error.message || '网络错误')
+       ElMessage.error(message)
      }
-     return Promise.reject(error)
+     return Promise.reject(new Error(message))
    }
  )
  

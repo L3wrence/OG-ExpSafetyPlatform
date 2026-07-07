@@ -2,6 +2,8 @@ package com.cupk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cupk.dto.LearningProgressDTO;
+import com.cupk.mapper.CourseStudentMapper;
+import com.cupk.pojo.CourseStudent;
 import com.cupk.pojo.LearningRecord;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.exception.BusinessException;
@@ -9,6 +11,7 @@ import com.cupk.interceptor.UserContext;
 import com.cupk.mapper.LearningRecordMapper;
 import com.cupk.mapper.TeachingResourceMapper;
 import com.cupk.service.LearningRecordService;
+import com.cupk.service.LearningTaskService;
 import com.cupk.util.AccessUtil;
 import com.cupk.vo.LearningProgressVO;
 import org.springframework.stereotype.Service;
@@ -23,10 +26,16 @@ import java.util.List;
 public class LearningRecordServiceImpl implements LearningRecordService {
     private final LearningRecordMapper recordMapper;
     private final TeachingResourceMapper resourceMapper;
+    private final CourseStudentMapper courseStudentMapper;
+    private final LearningTaskService learningTaskService;
 
-    public LearningRecordServiceImpl(LearningRecordMapper recordMapper, TeachingResourceMapper resourceMapper) {
+    public LearningRecordServiceImpl(LearningRecordMapper recordMapper, TeachingResourceMapper resourceMapper,
+                                     CourseStudentMapper courseStudentMapper,
+                                     LearningTaskService learningTaskService) {
         this.recordMapper = recordMapper;
         this.resourceMapper = resourceMapper;
+        this.courseStudentMapper = courseStudentMapper;
+        this.learningTaskService = learningTaskService;
     }
 
     @Override
@@ -45,6 +54,7 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             record.setExperimentId(resource.getExperimentId());
             record.setProgress(BigDecimal.ZERO);
             record.setDurationSeconds(0);
+            record.setLastPositionSeconds(0);
             record.setFinishFlag(0);
             record.setFirstTime(now);
             record.setLastTime(now);
@@ -67,15 +77,24 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             start(dto.getResourceId());
             record = find(studentId, dto.getResourceId());
         }
+        boolean wasFinished = Integer.valueOf(1).equals(record.getFinishFlag());
         record.setProgress(dto.getProgress());
         record.setExperimentId(resource.getExperimentId());
         int currentDuration = record.getDurationSeconds() == null ? 0 : record.getDurationSeconds();
         int durationDelta = dto.getDurationSeconds() == null ? 0 : dto.getDurationSeconds();
         record.setDurationSeconds(currentDuration + durationDelta);
-        record.setFinishFlag(dto.getFinishFlag() != null ? dto.getFinishFlag() :
-                (dto.getProgress().compareTo(BigDecimal.valueOf(100)) >= 0 ? 1 : 0));
+        if (dto.getLastPositionSeconds() != null) {
+            record.setLastPositionSeconds(dto.getLastPositionSeconds());
+        }
+        if (dto.getNote() != null) {
+            record.setNote(dto.getNote());
+        }
+        record.setFinishFlag(resolveFinishFlag(dto, resource, record.getDurationSeconds()));
         record.setLastTime(LocalDateTime.now());
         recordMapper.updateById(record);
+        if (!wasFinished && Integer.valueOf(1).equals(record.getFinishFlag())) {
+            learningTaskService.syncResourceCompleted(studentId, dto.getResourceId());
+        }
     }
 
     @Override
@@ -118,6 +137,45 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         TeachingResource resource = resourceMapper.selectById(id);
         if (resource == null) throw new BusinessException(404, "教学资源不存在");
         if (resource.getStatus() != 1) throw new BusinessException(403, "教学资源未开放");
+        if (resource.getInvalidFlag() != null && resource.getInvalidFlag() == 1) throw new BusinessException(403, "教学资源已失效");
+        LocalDateTime now = LocalDateTime.now();
+        if (resource.getOpenTime() != null && resource.getOpenTime().isAfter(now)) throw new BusinessException(403, "教学资源尚未开放");
+        if (resource.getCloseTime() != null && resource.getCloseTime().isBefore(now)) throw new BusinessException(403, "教学资源已过期");
+        if (resource.getCourseId() != null) {
+            Long count = courseStudentMapper.selectCount(new LambdaQueryWrapper<CourseStudent>()
+                    .eq(CourseStudent::getCourseId, resource.getCourseId())
+                    .eq(CourseStudent::getStudentId, UserContext.userId())
+                    .eq(CourseStudent::getStatus, 1));
+            if (count == null || count == 0) throw new BusinessException(403, "无权学习该课程资源");
+        }
         return resource;
+    }
+
+    @Override
+    public LearningRecord resourceRecord(Long resourceId) {
+        AccessUtil.requireStudent();
+        requireOpenResource(resourceId);
+        return find(UserContext.userId(), resourceId);
+    }
+
+    private Integer resolveFinishFlag(LearningProgressDTO dto, TeachingResource resource, Integer durationSeconds) {
+        if (dto.getFinishFlag() != null && dto.getFinishFlag() == 0) {
+            return 0;
+        }
+        int minProgress = resource.getMinProgress() == null ? 100 : resource.getMinProgress();
+        int minSeconds = resource.getMinStudySeconds() == null ? 0 : resource.getMinStudySeconds();
+        String rule = resource.getCompletionRule() == null ? "CONFIRM" : resource.getCompletionRule();
+        boolean progressEnough = dto.getProgress().compareTo(BigDecimal.valueOf(minProgress)) >= 0;
+        boolean timeEnough = durationSeconds != null && durationSeconds >= minSeconds;
+        if ("TIME".equals(rule)) {
+            return timeEnough ? 1 : 0;
+        }
+        if ("PROGRESS".equals(rule)) {
+            return progressEnough ? 1 : 0;
+        }
+        if ("PROGRESS_TIME".equals(rule)) {
+            return progressEnough && timeEnough ? 1 : 0;
+        }
+        return dto.getFinishFlag() != null && dto.getFinishFlag() == 1 ? 1 : (progressEnough && timeEnough ? 1 : 0);
     }
 }

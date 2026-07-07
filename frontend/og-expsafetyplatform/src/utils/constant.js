@@ -1,17 +1,20 @@
  // Role constants
  export const ROLE_STUDENT = 'student'
  export const ROLE_TEACHER = 'teacher'
+ export const ROLE_LAB_ADMIN = 'lab_admin'
  export const ROLE_ADMIN = 'admin'
  
  export const ROLE_LABELS = {
    [ROLE_STUDENT]: '学生',
    [ROLE_TEACHER]: '教师',
+   [ROLE_LAB_ADMIN]: '实验室管理员',
    [ROLE_ADMIN]: '管理员',
  }
  
  export const ROLE_COLORS = {
    [ROLE_STUDENT]: '#409eff',
    [ROLE_TEACHER]: '#67c23a',
+   [ROLE_LAB_ADMIN]: '#909399',
    [ROLE_ADMIN]: '#e6a23c',
  }
  

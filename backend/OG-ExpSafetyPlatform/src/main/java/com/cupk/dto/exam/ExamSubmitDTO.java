@@ -11,4 +11,5 @@ import java.util.List;
 public class ExamSubmitDTO {
     @NotEmpty(message = "答案列表不能为空")
     private List<AnswerItemDTO> answers;
+    private Boolean autoSubmit;
 }

@@ -1,9 +1,17 @@
 <template>
   <div class="course-list-page">
+    <section class="learning-hero" :style="{ backgroundImage: `url(${resourceCore})` }">
+      <div>
+        <p>AmazingTeaching Courses</p>
+        <h1>实验课程</h1>
+        <span>把课程拆成实验场景、资源学习、安全准入、预约操作和报告复盘，按路径一步步完成。</span>
+      </div>
+    </section>
+
     <section class="page-head">
       <div>
-        <p class="eyebrow">Student Courses</p>
-        <h1>实验课程列表</h1>
+        <p class="eyebrow">Learning Path</p>
+        <h1>我的实验学习路径</h1>
         <p class="page-desc">浏览实验课程、查看实验项目进度，并继续进入相关安全学习与实验任务。</p>
       </div>
       <div class="head-stats">
@@ -47,7 +55,7 @@
       <div class="course-panel">
         <div v-loading="loading" class="course-grid">
           <article v-for="course in courses" :key="course.id" class="course-card">
-            <div class="course-cover" :style="{ '--accent': accentForCourse(course) }">
+            <div class="course-cover" :style="coverStyle(course)">
               <div class="cover-icon">
                 <el-icon :size="26"><Monitor /></el-icon>
               </div>
@@ -65,6 +73,7 @@
                 <el-tag size="small" effect="plain">{{ course.direction || '未分类' }}</el-tag>
               </div>
               <p class="course-summary">{{ course.description || '暂无课程说明' }}</p>
+              <p class="course-tagline">{{ course.tagline || '从真实实验场景进入，完成资源学习、准入测评、预约操作与报告复盘。' }}</p>
 
               <div class="course-meta">
                 <span><el-icon><User /></el-icon>{{ course.teacherName || '未分配教师' }}</span>
@@ -85,15 +94,13 @@
               </div>
 
               <div class="tag-row">
-                <span>{{ course.direction || '实验课程' }}</span>
-                <span>{{ course.semester || '未设置学期' }}</span>
-                <span>{{ course.status === 1 ? '可学习' : '暂不可用' }}</span>
+                <span v-for="tag in courseTags(course)" :key="tag">{{ tag }}</span>
               </div>
             </div>
 
             <div class="course-actions">
               <el-button :icon="View" @click="openCourseDetail(course)">查看详情</el-button>
-              <el-button type="primary" :icon="VideoPlay" @click="openCourseDetail(course)">
+              <el-button type="primary" :icon="VideoPlay" @click="startLearning(course)">
                 继续学习
               </el-button>
             </div>
@@ -186,6 +193,11 @@
             <el-table-column prop="expCode" label="编号" width="120" />
             <el-table-column prop="riskLevel" label="风险等级" width="110" />
             <el-table-column prop="durationMinutes" label="时长(分钟)" width="110" />
+            <el-table-column label="操作" width="110">
+              <template #default="{ row }">
+                <el-button text type="primary" @click="goExperiment(row)">学习</el-button>
+              </template>
+            </el-table-column>
           </el-table>
         </template>
       </div>
@@ -195,6 +207,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Calendar,
@@ -209,10 +222,12 @@ import {
   Warning,
 } from '@element-plus/icons-vue'
 import { getCourseDetail, getCourses } from '@/api/course'
+import resourceCore from '@/assets/amazing/resource-core.png'
 
 const loading = ref(false)
 const detailLoading = ref(false)
 const detailVisible = ref(false)
+const router = useRouter()
 const courses = ref([])
 const selectedDetail = ref(null)
 const total = ref(0)
@@ -286,13 +301,40 @@ async function openCourseDetail(course) {
   }
 }
 
+function startLearning(course) {
+  router.push(`/student/learning/${course.id}`)
+}
+
+function goExperiment(experiment) {
+  const courseId = selectedDetail.value?.course?.id
+  if (!courseId) return
+  router.push({ path: `/student/learning/${courseId}`, query: { experimentId: experiment.id } })
+}
+
 function progressOf(course) {
   return Math.max(0, Math.min(100, Number(course.averageProgress || 0)))
 }
 
 function accentForCourse(course) {
-  const colors = ['#2d6a4f', '#33658a', '#77567a', '#a44a3f', '#3d5a80']
+  const colors = ['#177e89', '#2d6a4f', '#8a5a44', '#5a6f33', '#9c6644']
   return colors[Number(course.id || 0) % colors.length]
+}
+
+function coverStyle(course) {
+  const image = course.coverUrl || resourceCore
+  return {
+    '--accent': accentForCourse(course),
+    backgroundImage: `linear-gradient(135deg, rgba(14, 44, 51, 0.78), rgba(20, 80, 73, 0.28)), url(${image})`,
+  }
+}
+
+function courseTags(course) {
+  const configured = String(course.highlightTags || '').split(/[,，]/).map((item) => item.trim()).filter(Boolean)
+  return (configured.length ? configured : [
+    course.direction || '实验课程',
+    course.semester || '未设置学期',
+    course.status === 1 ? '可学习' : '暂不可用',
+  ]).slice(0, 4)
 }
 
 function uniqueValues(values) {
@@ -304,6 +346,42 @@ function uniqueValues(values) {
 .course-list-page {
   max-width: 1240px;
   margin: 0 auto;
+}
+
+.learning-hero {
+  min-height: 220px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.learning-hero > div {
+  max-width: 600px;
+  padding: 28px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0));
+}
+
+.learning-hero p {
+  color: #177e89;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.learning-hero h1 {
+  color: #13233a;
+  font-size: 32px;
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+
+.learning-hero span {
+  color: #344054;
+  line-height: 1.7;
 }
 
 .page-head {
@@ -410,10 +488,10 @@ function uniqueValues(values) {
 }
 
 .course-cover {
-  min-height: 86px;
+  min-height: 118px;
   padding: 16px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 88%, #ffffff 12%), color-mix(in srgb, var(--accent) 62%, #1b1b1b 38%));
+  background-size: cover;
+  background-position: center;
   color: #fff;
   display: flex;
   justify-content: space-between;
@@ -459,9 +537,16 @@ function uniqueValues(values) {
 }
 
 .course-summary {
-  min-height: 44px;
+  min-height: 42px;
   color: #667085;
   line-height: 1.55;
+  margin-bottom: 8px;
+}
+
+.course-tagline {
+  color: #177e89;
+  font-size: 13px;
+  line-height: 1.5;
   margin-bottom: 14px;
 }
 
@@ -681,6 +766,11 @@ function uniqueValues(values) {
 }
 
 @media (max-width: 860px) {
+  .learning-hero > div {
+    padding: 22px;
+    background: rgba(255, 255, 255, 0.88);
+  }
+
   .page-head {
     align-items: stretch;
     flex-direction: column;

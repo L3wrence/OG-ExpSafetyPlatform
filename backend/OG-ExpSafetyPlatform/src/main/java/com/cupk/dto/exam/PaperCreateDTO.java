@@ -18,6 +18,12 @@ public class PaperCreateDTO {
     private Integer totalScore;
     private Integer passScore;
     private Integer duration;
+    private Integer attemptLimit;
+    private Integer showAnswerAfterSubmit;
+    private Integer admissionValidityDays;
+    private String multipleScorePolicy;
+    private Integer randomEnabled;
+    private Integer randomCount;
     private Date startTime;
     private Date endTime;
 }

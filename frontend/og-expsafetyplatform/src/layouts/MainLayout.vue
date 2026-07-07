@@ -5,7 +5,7 @@
        <div class="sidebar-header">
          <div class="logo-wrapper">
            <el-icon :size="28" color="#409eff"><Platform /></el-icon>
-           <span class="logo-text" v-show="!appStore.sidebarCollapsed">油气安全平台</span>
+           <span class="logo-text" v-show="!appStore.sidebarCollapsed">AmazingTeaching</span>
          </div>
        </div>
        <el-menu
@@ -24,31 +24,35 @@
  
          <!-- Role-specific menu items -->
          <template v-if="authStore.role === 'student'">
-           <el-menu-item index="/student/courses">
+           <el-menu-item v-if="can('course:view')" index="/student/courses">
              <el-icon><Reading /></el-icon>
-             <template #title>课程列表</template>
+             <template #title>实验课程</template>
            </el-menu-item>
-          <el-menu-item index="/student/knowledge">
-            <el-icon><Notebook /></el-icon>
-            <template #title>安全知识</template>
-          </el-menu-item>
-          <el-menu-item index="/student/exams">
+           <el-menu-item v-if="can('resource:view')" index="/student/resources">
+             <el-icon><Folder /></el-icon>
+             <template #title>油气资源库</template>
+           </el-menu-item>
+           <el-menu-item v-if="can('course:view')" index="/discussions">
+             <el-icon><ChatLineRound /></el-icon>
+             <template #title>学习交流</template>
+           </el-menu-item>
+          <el-menu-item v-if="can('exam:take')" index="/student/exams">
             <el-icon><EditPen /></el-icon>
             <template #title>安全考试</template>
           </el-menu-item>
-          <el-menu-item index="/student/reserve">
+          <el-menu-item v-if="can('reservation:view')" index="/student/reserve">
             <el-icon><Calendar /></el-icon>
             <template #title>实验预约</template>
           </el-menu-item>
-           <el-menu-item index="/student/grades">
+           <el-menu-item v-if="can('report:view')" index="/student/grades">
              <el-icon><Trophy /></el-icon>
-             <template #title>成绩反馈</template>
+             <template #title>报告与成绩</template>
            </el-menu-item>
-           <el-menu-item index="/student/ai-assistant">
-             <el-icon><MagicStick /></el-icon>
-             <template #title>AI实验助手</template>
+           <el-menu-item v-if="can('portal:message')" index="/messages">
+             <el-icon><Bell /></el-icon>
+             <template #title>消息与日程</template>
            </el-menu-item>
-           <el-menu-item index="/student/profile">
+           <el-menu-item index="/profile">
              <el-icon><UserFilled /></el-icon>
              <template #title>个人中心</template>
            </el-menu-item>
@@ -57,44 +61,63 @@
          <template v-if="authStore.role === 'teacher'">
            <el-menu-item index="/teacher/dashboard">
              <el-icon><DataBoard /></el-icon>
-             <template #title>工作台</template>
+             <template #title>教师工作台</template>
            </el-menu-item>
-           <el-menu-item index="/teacher/courses">
-             <el-icon><Reading /></el-icon>
-             <template #title>课程管理</template>
+          <el-menu-item v-if="can('course:view')" index="/teacher/courses">
+            <el-icon><Reading /></el-icon>
+            <template #title>课程建设</template>
            </el-menu-item>
-           <el-menu-item index="/teacher/resources">
+           <el-menu-item v-if="can('experiment:view')" index="/teacher/experiments">
+             <el-icon><Operation /></el-icon>
+             <template #title>实验路径</template>
+           </el-menu-item>
+           <el-menu-item v-if="can('resource:view')" index="/teacher/resources">
              <el-icon><Folder /></el-icon>
              <template #title>资源管理</template>
            </el-menu-item>
-           <el-menu-item index="/teacher/knowledge">
-             <el-icon><Notebook /></el-icon>
-             <template #title>安全知识管理</template>
-           </el-menu-item>
-           <el-menu-item index="/teacher/exam-papers">
+           <el-menu-item v-if="can('exam-paper:view')" index="/teacher/exam-papers">
              <el-icon><EditPen /></el-icon>
-             <template #title>试卷管理</template>
+             <template #title>题库与考试</template>
            </el-menu-item>
-           <el-menu-item index="/teacher/reservations">
+           <el-menu-item v-if="can('reservation:review')" index="/teacher/reservations">
+             <el-icon><Calendar /></el-icon>
+             <template #title>预约管理</template>
+           </el-menu-item>
+           <el-menu-item v-if="can('report:review')" index="/teacher/reports">
+             <el-icon><Document /></el-icon>
+             <template #title>报告批改</template>
+           </el-menu-item>
+           <el-menu-item index="/profile">
+             <el-icon><UserFilled /></el-icon>
+             <template #title>个人中心</template>
+           </el-menu-item>
+         </template>
+
+         <template v-if="authStore.role === 'lab_admin'">
+           <el-menu-item index="/lab/home">
+             <el-icon><Monitor /></el-icon>
+             <template #title>实验室运行</template>
+           </el-menu-item>
+           <el-menu-item v-if="can('reservation:review')" index="/teacher/reservations">
              <el-icon><Calendar /></el-icon>
              <template #title>预约审核</template>
            </el-menu-item>
-           <el-menu-item index="/teacher/reports">
-             <el-icon><Document /></el-icon>
-             <template #title>报告批改</template>
+           <el-menu-item index="/profile">
+             <el-icon><UserFilled /></el-icon>
+             <template #title>个人中心</template>
            </el-menu-item>
          </template>
  
          <template v-if="authStore.role === 'admin'">
-           <el-menu-item index="/admin/users">
+           <el-menu-item v-if="can('user:view')" index="/admin/users">
              <el-icon><User /></el-icon>
              <template #title>用户管理</template>
            </el-menu-item>
-           <el-menu-item index="/admin/roles">
+           <el-menu-item v-if="can('role:view')" index="/admin/roles">
              <el-icon><Avatar /></el-icon>
              <template #title>角色管理</template>
            </el-menu-item>
-           <el-menu-item index="/admin/permissions">
+           <el-menu-item v-if="can('permission:view')" index="/admin/permissions">
              <el-icon><Lock /></el-icon>
              <template #title>权限管理</template>
            </el-menu-item>
@@ -105,6 +128,10 @@
            <el-menu-item index="/admin/logs">
              <el-icon><List /></el-icon>
              <template #title>操作日志</template>
+           </el-menu-item>
+           <el-menu-item index="/profile">
+             <el-icon><UserFilled /></el-icon>
+             <template #title>个人中心</template>
            </el-menu-item>
          </template>
        </el-menu>
@@ -134,13 +161,15 @@
          </div>
          <div class="top-bar-right">
            <el-tooltip content="通知" placement="bottom">
-             <el-button text class="top-icon-btn" aria-label="通知" title="通知">
-               <el-icon :size="18"><Bell /></el-icon>
-             </el-button>
+             <el-badge :value="unreadMessages" :hidden="unreadMessages === 0" :max="99">
+               <el-button text class="top-icon-btn" aria-label="通知" title="通知" @click="router.push('/messages')">
+                 <el-icon :size="18"><Bell /></el-icon>
+               </el-button>
+             </el-badge>
            </el-tooltip>
            <el-dropdown trigger="click">
              <span class="user-info-dropdown">
-               <el-avatar :size="32" icon="UserFilled" />
+             <el-avatar :size="32" :src="authStore.userInfo?.avatarUrl" :icon="UserFilled" />
                <span class="username">{{ displayName }}</span>
                <span class="role-name">{{ roleLabel }}</span>
                <el-icon><ArrowDown /></el-icon>
@@ -148,7 +177,7 @@
              <template #dropdown>
                <el-dropdown-menu>
                  <el-dropdown-item @click="handleLogout">
-                   <el-icon><SwitchButton /></el-icon>退出登录
+                 <el-icon><SwitchButton /></el-icon>退出登录
                  </el-dropdown-item>
                </el-dropdown-menu>
              </template>
@@ -165,13 +194,38 @@
  </template>
  
  <script setup>
- import { computed } from 'vue'
+ import { computed, onMounted, ref, watch } from 'vue'
  import { useRoute } from 'vue-router'
+ import {
+   ArrowDown,
+   Avatar,
+   Bell,
+   Calendar,
+   ChatLineRound,
+   DataBoard,
+   Document,
+   EditPen,
+   Expand,
+   Fold,
+   Folder,
+   HomeFilled,
+   List,
+   Lock,
+   Monitor,
+   Operation,
+   Platform,
+   Reading,
+   SwitchButton,
+   Trophy,
+   User,
+   UserFilled,
+ } from '@element-plus/icons-vue'
  import { useAppStore } from '@/stores/appStore'
  import { useAuthStore } from '@/stores/authStore'
  import { ROLE_LABELS } from '@/utils/constant'
  import { getRoleHomePath } from '@/utils/role'
  import router from '@/router'
+ import { getUnreadMessageCount, recordRecentVisit } from '@/api/portal'
  
  const route = useRoute()
  const appStore = useAppStore()
@@ -180,13 +234,39 @@
  const currentRoute = computed(() => route.path)
  const pageTitle = computed(() => route.meta?.title || '')
  const homePath = computed(() => getRoleHomePath(authStore.role))
- const displayName = computed(() => authStore.userInfo?.realName || authStore.userInfo?.name || authStore.userInfo?.username || '用户')
- const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '未绑定角色')
- 
- function handleLogout() {
-   authStore.logout()
-   router.push('/login')
+const displayName = computed(() => authStore.userInfo?.realName || authStore.userInfo?.name || authStore.userInfo?.username || '用户')
+const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '未绑定角色')
+const unreadMessages = ref(0)
+
+ function can(permission) {
+   return authStore.hasPermission(permission)
  }
+ 
+async function handleLogout() {
+  await authStore.logoutRemote()
+  router.push('/login')
+}
+
+async function loadUnreadMessages() {
+  if (!authStore.token || !can('portal:message')) return
+  unreadMessages.value = await getUnreadMessageCount({ silent: true }).catch(() => 0)
+}
+
+onMounted(loadUnreadMessages)
+
+watch(
+  () => route.fullPath,
+  (path) => {
+     if (!authStore.token || path === '/login') return
+     recordRecentVisit({
+       title: route.meta?.title || '功能页面',
+       path,
+       module: String(route.name || ''),
+     }).catch(() => {})
+     loadUnreadMessages()
+   },
+   { immediate: true },
+ )
  </script>
  
  <style scoped>
@@ -199,7 +279,7 @@
  /* Sidebar */
  .sidebar {
    width: 220px;
-   background: linear-gradient(180deg, #0b1a2e 0%, #132d4a 100%);
+   background: linear-gradient(180deg, #12312f 0%, #24483e 52%, #5b4b35 100%);
    display: flex;
    flex-direction: column;
    transition: width 0.3s;

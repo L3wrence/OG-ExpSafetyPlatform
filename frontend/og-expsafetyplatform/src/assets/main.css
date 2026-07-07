@@ -1,9 +1,9 @@
  /* ========================================
-    Global Styles - 油气工程实验教学与安全考核平台
+   Global Styles - AmazingTeaching
     ======================================== */
  
  :root {
-   --el-color-primary: #409eff;
+   --el-color-primary: #177e89;
    --sidebar-width: 220px;
    --topbar-height: 56px;
  }

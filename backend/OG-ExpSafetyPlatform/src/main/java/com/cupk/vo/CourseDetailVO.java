@@ -15,4 +15,10 @@ public class CourseDetailVO {
     private Long resourceCount;     //资源数量
     private BigDecimal averageProgress;     //平均进度
     private List<ExperimentSimpleVO> experiments;   //项目简介
+    private String learningRequirement;     //学习要求
+    private Integer studentCount;           //学生数量
+    private Integer teachingClassCount;     //教学班数量
+    private List<TeachingClassVO> teachingClasses;
+    private List<CourseStudentVO> students;
+    private List<String> announcements;
 }

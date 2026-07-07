@@ -15,3 +15,11 @@ export function updateUser(data) {
 export function deleteUser(id) {
   return request.delete('/users', { data: { id } })
 }
+
+export function getMyProfile(config = {}) {
+  return request.get('/users/me', config)
+}
+
+export function updateMyProfile(data) {
+  return request.put('/users/me', data)
+}

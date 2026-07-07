@@ -13,5 +13,6 @@ public class DashboardOverviewVO {
     private Long monthReservationCount;
     private Long pendingReservationCount;
     private Long pendingReportCount;
+    private Long pendingSubjectiveCount;
     private BigDecimal examPassRate;
 }

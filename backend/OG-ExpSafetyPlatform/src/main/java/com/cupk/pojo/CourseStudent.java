@@ -16,8 +16,11 @@ public class CourseStudent extends BasePojo {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long courseId;
+    private Long teachingClassId;
     private Long studentId;
     private String semester;
+    private String groupName;
+    private String remark;
     private Integer status;
     private LocalDateTime joinTime;
 }

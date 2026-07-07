@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import request from '@/utils/request'
+import { logout as logoutApi } from '@/api/auth'
 import { inferRoleFromLoginResult, normalizeRole } from '@/utils/role'
 
 /**
@@ -37,7 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
     const res = await request.post('/auth/login', {
       username: loginForm.username,
       password: loginForm.password,
-    })
+    }, { silent: true })
 
     const loginUserInfo = res.userInfo || {}
     const loginRole = inferRoleFromLoginResult(res)
@@ -69,7 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = normalizeRole(r)
     localStorage.setItem('role', role.value)
   }
- 
+
   function logout() {
     token.value = ''
     userInfo.value = null
@@ -82,6 +83,25 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('menus')
     localStorage.removeItem('permissions')
   }
- 
-  return { token, userInfo, role, menus, permissions, login, setRole, logout }
+
+  async function logoutRemote() {
+    try {
+      if (token.value) {
+        await logoutApi()
+      }
+    } finally {
+      logout()
+    }
+  }
+
+  function setUserInfo(nextUserInfo) {
+    userInfo.value = nextUserInfo
+    localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
+  }
+
+  function hasPermission(code) {
+    return permissions.value.includes(code)
+  }
+
+  return { token, userInfo, role, menus, permissions, login, setRole, logout, logoutRemote, setUserInfo, hasPermission }
 })

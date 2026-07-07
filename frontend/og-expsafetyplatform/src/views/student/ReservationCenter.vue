@@ -97,6 +97,12 @@
         <el-form-item label="预约用途">
           <el-input v-model="reserveForm.purpose" type="textarea" :rows="4" placeholder="说明本次实验目的或任务" />
         </el-form-item>
+        <el-alert
+          v-if="admissionStatus"
+          :type="admissionStatus.qualified ? 'success' : 'warning'"
+          :closable="false"
+          :title="admissionStatus.qualified ? `已获得准入资格，有效期至 ${admissionStatus.validUntil || '-'}` : `暂未满足准入：${admissionStatus.reason || '请完成必学任务和正式考试'}`"
+        />
       </el-form>
       <template #footer>
         <el-button @click="reserveVisible = false">取消</el-button>
@@ -116,12 +122,14 @@ import {
   getAvailableSlots,
   getMyReservations,
 } from '@/api/reservation'
+import { getAdmissionStatus } from '@/api/exam'
 
 const filters = reactive({ date: '', labId: '' })
 const reserveForm = reactive({ timeSlotId: null, labId: '', experimentId: '', purpose: '' })
 const availableSlots = ref([])
 const myReservations = ref([])
 const selectedSlot = ref(null)
+const admissionStatus = ref(null)
 const myStatus = ref('')
 const slotPage = ref(1)
 const myPage = ref(1)
@@ -169,7 +177,7 @@ async function loadMyReservations() {
   }
 }
 
-function openReserve(row) {
+async function openReserve(row) {
   const slot = slotOf(row)
   selectedSlot.value = slot
   Object.assign(reserveForm, {
@@ -178,12 +186,20 @@ function openReserve(row) {
     experimentId: slot.experimentId || '',
     purpose: '',
   })
+  admissionStatus.value = null
+  if (slot.experimentId) {
+    admissionStatus.value = await getAdmissionStatus(slot.experimentId).catch(() => null)
+  }
   reserveVisible.value = true
 }
 
 async function submitReservation() {
   if (!reserveForm.labId) {
     ElMessage.warning('请输入实验室ID')
+    return
+  }
+  if (admissionStatus.value && !admissionStatus.value.qualified) {
+    ElMessage.warning(admissionStatus.value.reason || '暂未满足实验准入条件')
     return
   }
   saving.value = true

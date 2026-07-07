@@ -37,6 +37,12 @@ public class ExamPaper {
 
     /** 考试时长（分钟） */
     private Integer duration;
+    private Integer attemptLimit;
+    private Integer showAnswerAfterSubmit;
+    private Integer admissionValidityDays;
+    private String multipleScorePolicy;
+    private Integer randomEnabled;
+    private Integer randomCount;
 
     /** 出卷教师ID（引用 t_user.id） */
     private Long teacherId;

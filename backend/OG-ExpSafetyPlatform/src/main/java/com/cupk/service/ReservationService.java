@@ -3,6 +3,7 @@ package com.cupk.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.pojo.LabTimeSlot;
 import com.cupk.pojo.Reservation;
+import com.cupk.vo.ReservationVO;
 
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public interface ReservationService {
     // ===== 教师审核 =====
 
     /** 待审核预约列表 */
-    Page<Reservation> getPendingReservations(int pageNum, int pageSize, Long labId);
+    Page<ReservationVO> getPendingReservations(int pageNum, int pageSize, Long labId);
 
     /** 审核预约 */
     void reviewReservation(Long id, String status, String reviewComment);

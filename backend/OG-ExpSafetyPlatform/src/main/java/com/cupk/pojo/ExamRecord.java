@@ -35,8 +35,11 @@ public class ExamRecord {
     /** 主观题得分（教师批改后） */
     private Integer subjectiveScore;
 
-    /** 状态：IN_PROGRESS / SUBMITTED / REVIEWED */
+    /** 状态：IN_PROGRESS / PENDING_REVIEW / GRADED / EXPIRED */
     private String status;
+    private String questionSnapshotJson;
+    private Integer autoSubmitFlag;
+    private Long admissionId;
 
     /** 是否通过（score >= pass_score） */
     private Integer passed;
@@ -48,6 +51,15 @@ public class ExamRecord {
     /** 交卷时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private Date submitTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private Date endTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private Date lastSaveTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private Date finalGradeTime;
 
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")

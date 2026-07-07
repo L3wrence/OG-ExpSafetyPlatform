@@ -15,6 +15,9 @@ public class ExperimentStepDTO {
     @NotBlank(message = "步骤内容不能为空")
     private String content;
     private String safetyTip;
+    private String mediaType;
+    private String mediaUrl;
+    private String flowchartData;
     private Integer requiredFlag = 1;
     private Integer estimatedMinutes = 0;
 }

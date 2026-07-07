@@ -4,11 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cupk.common.PageResult;
+import com.cupk.dto.ChangePasswordDTO;
 import com.cupk.dto.LoginDTO;
+import com.cupk.dto.ProfileUpdateDTO;
+import com.cupk.dto.RegisterDTO;
 import com.cupk.dto.UserCreateDTO;
 import com.cupk.dto.UserUpdateDTO;
 import com.cupk.exception.BusinessException;
+import com.cupk.interceptor.UserContext;
+import com.cupk.mapper.OperationLogMapper;
 import com.cupk.mapper.UserMapper;
+import com.cupk.pojo.OperationLog;
 import com.cupk.pojo.Permission;
 import com.cupk.pojo.Role;
 import com.cupk.pojo.RolePermission;
@@ -31,6 +37,7 @@ import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,15 +51,43 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final RolePermissionService rolePermissionService;
     private final PermissionService permissionService;
     private final RoleService roleService;
+    private final OperationLogMapper operationLogMapper;
 
     public UserServiceImpl(UserRoleService userRoleService, TokenService tokenService,
                            RolePermissionService rolePermissionService, PermissionService permissionService,
-                           RoleService roleService) {
+                           RoleService roleService, OperationLogMapper operationLogMapper) {
         this.userRoleService = userRoleService;
         this.tokenService = tokenService;
         this.rolePermissionService = rolePermissionService;
         this.permissionService = permissionService;
         this.roleService = roleService;
+        this.operationLogMapper = operationLogMapper;
+    }
+
+    @Override
+    @Transactional
+    public Long register(RegisterDTO dto) {
+        User existUser = getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, dto.getUsername()));
+        if (existUser != null) {
+            throw new BusinessException(400, "该学号已存在");
+        }
+        Role studentRole = roleService.getOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "STUDENT"));
+        if (studentRole == null) {
+            throw new BusinessException(500, "系统未初始化学生角色");
+        }
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPassword(md5(dto.getPassword()));
+        user.setRealName(dto.getRealName());
+        user.setPhone(dto.getPhone());
+        user.setMajor(dto.getMajor());
+        user.setClassName(dto.getClassName());
+        user.setEmail(dto.getEmail());
+        user.setStatus(1);
+        save(user);
+        saveUserRole(user.getId(), studentRole.getId());
+        writeLog(user.getId(), user.getUsername(), "用户中心", "注册", "学生自助注册", "SUCCESS");
+        return user.getId();
     }
 
     @Override
@@ -70,6 +105,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setStatus(1);
         save(user);
         saveUserRole(user.getId(), dto.getRoleId());
+        writeCurrentLog("用户中心", "创建用户", "创建账号：" + user.getUsername(), "SUCCESS");
         return user.getId();
     }
 
@@ -92,8 +128,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public LoginResultVO login(LoginDTO dto) {
         User user = getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, dto.getUsername()));
-        if (user == null || Integer.valueOf(0).equals(user.getStatus()) || !md5(dto.getPassword()).equals(user.getPassword())) {
+        if (user == null || !md5(dto.getPassword()).equals(user.getPassword())) {
             throw new BusinessException(401, "用户名或密码错误");
+        }
+        if (Integer.valueOf(0).equals(user.getStatus())) {
+            writeLog(user.getId(), user.getUsername(), "用户中心", "登录", "禁用账号尝试登录", "DENIED");
+            throw new BusinessException(403, "账号已被禁用，请联系管理员");
         }
         String token = tokenService.createToken(user.getId());
 
@@ -102,7 +142,63 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         result.setUserInfo(toUserInfo(user));
         result.setMenus(getUserMenus(user.getId()));
         result.setPermissions(getUserPermissionCodes(user.getId()));
+        writeLog(user.getId(), user.getUsername(), "用户中心", "登录", "登录成功", "SUCCESS");
         return result;
+    }
+
+    @Override
+    @Transactional
+    public void logout(String token) {
+        if (StringUtils.hasText(token)) {
+            tokenService.remove(new LambdaQueryWrapper<Token>().eq(Token::getToken, token));
+        }
+        writeCurrentLog("用户中心", "退出登录", "用户主动退出", "SUCCESS");
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordDTO dto) {
+        User user = getById(UserContext.userId());
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        if (!md5(dto.getOldPassword()).equals(user.getPassword())) {
+            throw new BusinessException(400, "旧密码不正确");
+        }
+        if (md5(dto.getNewPassword()).equals(user.getPassword())) {
+            throw new BusinessException(400, "新密码不能与旧密码相同");
+        }
+        user.setPassword(md5(dto.getNewPassword()));
+        updateById(user);
+        tokenService.remove(new LambdaQueryWrapper<Token>().eq(Token::getUserId, user.getId()));
+        writeLog(user.getId(), user.getUsername(), "用户中心", "修改密码", "用户修改登录密码", "SUCCESS");
+    }
+
+    @Override
+    public UserInfoVO currentUser() {
+        User user = getById(UserContext.userId());
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        return toUserInfo(user);
+    }
+
+    @Override
+    @Transactional
+    public UserInfoVO updateProfile(ProfileUpdateDTO dto) {
+        User user = getById(UserContext.userId());
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        if (dto.getRealName() != null) user.setRealName(dto.getRealName());
+        if (dto.getPhone() != null) user.setPhone(dto.getPhone());
+        if (dto.getAvatarUrl() != null) user.setAvatarUrl(dto.getAvatarUrl());
+        if (dto.getMajor() != null) user.setMajor(dto.getMajor());
+        if (dto.getClassName() != null) user.setClassName(dto.getClassName());
+        if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+        updateById(user);
+        writeLog(user.getId(), user.getUsername(), "用户中心", "更新资料", "用户更新个人资料", "SUCCESS");
+        return toUserInfo(user);
     }
 
     @Override
@@ -118,6 +214,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (dto.getPhone() != null) {
             user.setPhone(dto.getPhone());
         }
+        if (dto.getAvatarUrl() != null) {
+            user.setAvatarUrl(dto.getAvatarUrl());
+        }
+        if (dto.getMajor() != null) {
+            user.setMajor(dto.getMajor());
+        }
+        if (dto.getClassName() != null) {
+            user.setClassName(dto.getClassName());
+        }
+        if (dto.getEmail() != null) {
+            user.setEmail(dto.getEmail());
+        }
         if (dto.getStatus() != null) {
             user.setStatus(dto.getStatus());
         }
@@ -126,6 +234,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             userRoleService.remove(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, id));
             saveUserRole(id, dto.getRoleId());
         }
+        writeCurrentLog("用户中心", "更新用户", "更新账号：" + user.getUsername(), "SUCCESS");
     }
 
     @Override
@@ -138,6 +247,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         removeById(id);
         userRoleService.remove(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, id));
         tokenService.remove(new LambdaQueryWrapper<Token>().eq(Token::getUserId, id));
+        writeCurrentLog("用户中心", "删除用户", "删除账号：" + user.getUsername(), "SUCCESS");
     }
 
     @Override
@@ -264,5 +374,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     private String md5(String input) {
         return DigestUtils.md5DigestAsHex(input.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void writeCurrentLog(String module, String action, String content, String result) {
+        Long userId;
+        String username;
+        try {
+            userId = UserContext.userId();
+            User user = getById(userId);
+            username = user == null ? null : user.getUsername();
+        } catch (BusinessException e) {
+            userId = null;
+            username = null;
+        }
+        writeLog(userId, username, module, action, content, result);
+    }
+
+    private void writeLog(Long userId, String username, String module, String action, String content, String result) {
+        OperationLog log = new OperationLog();
+        log.setUserId(userId);
+        log.setUsername(username);
+        log.setModule(module);
+        log.setAction(action);
+        log.setContent(content);
+        log.setResult(result);
+        log.setCreateTime(LocalDateTime.now());
+        operationLogMapper.insert(log);
     }
 }

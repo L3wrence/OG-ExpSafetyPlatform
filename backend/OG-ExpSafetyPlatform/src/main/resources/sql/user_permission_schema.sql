@@ -102,6 +102,11 @@ FROM (
     UNION ALL SELECT '安全知识新增', 'safety:create', 2, 0, NULL, NULL, 242
     UNION ALL SELECT '安全知识修改', 'safety:update', 2, 0, NULL, NULL, 243
     UNION ALL SELECT '安全知识删除', 'safety:delete', 2, 0, NULL, NULL, 244
+    UNION ALL SELECT '门户首页', 'portal:view', 2, 0, NULL, NULL, 251
+    UNION ALL SELECT '个人资料维护', 'profile:update', 2, 0, NULL, NULL, 252
+    UNION ALL SELECT '密码修改', 'profile:password', 2, 0, NULL, NULL, 253
+    UNION ALL SELECT '消息提醒', 'portal:message', 2, 0, NULL, NULL, 254
+    UNION ALL SELECT '全站搜索', 'portal:search', 2, 0, NULL, NULL, 255
     UNION ALL SELECT '统计看板', 'dashboard:view', 2, 0, NULL, NULL, 301
 ) p
 WHERE NOT EXISTS (SELECT 1 FROM t_permission tp WHERE tp.code = p.code);
@@ -124,6 +129,7 @@ JOIN t_permission p ON p.code IN (
     'experiment:view', 'experiment:create', 'experiment:update', 'experiment:delete',
     'resource:view', 'resource:create', 'resource:update', 'resource:delete',
     'safety:view', 'safety:create', 'safety:update', 'safety:delete',
+    'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
     'dashboard:view'
 )
 WHERE r.role_code = 'TEACHER'
@@ -137,7 +143,9 @@ SELECT r.id, p.id
 FROM t_role r
 JOIN t_permission p ON p.code IN (
     'course:view', 'experiment:view', 'resource:view',
-    'learning:update:self', 'safety:view', 'dashboard:view'
+    'learning:update:self', 'safety:view',
+    'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
+    'dashboard:view'
 )
 WHERE r.role_code = 'STUDENT'
   AND NOT EXISTS (
@@ -149,7 +157,9 @@ INSERT INTO t_role_permission (role_id, permission_id)
 SELECT r.id, p.id
 FROM t_role r
 JOIN t_permission p ON p.code IN (
-    'course:view', 'experiment:view', 'resource:view', 'safety:view', 'dashboard:view'
+    'course:view', 'experiment:view', 'resource:view', 'safety:view',
+    'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
+    'dashboard:view'
 )
 WHERE r.role_code = 'LAB_ADMIN'
   AND NOT EXISTS (

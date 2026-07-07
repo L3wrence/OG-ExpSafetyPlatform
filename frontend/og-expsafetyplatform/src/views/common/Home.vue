@@ -1,999 +1,754 @@
- <template>
-   <div class="home-page">
-     <!-- Student Dashboard -->
-     <template v-if="authStore.role === 'student'">
-       <div class="welcome-banner">
-         <div class="welcome-content">
-           <h2 class="welcome-title">欢迎回来，{{ authStore.userInfo?.name || '同学' }}！</h2>
-           <p class="welcome-desc">继续你的油气工程学习之旅，完成实验任务，掌握安全知识。</p>
-         </div>
-         <div class="welcome-progress">
-           <div class="progress-label">
-             <span>本学期进度</span>
-             <span class="progress-value">{{ studentProgress.percent }}%</span>
-           </div>
-           <el-progress :percentage="studentProgress.percent" :stroke-width="8" striped striped-flow />
-           <div class="progress-detail">
-             <span>已修：{{ studentProgress.courseDone }}/{{ studentProgress.courseTotal }} 门课程</span>
-             <span>已完成：{{ studentProgress.experimentDone }}/{{ studentProgress.experimentTotal }} 个实验</span>
-           </div>
-         </div>
-       </div>
- 
-       <!-- Todo Cards -->
-       <div class="stat-cards">
-         <div class="stat-card todo-exam" @click="router.push('/student/exams')">
-           <div class="stat-icon"><el-icon :size="24"><EditPen /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ studentStats.examCount }}</span>
-             <span class="stat-label">待参加考试</span>
-           </div>
-         </div>
-         <div class="stat-card todo-reserve" @click="router.push('/student/reserve')">
-           <div class="stat-icon"><el-icon :size="24"><Calendar /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ studentStats.reserveCount }}</span>
-             <span class="stat-label">待预约实验</span>
-           </div>
-         </div>
-         <div class="stat-card todo-report" @click="router.push('/student/grades')">
-           <div class="stat-icon"><el-icon :size="24"><Document /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ studentStats.reportCount }}</span>
-             <span class="stat-label">待提交报告</span>
-           </div>
-         </div>
-         <div class="stat-card todo-grade" @click="router.push('/student/grades')">
-           <div class="stat-icon"><el-icon :size="24"><Trophy /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ studentStats.avgScore }}%</span>
-             <span class="stat-label">考试通过率</span>
-           </div>
-         </div>
-       </div>
- 
-       <div class="home-grid-2col">
-         <!-- Announcements -->
-         <div class="home-card announcements-card">
-           <div class="card-header">
-             <h3><el-icon><Bell /></el-icon> 系统公告</h3>
-             <el-button text type="primary" size="small">更多</el-button>
-           </div>
-           <div class="card-body">
-             <div v-for="item in announcements" :key="item.id" class="announcement-item">
-               <div class="announcement-tag">
-                 <el-tag :type="item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'info'" size="small">
-                   {{ item.priority === 'high' ? '重要' : item.priority === 'medium' ? '普通' : '一般' }}
-                 </el-tag>
-               </div>
-               <div class="announcement-content">
-                 <span class="announcement-title">{{ item.title }}</span>
-                 <span class="announcement-time">{{ item.time }}</span>
-               </div>
-             </div>
-             <div v-if="announcements.length === 0" class="empty-hint">暂无公告</div>
-           </div>
-         </div>
- 
-         <!-- Learning Stats Pie -->
-         <div class="home-card chart-card">
-           <div class="card-header">
-             <h3><el-icon><DataAnalysis /></el-icon> 学习统计</h3>
-           </div>
-           <div class="card-body chart-body">
-             <div ref="studentChartRef" class="chart-container"></div>
-           </div>
-         </div>
-       </div>
- 
-       <!-- Recommended Resources -->
-       <div class="home-card">
-         <div class="card-header">
-           <h3><el-icon><StarFilled /></el-icon> 推荐学习</h3>
-           <el-button text type="primary" size="small">更多推荐</el-button>
-         </div>
-         <div class="card-body">
-           <div v-if="recommendations.length === 0" class="empty-hint">暂无推荐内容</div>
-           <div v-else class="recommend-grid">
-             <div v-for="item in recommendations" :key="item.id" class="recommend-card" @click="handleRecommendClick(item)">
-               <div class="recommend-icon" :class="item.type">
-                 <el-icon :size="20">
-                   <component :is="item.type === 'resource' ? 'Folder' : item.type === 'experiment' ? 'Monitor' : 'Notebook'" />
-                 </el-icon>
-               </div>
-               <div class="recommend-info">
-                 <span class="recommend-title">{{ item.title }}</span>
-                 <el-tag size="small" type="warning">热度 {{ item.score }}</el-tag>
-               </div>
-               <div class="recommend-reason">{{ item.reason }}</div>
-             </div>
-           </div>
-         </div>
-       </div>
-     </template>
- 
-     <!-- Teacher Dashboard -->
-     <template v-if="authStore.role === 'teacher'">
-       <div class="welcome-banner teacher-banner">
-         <div class="welcome-content">
-           <h2 class="welcome-title">欢迎回来，{{ authStore.userInfo?.name || '老师' }}！</h2>
-           <p class="welcome-desc">今日有 <strong>{{ teacherStats.todoTotal }}</strong> 项待办事项等待处理。</p>
-         </div>
-         <div class="quick-actions">
-           <el-button type="primary" :icon="Plus" @click="router.push('/teacher/courses')">创建课程</el-button>
-           <el-button type="success" :icon="EditPen" @click="router.push('/teacher/exam-papers')">发布考试</el-button>
-           <el-button type="warning" :icon="Calendar" @click="router.push('/teacher/reservations')">审核预约</el-button>
-         </div>
-       </div>
- 
-       <!-- Todo Statistics -->
-       <div class="stat-cards">
-         <div class="stat-card todo-reserve" @click="router.push('/teacher/reservations')">
-           <div class="stat-icon"><el-icon :size="24"><Calendar /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ teacherStats.pendingReservations }}</span>
-             <span class="stat-label">待审核预约</span>
-           </div>
-         </div>
-         <div class="stat-card todo-report" @click="router.push('/teacher/reports')">
-           <div class="stat-icon"><el-icon :size="24"><Document /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ teacherStats.pendingReports }}</span>
-             <span class="stat-label">待批改报告</span>
-           </div>
-         </div>
-         <div class="stat-card todo-exam" @click="router.push('/teacher/exam-papers')">
-           <div class="stat-icon"><el-icon :size="24"><EditPen /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ teacherStats.pendingExams }}</span>
-             <span class="stat-label">待发布考试</span>
-           </div>
-         </div>
-         <div class="stat-card todo-student">
-           <div class="stat-icon"><el-icon :size="24"><User /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ teacherStats.studentCount }}</span>
-             <span class="stat-label">所教学生</span>
-           </div>
-         </div>
-       </div>
- 
-       <div class="home-grid-2col">
-         <!-- Appointment Trend Chart -->
-         <div class="home-card chart-card">
-           <div class="card-header">
-             <h3><el-icon><DataLine /></el-icon> 预约量趋势</h3>
-           </div>
-           <div class="card-body chart-body">
-             <div ref="teacherChartRef" class="chart-container"></div>
-           </div>
-         </div>
- 
-         <!-- Latest Activity -->
-         <div class="home-card">
-           <div class="card-header">
-             <h3><el-icon><Clock /></el-icon> 最新动态</h3>
-           </div>
-           <div class="card-body">
-             <div v-for="item in activities" :key="item.id" class="activity-item">
-               <div class="activity-dot" :style="{ background: item.color || '#409eff' }"></div>
-               <div class="activity-content">
-                 <span class="activity-text">{{ item.text }}</span>
-                 <span class="activity-time">{{ item.time }}</span>
-               </div>
-             </div>
-             <div v-if="activities.length === 0" class="empty-hint">暂无最新动态</div>
-           </div>
-         </div>
-       </div>
-     </template>
- 
-     <!-- Admin Dashboard -->
-     <template v-if="authStore.role === 'admin'">
-       <!-- System Overview Stats -->
-       <div class="stat-cards">
-         <div class="stat-card admin-user">
-           <div class="stat-icon"><el-icon :size="28"><User /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ adminStats.userCount }}</span>
-             <span class="stat-label">注册用户</span>
-           </div>
-           <div class="stat-trend up">实时统计</div>
-         </div>
-         <div class="stat-card admin-course">
-           <div class="stat-icon"><el-icon :size="28"><Reading /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ adminStats.courseCount }}</span>
-             <span class="stat-label">课程总数</span>
-           </div>
-           <div class="stat-trend up">实时统计</div>
-         </div>
-         <div class="stat-card admin-experiment">
-           <div class="stat-icon"><el-icon :size="28"><Monitor /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ adminStats.experimentCount }}</span>
-             <span class="stat-label">实验项目</span>
-           </div>
-           <div class="stat-trend up">实时统计</div>
-         </div>
-         <div class="stat-card admin-exam">
-           <div class="stat-icon"><el-icon :size="28"><EditPen /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ adminStats.examCount }}%</span>
-             <span class="stat-label">考试通过率</span>
-           </div>
-           <div class="stat-trend up">实时统计</div>
-         </div>
-         <div class="stat-card admin-reservation">
-           <div class="stat-icon"><el-icon :size="28"><Calendar /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ adminStats.reservationCount }}</span>
-             <span class="stat-label">实验预约</span>
-           </div>
-           <div class="stat-trend up">实时统计</div>
-         </div>
-         <div class="stat-card admin-report">
-           <div class="stat-icon"><el-icon :size="28"><Document /></el-icon></div>
-           <div class="stat-info">
-             <span class="stat-num">{{ adminStats.reportCount }}</span>
-             <span class="stat-label">实验报告</span>
-           </div>
-           <div class="stat-trend up">实时统计</div>
-         </div>
-       </div>
- 
-       <div class="home-grid-3col">
-         <!-- Announcement Quick Entry -->
-         <div class="home-card">
-           <div class="card-header">
-             <h3><el-icon><Bell /></el-icon> 公告管理</h3>
-             <el-button text type="primary" size="small" @click="router.push('/admin/notices')">发布公告</el-button>
-           </div>
-           <div class="card-body">
-             <div v-for="item in adminAnnouncements" :key="item.id" class="announcement-item">
-               <div class="announcement-tag">
-                 <el-tag :type="item.priority === 'high' ? 'danger' : 'info'" size="small">
-                   {{ item.priority === 'high' ? '置顶' : '普通' }}
-                 </el-tag>
-               </div>
-               <div class="announcement-content">
-                 <span class="announcement-title">{{ item.title }}</span>
-                 <span class="announcement-time">{{ item.time }}</span>
-               </div>
-             </div>
-             <div v-if="adminAnnouncements.length === 0" class="empty-hint">暂无公告</div>
-           </div>
-         </div>
- 
-         <!-- System Status -->
-         <div class="home-card">
-           <div class="card-header">
-             <h3><el-icon><Monitor /></el-icon> 系统状态</h3>
-           </div>
-           <div class="card-body">
-             <div class="status-item">
-             <span class="status-name">API 服务</span>
-             <el-tag size="small" type="success">正常</el-tag>
-              <span class="status-uptime">已连接新后端</span>
-             </div>
-             <div class="status-item">
-             <span class="status-name">数据库</span>
-             <el-tag size="small" type="success">正常</el-tag>
-              <span class="status-uptime">ogexpsafetyplatform</span>
-             </div>
-             <div class="status-item">
-             <span class="status-name">文件存储</span>
-              <el-tag size="small" type="info">未接入</el-tag>
-              <span class="status-uptime">等待后端接口</span>
-             </div>
-             <div class="status-item">
-             <span class="status-name">AI 服务</span>
-              <el-tag size="small" type="info">未接入</el-tag>
-              <span class="status-uptime">等待后端接口</span>
-             </div>
-             <div class="status-item">
-             <span class="status-name">存储使用</span>
-              <el-progress :percentage="0" :stroke-width="8" />
-              <span class="status-uptime">暂无接口</span>
-             </div>
-           </div>
-         </div>
- 
-         <!-- Recent Log Timeline -->
-         <div class="home-card">
-           <div class="card-header">
-             <h3><el-icon><List /></el-icon> 最近日志</h3>
-             <el-button text type="primary" size="small" @click="router.push('/admin/logs')">查看全部</el-button>
-           </div>
-           <div class="card-body">
-             <el-timeline>
-               <el-timeline-item
-                 v-for="log in recentLogs"
-                 :key="log.id"
-                 :timestamp="log.time"
-                 :type="log.type"
-                 :size="log.type === 'primary' ? 'large' : 'default'"
-               >
-                 {{ log.content }}
-               </el-timeline-item>
-             </el-timeline>
-             <div v-if="recentLogs.length === 0" class="empty-hint">暂无日志记录</div>
-           </div>
-         </div>
-       </div>
-     </template>
-   </div>
- </template>
- 
- <script setup>
- import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
- import { useRouter } from 'vue-router'
- import { useAuthStore } from '@/stores/authStore'
- import * as echarts from 'echarts'
- import { Plus, EditPen, Calendar, Document, Trophy, Bell, DataAnalysis, DataLine, Clock, StarFilled, User, Reading, Monitor, List } from '@element-plus/icons-vue'
- import {
-   getCourseCompletion,
-   getDashboardOverview,
-   getHotResources,
-   getReservationTrend,
-   getResourceTypeDistribution,
- } from '@/api/dashboard'
- 
- const router = useRouter()
- const authStore = useAuthStore()
- 
- const studentChartRef = ref(null)
- const teacherChartRef = ref(null)
- const studentChartData = ref([])
- const teacherTrendData = ref([])
- let studentChart = null
- let teacherChart = null
- 
- // Student stats
- const studentStats = reactive({
-   examCount: 0,
-   reserveCount: 0,
-   reportCount: 0,
-   avgScore: 0,
- })
+<template>
+  <div class="portal-page" v-loading="loading">
+    <section class="amazing-hero" :style="{ backgroundImage: `url(${labHero})` }">
+      <div class="hero-copy">
+        <p>AmazingTeaching</p>
+        <h1>{{ roleTitle }}</h1>
+        <span>{{ subtitle }}</span>
+        <div class="hero-actions">
+          <el-button v-if="isStudent" type="primary" :icon="Reading" @click="go('/student/courses')">进入实验课程</el-button>
+          <el-button v-if="isStudent" :icon="Folder" @click="go('/student/resources')">浏览油气资源库</el-button>
+          <el-button v-if="authStore.role === 'teacher'" type="primary" :icon="Operation" @click="go('/teacher/experiments')">建设实验路径</el-button>
+          <el-button v-if="authStore.role === 'teacher'" :icon="Reading" @click="go('/teacher/courses')">课程建设</el-button>
+        </div>
+      </div>
+    </section>
 
- const studentProgress = reactive({
-   percent: 0,
-   courseDone: 0,
-   courseTotal: 0,
-   experimentDone: 0,
-   experimentTotal: 0,
- })
- 
- // Teacher stats
- const teacherStats = reactive({
-   pendingReservations: 0,
-   pendingReports: 0,
-   pendingExams: 0,
-   studentCount: 0,
-   todoTotal: 0,
- })
- 
- // Admin stats
- const adminStats = reactive({
-   userCount: 0,
-   courseCount: 0,
-   experimentCount: 0,
-   examCount: 0,
-   reservationCount: 0,
-   reportCount: 0,
- })
- 
- // Announcements
- const announcements = reactive([])
- 
- const adminAnnouncements = reactive([])
- 
- // Recommendations
- const recommendations = reactive([])
- 
- // Activities (teacher)
- const activities = reactive([])
- 
- // Recent logs (admin)
- const recentLogs = reactive([])
- 
- function handleRecommendClick(item) {
-   if (item.type === 'resource') {
-     router.push('/student/courses')
-   }
- }
+    <section class="portal-toolbar">
+      <div>
+        <h1>知识检索</h1>
+        <p>搜索课程、实验、资源和安全知识，把学习任务直接接到当前路径。</p>
+      </div>
+      <div class="search-box">
+        <el-input
+          v-model="keyword"
+          clearable
+          placeholder="搜索课程、实验、资源、安全知识"
+          :prefix-icon="Search"
+          @keyup.enter="doSearch"
+        />
+        <el-button type="primary" :icon="Search" :loading="searching" @click="doSearch">搜索</el-button>
+      </div>
+    </section>
 
- async function loadHomeData() {
-   await Promise.allSettled([
-     loadOverview(),
-     loadCourseProgress(),
-     loadRecommendations(),
-     loadChartData(),
-   ])
- }
+    <section v-if="isStudent" class="student-priority-grid">
+      <el-card shadow="never" class="panel todo-panel">
+        <template #header>
+          <div class="panel-header">
+            <span>今日待办</span>
+            <el-button text :icon="Refresh" @click="loadHome">刷新</el-button>
+          </div>
+        </template>
+        <div v-if="home.todos.length" class="item-list">
+          <button v-for="item in home.todos" :key="`${item.type}-${item.id}`" class="list-item" type="button" @click="go(item.path)">
+            <el-tag size="small" :type="tagType(item.type)">{{ typeLabel(item.type) }}</el-tag>
+            <span>{{ item.title }}</span>
+            <time>{{ formatTime(item.time) }}</time>
+          </button>
+        </div>
+        <el-empty v-else description="暂无待办" :image-size="80" />
+      </el-card>
 
- async function loadOverview() {
-   const data = await getDashboardOverview({})
-   if (!data) return
+      <el-card shadow="never" class="panel continue-panel">
+        <template #header><div class="panel-header"><span>继续学习</span></div></template>
+        <button v-if="continueItem" class="continue-card" type="button" @click="go(continueItem.path)">
+          <strong>{{ continueItem.title }}</strong>
+          <span>{{ continueItem.status === 'OVERDUE' ? '任务已逾期' : '定位到最近未完成任务' }}</span>
+        </button>
+        <el-empty v-else description="暂无未完成学习任务" :image-size="80" />
+      </el-card>
 
-   const courseCount = toNumber(data.courseCount)
-   const experimentCount = toNumber(data.experimentCount)
-   const studentCount = toNumber(data.studentCount)
-   const monthReservationCount = toNumber(data.monthReservationCount)
-   const pendingReservationCount = toNumber(data.pendingReservationCount)
-   const pendingReportCount = toNumber(data.pendingReportCount)
-   const examPassRate = Math.round(toNumber(data.examPassRate))
+      <el-card shadow="never" class="panel">
+        <template #header><div class="panel-header"><span>即将截止</span></div></template>
+        <div v-if="deadlineItems.length" class="item-list">
+          <button v-for="item in deadlineItems" :key="`${item.type}-${item.id}`" class="list-item" type="button" @click="go(item.path)">
+            <el-tag size="small" type="warning">{{ typeLabel(item.type) }}</el-tag>
+            <span>{{ item.title }}</span>
+            <time>{{ formatTime(item.time) }}</time>
+          </button>
+        </div>
+        <el-empty v-else description="暂无临近截止事项" :image-size="80" />
+      </el-card>
 
-   studentStats.examCount = 0
-   studentStats.reserveCount = pendingReservationCount
-   studentStats.reportCount = pendingReportCount
-   studentStats.avgScore = examPassRate
+      <el-card shadow="never" class="panel">
+        <template #header><div class="panel-header"><span>准入和预约提醒</span></div></template>
+        <div v-if="admissionItems.length" class="item-list">
+          <button v-for="item in admissionItems" :key="`${item.type}-${item.id}`" class="list-item" type="button" @click="go(item.path)">
+            <el-tag size="small" :type="tagType(item.type)">{{ typeLabel(item.type) }}</el-tag>
+            <span>{{ item.title }}</span>
+            <time>{{ formatTime(item.time) }}</time>
+          </button>
+        </div>
+        <el-empty v-else description="暂无准入或预约提醒" :image-size="80" />
+      </el-card>
 
-   studentProgress.courseTotal = courseCount
-   studentProgress.experimentTotal = experimentCount
+      <el-card shadow="never" class="panel">
+        <template #header><div class="panel-header"><span>我的课程进度</span></div></template>
+        <div class="student-metrics">
+          <button v-for="metric in home.metrics" :key="metric.code" type="button" @click="go(metric.path)">
+            <span>{{ metric.label }}</span>
+            <strong>{{ metric.value }}<small>{{ metric.unit }}</small></strong>
+          </button>
+        </div>
+      </el-card>
 
-   teacherStats.pendingReservations = pendingReservationCount
-   teacherStats.pendingReports = pendingReportCount
-   teacherStats.pendingExams = 0
-   teacherStats.studentCount = studentCount
-   teacherStats.todoTotal = pendingReservationCount + pendingReportCount
+      <el-card shadow="never" class="panel">
+        <template #header><div class="panel-header"><span>个性化学习建议</span></div></template>
+        <div class="advice-list">
+          <button type="button" @click="go('/student/courses')">从课程学习页继续完成必做资源和准备清单</button>
+          <button type="button" @click="go('/student/exams')">查看正式安全考试状态，未通过实验优先复习错题</button>
+          <button type="button" @click="go('/student/grades')">报告被退回时先处理教师反馈再重新提交</button>
+        </div>
+      </el-card>
 
-   adminStats.userCount = studentCount
-   adminStats.courseCount = courseCount
-   adminStats.experimentCount = experimentCount
-   adminStats.examCount = examPassRate
-   adminStats.reservationCount = monthReservationCount
-   adminStats.reportCount = pendingReportCount
- }
+      <el-card shadow="never" class="panel">
+        <template #header><div class="panel-header"><span>消息与日程</span></div></template>
+        <div v-if="home.calendarEvents.length" class="timeline compact">
+          <button v-for="event in home.calendarEvents" :key="`${event.type}-${event.id}`" type="button" @click="go(event.path)">
+            <span class="timeline-dot" :class="event.type"></span>
+            <span class="timeline-main">{{ event.title }}</span>
+            <time>{{ formatTime(event.startTime) }}</time>
+          </button>
+        </div>
+        <el-empty v-else description="暂无日程" :image-size="80" />
+      </el-card>
+    </section>
 
- async function loadCourseProgress() {
-   const list = await getCourseCompletion({})
-   if (!Array.isArray(list) || list.length === 0) {
-     studentProgress.percent = 0
-     studentProgress.courseDone = 0
-     studentProgress.experimentDone = 0
-     return
-   }
+    <section v-if="!isStudent" class="metric-grid">
+      <button
+        v-for="metric in home.metrics"
+        :key="metric.code"
+        class="metric-card"
+        :class="metric.type"
+        type="button"
+        @click="go(metric.path)"
+      >
+        <span class="metric-label">{{ metric.label }}</span>
+        <strong>{{ metric.value }}<small>{{ metric.unit }}</small></strong>
+      </button>
+    </section>
 
-   const rates = list.map((item) => toNumber(item.completionRate))
-   studentProgress.percent = Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length)
-   studentProgress.courseDone = rates.filter((rate) => rate >= 100).length
-   studentProgress.courseTotal = list.length
- }
+    <section v-if="!isStudent" class="content-grid">
+      <el-card shadow="never" class="panel todo-panel">
+        <template #header>
+          <div class="panel-header">
+            <span>待办事项</span>
+            <el-button text :icon="Refresh" @click="loadHome">刷新</el-button>
+          </div>
+        </template>
+        <div v-if="home.todos.length" class="item-list">
+          <button v-for="item in home.todos" :key="`${item.type}-${item.id}`" class="list-item" type="button" @click="go(item.path)">
+            <el-tag size="small" :type="tagType(item.type)">{{ item.type || '待办' }}</el-tag>
+            <span>{{ item.title }}</span>
+            <time>{{ formatTime(item.time) }}</time>
+          </button>
+        </div>
+        <el-empty v-else description="暂无待办" :image-size="80" />
+      </el-card>
 
- async function loadRecommendations() {
-   const list = await getHotResources({ limit: 4 })
-   recommendations.splice(0, recommendations.length, ...(list || []).map((item) => ({
-     id: item.resourceId,
-     title: item.title,
-     type: 'resource',
-     score: toNumber(item.viewCount),
-     reason: `${resourceTypeLabel(item.resourceType)}，浏览量 ${toNumber(item.viewCount)}`,
-   })))
- }
+      <el-card shadow="never" class="panel">
+        <template #header>
+          <div class="panel-header">
+            <span>公告与消息</span>
+            <el-badge :value="unreadCount" :hidden="unreadCount === 0" />
+          </div>
+        </template>
+        <el-tabs v-model="messageTab">
+          <el-tab-pane label="公告" name="notices">
+            <div v-if="home.notices.length" class="item-list">
+              <div v-for="item in home.notices" :key="item.id" class="list-item static">
+                <el-tag size="small" :type="noticeTag(item.status)">{{ noticeLabel(item.status) }}</el-tag>
+                <span>{{ item.title }}</span>
+                <time>{{ formatTime(item.time) }}</time>
+              </div>
+            </div>
+            <el-empty v-else description="暂无公告" :image-size="80" />
+          </el-tab-pane>
+          <el-tab-pane label="消息" name="messages">
+            <div v-if="home.messages.length" class="item-list">
+              <button
+                v-for="item in home.messages"
+                :key="item.id"
+                class="list-item"
+                :class="{ unread: Number(item.value) === 0 }"
+                type="button"
+                @click="readMessage(item)"
+              >
+                <el-tag size="small" :type="Number(item.value) === 0 ? 'warning' : 'info'">
+                  {{ Number(item.value) === 0 ? '未读' : '已读' }}
+                </el-tag>
+                <span>{{ item.title }}</span>
+                <time>{{ formatTime(item.time) }}</time>
+              </button>
+            </div>
+            <el-empty v-else description="暂无消息" :image-size="80" />
+          </el-tab-pane>
+        </el-tabs>
+      </el-card>
 
- async function loadChartData() {
-   const [resourceResult, trendResult] = await Promise.allSettled([
-     getResourceTypeDistribution({}),
-     getReservationTrend({ limit: 7 }),
-   ])
+      <el-card shadow="never" class="panel">
+        <template #header>
+          <div class="panel-header">
+            <span>学习日历与实验日程</span>
+          </div>
+        </template>
+        <div v-if="home.calendarEvents.length" class="timeline">
+          <button v-for="event in home.calendarEvents" :key="`${event.type}-${event.id}`" type="button" @click="go(event.path)">
+            <span class="timeline-dot" :class="event.type"></span>
+            <span class="timeline-main">{{ event.title }}</span>
+            <time>{{ formatTime(event.startTime) }}</time>
+          </button>
+        </div>
+        <el-empty v-else description="暂无日程" :image-size="80" />
+      </el-card>
 
-   if (resourceResult.status === 'fulfilled') {
-     studentChartData.value = (resourceResult.value || []).map((item) => ({
-       value: toNumber(item.value),
-       name: resourceTypeLabel(item.name),
-     }))
-   }
+      <el-card shadow="never" class="panel">
+        <template #header>
+          <div class="panel-header">
+            <span>快捷入口</span>
+          </div>
+        </template>
+        <div class="shortcut-grid">
+          <button v-for="item in home.shortcuts" :key="`${item.title}-${item.path}`" type="button" @click="go(item.path)">
+            <el-icon><component :is="shortcutIcon(item.type)" /></el-icon>
+            <span>{{ item.title }}</span>
+          </button>
+        </div>
+        <div class="recent-block">
+          <h2>最近访问</h2>
+          <div v-if="home.recentVisits.length" class="recent-list">
+            <button v-for="item in home.recentVisits" :key="item.id" type="button" @click="go(item.path)">
+              <span>{{ item.title }}</span>
+              <time>{{ formatTime(item.time) }}</time>
+            </button>
+          </div>
+          <el-empty v-else description="暂无最近访问" :image-size="70" />
+        </div>
+      </el-card>
+    </section>
 
-   if (trendResult.status === 'fulfilled') {
-     teacherTrendData.value = trendResult.value || []
-   }
- }
+    <el-dialog v-model="searchVisible" title="搜索结果" width="680px">
+      <div v-if="searchResults.length" class="search-results">
+        <button v-for="item in searchResults" :key="`${item.type}-${item.id}`" type="button" @click="openSearchResult(item)">
+          <el-tag size="small" :type="tagType(item.type)">{{ typeLabel(item.type) }}</el-tag>
+          <div>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.description || '暂无摘要' }}</p>
+          </div>
+        </button>
+      </div>
+      <el-empty v-else description="没有找到匹配内容" />
+    </el-dialog>
+  </div>
+</template>
 
- function toNumber(value) {
-   const number = Number(value || 0)
-   return Number.isFinite(number) ? number : 0
- }
+<script setup>
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import {
+  Calendar,
+  Document,
+  EditPen,
+  Folder,
+  Link,
+  Notebook,
+  Operation,
+  Reading,
+  Refresh,
+  Search,
+} from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/authStore'
+import { getPortalHome, markMessageRead, searchPortal } from '@/api/portal'
+import labHero from '@/assets/amazing/lab-hero.png'
 
- function resourceTypeLabel(type) {
-   const labels = {
-     VIDEO: '视频资源',
-     DOCUMENT: '文档资料',
-     IMAGE: '图片资料',
-     LINK: '外部链接',
-     FILE: '文件资料',
-     UNKNOWN: '未分类资源',
-   }
-   return labels[type] || type || '未分类资源'
- }
- 
- // ECharts - Student learning stats pie
- function initStudentChart() {
-   if (!studentChartRef.value) return
-   studentChart = echarts.init(studentChartRef.value)
-   const hasData = studentChartData.value.some((item) => item.value > 0)
-   studentChart.setOption({
-     title: hasData ? undefined : {
-       text: '暂无数据',
-       left: 'center',
-       top: 'middle',
-       textStyle: { color: '#98a2b3', fontSize: 14, fontWeight: 400 },
-     },
-     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-     legend: {
-       bottom: 0,
-       textStyle: { fontSize: 12 },
-       itemWidth: 10,
-       itemHeight: 10,
-     },
-     series: [
-       {
-         type: 'pie',
-         radius: ['45%', '70%'],
-         center: ['50%', '45%'],
-         avoidLabelOverlap: false,
-         label: { show: false },
-         emphasis: {
-           label: { show: true, fontSize: 14, fontWeight: 'bold' },
-           itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' },
-         },
-         data: hasData ? studentChartData.value : [],
-         itemStyle: {
-           borderRadius: 4,
-           borderColor: '#fff',
-           borderWidth: 2,
-         },
-       },
-     ],
-   })
- }
- 
- // ECharts - Teacher appointment trend
- function initTeacherChart() {
-   if (!teacherChartRef.value) return
-   teacherChart = echarts.init(teacherChartRef.value)
-   const labels = teacherTrendData.value.map((item) => item.statDate)
-   const values = teacherTrendData.value.map((item) => toNumber(item.value))
-   const hasData = values.some((item) => item > 0)
-   teacherChart.setOption({
-     title: hasData ? undefined : {
-       text: '暂无数据',
-       left: 'center',
-       top: 'middle',
-       textStyle: { color: '#98a2b3', fontSize: 14, fontWeight: 400 },
-     },
-     tooltip: { trigger: 'axis' },
-     grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
-     xAxis: {
-       type: 'category',
-       data: labels.length ? labels : ['暂无数据'],
-       axisLabel: { fontSize: 11 },
-       axisLine: { lineStyle: { color: '#eee' } },
-     },
-     yAxis: {
-       type: 'value',
-       splitLine: { lineStyle: { color: '#f5f5f5' } },
-       axisLabel: { fontSize: 11 },
-     },
-     series: [
-       {
-         name: '预约量',
-         type: 'line',
-         smooth: true,
-         symbol: 'circle',
-         symbolSize: 8,
-         lineStyle: { width: 3, color: '#409eff' },
-         areaStyle: {
-           color: {
-             type: 'linear',
-             x: 0, y: 0, x2: 0, y2: 1,
-             colorStops: [
-               { offset: 0, color: 'rgba(64,158,255,0.3)' },
-               { offset: 1, color: 'rgba(64,158,255,0.02)' },
-             ],
-           },
-         },
-         itemStyle: { color: '#409eff' },
-         data: labels.length ? values : [0],
-       },
-     ],
-     legend: {
-       bottom: 0,
-       textStyle: { fontSize: 12 },
-       itemWidth: 14,
-       itemHeight: 10,
-     },
-   })
- }
- 
- onMounted(async () => {
-   await loadHomeData()
-   nextTick(() => {
-     if (authStore.role === 'student') initStudentChart()
-     if (authStore.role === 'teacher') initTeacherChart()
-   })
-   window.addEventListener('resize', handleResize)
- })
- 
- onUnmounted(() => {
-   window.removeEventListener('resize', handleResize)
-   studentChart?.dispose()
-   teacherChart?.dispose()
- })
- 
- function handleResize() {
-   studentChart?.resize()
-   teacherChart?.resize()
- }
- </script>
- 
- <style scoped>
- .home-page {
-   max-width: 1200px;
-   margin: 0 auto;
- }
- 
- /* Welcome Banner */
- .welcome-banner {
-   background: linear-gradient(135deg, #1a3a5c 0%, #2d5f8a 100%);
-   border-radius: 12px;
-   padding: 24px 28px;
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   gap: 24px;
-   margin-bottom: 20px;
-   color: #fff;
- }
- .teacher-banner {
-   background: linear-gradient(135deg, #1d4e3a 0%, #3a7d5a 100%);
- }
- .welcome-title {
-   font-size: 22px;
-   font-weight: 600;
-   margin-bottom: 6px;
- }
- .welcome-desc {
-   font-size: 14px;
-   opacity: 0.8;
- }
- .welcome-desc strong {
-   color: #ffd666;
-   font-weight: 600;
- }
- .welcome-progress {
-   min-width: 280px;
- }
- .progress-label {
-   display: flex;
-   justify-content: space-between;
-   font-size: 13px;
-   margin-bottom: 6px;
-   opacity: 0.9;
- }
- .progress-value {
-   font-weight: 600;
-   font-size: 15px;
- }
- .progress-detail {
-   display: flex;
-   justify-content: space-between;
-   font-size: 12px;
-   opacity: 0.7;
-   margin-top: 6px;
- }
- .quick-actions {
-   display: flex;
-   gap: 8px;
-   flex-shrink: 0;
- }
- 
- /* Stat Cards */
- .stat-cards {
-   display: grid;
-   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-   gap: 16px;
-   margin-bottom: 20px;
- }
- .stat-card {
-   background: #fff;
-   border-radius: 12px;
-   padding: 20px;
-   display: flex;
-   align-items: center;
-   gap: 16px;
-   cursor: pointer;
-   transition: all 0.25s;
-   border: 1px solid #f0f0f0;
-   position: relative;
- }
- .stat-card:hover {
-   transform: translateY(-2px);
-   box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-   border-color: transparent;
- }
- .stat-icon {
-   width: 48px;
-   height: 48px;
-   border-radius: 12px;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   flex-shrink: 0;
- }
- .todo-exam .stat-icon { background: #ecf5ff; color: #409eff; }
- .todo-reserve .stat-icon { background: #f0f9eb; color: #67c23a; }
- .todo-report .stat-icon { background: #fef0f0; color: #f56c6c; }
- .todo-grade .stat-icon { background: #fdf6ec; color: #e6a23c; }
- .todo-student .stat-icon { background: #f4f4f5; color: #909399; }
- .admin-user .stat-icon { background: #ecf5ff; color: #409eff; }
- .admin-course .stat-icon { background: #f0f9eb; color: #67c23a; }
- .admin-experiment .stat-icon { background: #fdf6ec; color: #e6a23c; }
- .admin-exam .stat-icon { background: #fef0f0; color: #f56c6c; }
- .admin-reservation .stat-icon { background: #f0f9eb; color: #67c23a; }
- .admin-report .stat-icon { background: #ecf5ff; color: #409eff; }
- .stat-info {
-   display: flex;
-   flex-direction: column;
- }
- .stat-num {
-   font-size: 28px;
-   font-weight: 700;
-   color: #1a1a2e;
-   line-height: 1.2;
- }
- .stat-label {
-   font-size: 13px;
-   color: #999;
- }
- .stat-trend {
-   position: absolute;
-   top: 12px;
-   right: 12px;
-   font-size: 11px;
-   padding: 2px 8px;
-   border-radius: 10px;
-   font-weight: 500;
- }
- .stat-trend.up {
-   color: #67c23a;
-   background: #f0f9eb;
- }
- .stat-trend.down {
-   color: #f56c6c;
-   background: #fef0f0;
- }
- 
- /* Grid Layouts */
- .home-grid-2col {
-   display: grid;
-   grid-template-columns: 1fr 1fr;
-   gap: 16px;
-   margin-bottom: 20px;
- }
- .home-grid-3col {
-   display: grid;
-   grid-template-columns: 1fr 1fr 1fr;
-   gap: 16px;
-   margin-bottom: 20px;
- }
- 
- /* Home Card */
- .home-card {
-   background: #fff;
-   border-radius: 12px;
-   border: 1px solid #f0f0f0;
-   overflow: hidden;
-   transition: box-shadow 0.25s;
- }
- .home-card:hover {
-   box-shadow: 0 4px 16px rgba(0,0,0,0.04);
- }
- .card-header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   padding: 16px 20px;
-   border-bottom: 1px solid #f5f5f5;
- }
- .card-header h3 {
-   font-size: 15px;
-   font-weight: 600;
-   color: #1a1a2e;
-   display: flex;
-   align-items: center;
-   gap: 6px;
- }
- .card-header h3 .el-icon {
-   color: #409eff;
- }
- .card-body {
-   padding: 16px 20px;
- }
- .chart-body {
-   padding: 8px 12px 4px;
- }
- .chart-container {
-   width: 100%;
-   height: 240px;
- }
- 
- /* Announcement Items */
- .announcement-item {
-   display: flex;
-   align-items: center;
-   gap: 10px;
-   padding: 10px 0;
-   border-bottom: 1px solid #f5f5f5;
-   cursor: pointer;
-   transition: background 0.2s;
- }
- .announcement-item:last-child {
-   border-bottom: none;
- }
- .announcement-item:hover {
-   background: #fafafa;
-   margin: 0 -20px;
-   padding-left: 20px;
-   padding-right: 20px;
- }
- .announcement-tag {
-   flex-shrink: 0;
- }
- .announcement-content {
-   flex: 1;
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   gap: 12px;
- }
- .announcement-title {
-   font-size: 14px;
-   color: #333;
- }
- .announcement-time {
-   font-size: 12px;
-   color: #999;
-   flex-shrink: 0;
- }
- 
- /* Recommended Resources */
- .recommend-grid {
-   display: grid;
-   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-   gap: 12px;
- }
- .recommend-card {
-   display: flex;
-   flex-direction: column;
-   gap: 6px;
-   padding: 14px;
-   border: 1px solid #f0f0f0;
-   border-radius: 10px;
-   cursor: pointer;
-   transition: all 0.2s;
- }
- .recommend-card:hover {
-   border-color: #409eff;
-   background: #f8fbff;
- }
- .recommend-icon {
-   width: 32px;
-   height: 32px;
-   border-radius: 8px;
-   display: flex;
-   align-items: center;
-   justify-content: center;
- }
- .recommend-icon.resource { background: #ecf5ff; color: #409eff; }
- .recommend-icon.experiment { background: #f0f9eb; color: #67c23a; }
- .recommend-icon.knowledge { background: #fdf6ec; color: #e6a23c; }
- .recommend-info {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
- }
- .recommend-title {
-   font-size: 14px;
-   font-weight: 500;
-   color: #333;
- }
- .recommend-reason {
-   font-size: 12px;
-   color: #999;
-   line-height: 1.4;
- }
- 
- /* Activities */
- .activity-item {
-   display: flex;
-   align-items: flex-start;
-   gap: 12px;
-   padding: 10px 0;
-   border-bottom: 1px solid #f5f5f5;
- }
- .activity-item:last-child {
-   border-bottom: none;
- }
- .activity-dot {
-   width: 8px;
-   height: 8px;
-   border-radius: 50%;
-   margin-top: 6px;
-   flex-shrink: 0;
- }
- .activity-content {
-   flex: 1;
-   display: flex;
-   flex-direction: column;
-   gap: 2px;
- }
- .activity-text {
-   font-size: 14px;
-   color: #333;
- }
- .activity-time {
-   font-size: 12px;
-   color: #999;
- }
- 
- /* Status Items */
- .status-item {
-   display: flex;
-   align-items: center;
-   gap: 12px;
-   padding: 10px 0;
-   border-bottom: 1px solid #f5f5f5;
- }
- .status-item:last-child {
-   border-bottom: none;
-   flex-wrap: wrap;
- }
- .status-name {
-   font-size: 14px;
-   color: #333;
-   min-width: 80px;
- }
- .status-uptime {
-   font-size: 12px;
-   color: #999;
-   margin-left: auto;
- }
- 
- /* Empty Hint */
- .empty-hint {
-   text-align: center;
-   padding: 24px;
-   color: #ccc;
-   font-size: 14px;
- }
- 
- /* Responsive */
- @media (max-width: 1024px) {
-   .home-grid-2col,
-   .home-grid-3col {
-     grid-template-columns: 1fr;
-   }
- }
- @media (max-width: 768px) {
-   .welcome-banner {
-     flex-direction: column;
-     align-items: stretch;
-     text-align: center;
-   }
-   .quick-actions {
-     justify-content: center;
-     flex-wrap: wrap;
-   }
-   .welcome-progress {
-     min-width: auto;
-   }
-   .stat-cards {
-     grid-template-columns: repeat(2, 1fr);
-   }
-   .recommend-grid {
-     grid-template-columns: 1fr;
-   }
- }
- </style>
+const router = useRouter()
+const authStore = useAuthStore()
+const loading = ref(false)
+const searching = ref(false)
+const searchVisible = ref(false)
+const messageTab = ref('notices')
+const keyword = ref('')
+const searchResults = ref([])
+
+const home = reactive({
+  role: '',
+  metrics: [],
+  todos: [],
+  notices: [],
+  messages: [],
+  calendarEvents: [],
+  recentVisits: [],
+  shortcuts: [],
+})
+
+const roleTitle = computed(() => ({
+  student: '实验学习驾驶舱',
+  teacher: '教师课程建设台',
+  lab_admin: '实验室运行总览',
+  admin: '平台治理中心',
+}[authStore.role] || '统一门户'))
+
+const subtitle = computed(() => ({
+  student: '沿着实验可视化路径完成预习、资源、准入、预约、报告和交流。',
+  teacher: '把课程内容组织成可看、可练、可追踪的油气工程实验学习路径。',
+  lab_admin: '查看今日实验、容量使用、准入状态和实验室运行情况。',
+  admin: '维护平台用户、权限、公告和运行日志。',
+}[authStore.role] || '汇总当前账号可访问的事项。'))
+
+const unreadCount = computed(() => home.messages.filter((item) => Number(item.value) === 0).length)
+const isStudent = computed(() => authStore.role === 'student')
+const continueItem = computed(() => home.todos.find((item) => item.type === 'learning') || home.todos[0] || null)
+const deadlineItems = computed(() => home.todos.filter((item) => ['DUE_SOON', 'OVERDUE'].includes(item.status)).slice(0, 5))
+const admissionItems = computed(() => home.todos.filter((item) => ['admission', 'reservation', 'report'].includes(item.type)).slice(0, 6))
+const shortcutIconMap = {
+  course: Reading,
+  experiment: Operation,
+  exam: EditPen,
+  knowledge: Notebook,
+  resource: Folder,
+  reservation: Calendar,
+  report: Document,
+}
+
+onMounted(loadHome)
+
+async function loadHome() {
+  loading.value = true
+  try {
+    const data = await getPortalHome()
+    Object.assign(home, {
+      role: data?.role || '',
+      metrics: data?.metrics || [],
+      todos: data?.todos || [],
+      notices: data?.notices || [],
+      messages: data?.messages || [],
+      calendarEvents: data?.calendarEvents || [],
+      recentVisits: data?.recentVisits || [],
+      shortcuts: data?.shortcuts || [],
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+async function doSearch() {
+  if (!keyword.value.trim()) {
+    ElMessage.warning('请输入搜索关键词')
+    return
+  }
+  searching.value = true
+  try {
+    searchResults.value = await searchPortal({ keyword: keyword.value.trim(), limit: 12 })
+    searchVisible.value = true
+  } finally {
+    searching.value = false
+  }
+}
+
+async function readMessage(item) {
+  if (Number(item.value) === 0) {
+    await markMessageRead(item.id)
+    item.value = 1
+  }
+  go(item.path)
+}
+
+function openSearchResult(item) {
+  searchVisible.value = false
+  go(item.path)
+}
+
+function go(path) {
+  if (path) router.push(path)
+}
+
+function shortcutIcon(type) {
+  return shortcutIconMap[type] || Link
+}
+
+function formatTime(value) {
+  if (!value) return '未设置'
+  return String(value).replace('T', ' ').slice(0, 16)
+}
+
+function tagType(type) {
+  return {
+    exam: 'warning',
+    learning: 'primary',
+    admission: 'warning',
+    reservation: 'success',
+    report: 'danger',
+    course: 'primary',
+    experiment: 'success',
+    resource: 'info',
+    knowledge: 'warning',
+    log: 'info',
+  }[type] || 'info'
+}
+
+function typeLabel(type) {
+  return {
+    course: '课程',
+    experiment: '实验',
+    learning: '学习',
+    exam: '考试',
+    reservation: '预约',
+    report: '报告',
+    admission: '准入',
+    resource: '资源',
+    knowledge: '安全知识',
+    notice: '公告',
+  }[type] || type || '结果'
+}
+
+function noticeTag(priority) {
+  return priority === 'HIGH' ? 'danger' : priority === 'MEDIUM' ? 'warning' : 'info'
+}
+
+function noticeLabel(priority) {
+  return priority === 'HIGH' ? '重要' : priority === 'MEDIUM' ? '普通' : '一般'
+}
+</script>
+
+<style scoped>
+.portal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.amazing-hero {
+  min-height: 260px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+}
+.hero-copy {
+  width: min(620px, 100%);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0));
+}
+.hero-copy p {
+  color: #177e89;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.hero-copy h1 {
+  color: #13233a;
+  font-size: 34px;
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+.hero-copy span {
+  max-width: 480px;
+  color: #344054;
+  line-height: 1.7;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+.portal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+.portal-toolbar h1 {
+  font-size: 22px;
+  color: #1f2937;
+}
+.portal-toolbar p {
+  margin-top: 6px;
+  color: #6b7280;
+}
+.search-box {
+  width: min(520px, 48vw);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.metric-card {
+  min-height: 108px;
+  padding: 16px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.metric-card:hover {
+  border-color: #409eff;
+}
+.metric-label {
+  display: block;
+  color: #6b7280;
+  font-size: 14px;
+}
+.metric-card strong {
+  display: block;
+  margin-top: 14px;
+  font-size: 30px;
+  color: #111827;
+}
+.metric-card small {
+  margin-left: 4px;
+  font-size: 14px;
+  color: #6b7280;
+}
+.metric-card.warning strong { color: #b45309; }
+.metric-card.danger strong { color: #b91c1c; }
+.metric-card.success strong { color: #047857; }
+.student-priority-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 16px;
+}
+.student-priority-grid .todo-panel {
+  grid-row: span 2;
+}
+.continue-card {
+  width: 100%;
+  min-height: 118px;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+}
+.continue-card strong {
+  display: block;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.continue-card span {
+  color: #6b7280;
+}
+.student-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.student-metrics button {
+  min-height: 86px;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+}
+.student-metrics span {
+  display: block;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+.student-metrics strong {
+  color: #111827;
+  font-size: 24px;
+}
+.student-metrics small {
+  margin-left: 3px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.advice-list {
+  display: grid;
+  gap: 10px;
+}
+.advice-list button {
+  text-align: left;
+  color: #344054;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+}
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.panel {
+  border-radius: 8px;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.item-list {
+  display: flex;
+  flex-direction: column;
+}
+.list-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  cursor: pointer;
+}
+.list-item.static {
+  cursor: default;
+}
+.list-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1f2937;
+}
+.list-item time,
+.timeline time,
+.recent-list time {
+  color: #9ca3af;
+  font-size: 12px;
+}
+.list-item.unread span {
+  font-weight: 600;
+}
+.timeline,
+.recent-list {
+  display: flex;
+  flex-direction: column;
+}
+.timeline button,
+.recent-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  cursor: pointer;
+}
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #409eff;
+}
+.timeline-dot.reservation { background: #67c23a; }
+.timeline-dot.exam { background: #e6a23c; }
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.shortcut-grid button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.recent-block {
+  margin-top: 18px;
+}
+.recent-block h2 {
+  margin-bottom: 8px;
+  font-size: 15px;
+  color: #1f2937;
+}
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-results button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+.search-results p {
+  margin-top: 4px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1080px) {
+  .metric-grid,
+  .content-grid,
+  .student-priority-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .portal-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .search-box {
+    width: 100%;
+  }
+}
+@media (max-width: 720px) {
+  .amazing-hero {
+    min-height: 320px;
+    background-position: 62% center;
+  }
+  .hero-copy {
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.88);
+  }
+  .hero-copy h1 {
+    font-size: 26px;
+  }
+  .metric-grid,
+  .content-grid,
+  .student-priority-grid,
+  .student-metrics {
+    grid-template-columns: 1fr;
+  }
+  .search-box {
+    grid-template-columns: 1fr;
+  }
+  .list-item,
+  .timeline button,
+  .recent-list button {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .list-item time,
+  .timeline time,
+  .recent-list time {
+    grid-column: 2;
+  }
+}
+</style>

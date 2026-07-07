@@ -16,6 +16,10 @@ public class User {
     private String password;
     private String realName;    //真实姓名
     private String phone;
+    private String avatarUrl;
+    private String major;
+    private String className;
+    private String email;
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

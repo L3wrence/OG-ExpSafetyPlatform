@@ -1,12 +1,12 @@
  <template>
-   <div class="login-page">
+   <div class="login-page" :style="{ backgroundImage: `linear-gradient(90deg, rgba(19, 35, 58, 0.76), rgba(19, 35, 58, 0.18)), url(${labHero})` }">
      <div class="login-card">
        <div class="login-header">
          <div class="platform-logo">
            <el-icon :size="40" color="#409eff"><Platform /></el-icon>
          </div>
-         <h2 class="platform-title">油气工程实验教学与安全考核平台</h2>
-         <p class="platform-subtitle">石油工程学院 · 实验教学中心</p>
+         <h2 class="platform-title">AmazingTeaching</h2>
+         <p class="platform-subtitle">油气工程实验可视化学习平台</p>
        </div>
  
        <el-form
@@ -19,7 +19,7 @@
          <el-form-item prop="username">
            <el-input
              v-model="form.username"
-             placeholder="用户名"
+             placeholder="学号 / 工号 / 管理员账号"
              :prefix-icon="User"
              size="large"
            />
@@ -62,9 +62,39 @@
  
        <div class="login-footer">
          <span class="footer-link">忘记密码？</span>
-         <span class="footer-link">注册账号</span>
+         <span class="footer-link" @click="registerVisible = true">注册账号</span>
        </div>
      </div>
+
+     <el-dialog v-model="registerVisible" title="学生账号注册" width="520px">
+       <el-form ref="registerRef" :model="registerForm" :rules="registerRules" label-width="96px">
+         <el-form-item label="学号" prop="username">
+           <el-input v-model="registerForm.username" maxlength="50" />
+         </el-form-item>
+         <el-form-item label="姓名" prop="realName">
+           <el-input v-model="registerForm.realName" maxlength="50" />
+         </el-form-item>
+         <el-form-item label="密码" prop="password">
+           <el-input v-model="registerForm.password" type="password" show-password />
+         </el-form-item>
+         <el-form-item label="联系方式" prop="phone">
+           <el-input v-model="registerForm.phone" maxlength="30" />
+         </el-form-item>
+         <el-form-item label="专业" prop="major">
+           <el-input v-model="registerForm.major" maxlength="100" />
+         </el-form-item>
+         <el-form-item label="班级" prop="className">
+           <el-input v-model="registerForm.className" maxlength="100" />
+         </el-form-item>
+         <el-form-item label="邮箱" prop="email">
+           <el-input v-model="registerForm.email" maxlength="100" />
+         </el-form-item>
+       </el-form>
+       <template #footer>
+         <el-button @click="registerVisible = false">取消</el-button>
+         <el-button type="primary" :loading="registering" @click="handleRegister">注册</el-button>
+       </template>
+     </el-dialog>
    </div>
  </template>
  
@@ -72,21 +102,36 @@
  import { ref, reactive } from 'vue'
  import { useRouter, useRoute } from 'vue-router'
  import { ElMessage } from 'element-plus'
- import { User, Lock } from '@element-plus/icons-vue'
+ import { User, Lock, Platform } from '@element-plus/icons-vue'
  import { useAuthStore } from '@/stores/authStore'
  import { getRoleHomePath } from '@/utils/role'
+ import { register } from '@/api/auth'
+ import labHero from '@/assets/amazing/lab-hero.png'
  
  const router = useRouter()
  const route = useRoute()
  const authStore = useAuthStore()
  
  const formRef = ref(null)
+ const registerRef = ref(null)
  const loading = ref(false)
+ const registering = ref(false)
+ const registerVisible = ref(false)
  
  const form = reactive({
    username: '',
    password: '',
    captcha: '',
+ })
+
+ const registerForm = reactive({
+   username: '',
+   realName: '',
+   password: '',
+   phone: '',
+   major: '',
+   className: '',
+   email: '',
  })
  
  const rules = {
@@ -103,6 +148,19 @@
      { len: 4, message: '验证码为4位', trigger: 'blur' },
    ],
  }
+
+ const registerRules = {
+   username: [
+     { required: true, message: '请输入学号', trigger: 'blur' },
+     { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' },
+   ],
+   realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+   password: [
+     { required: true, message: '请输入密码', trigger: 'blur' },
+     { min: 6, max: 64, message: '长度在 6 到 64 个字符', trigger: 'blur' },
+   ],
+   email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
+ }
  
  // Mock captcha
  const captchaText = ref('')
@@ -114,6 +172,11 @@
  async function handleLogin() {
    const valid = await formRef.value.validate().catch(() => false)
    if (!valid) return
+   if (form.captcha.toUpperCase() !== captchaText.value) {
+     ElMessage.error('验证码不正确')
+     refreshCaptcha()
+     return
+   }
    loading.value = true
    try {
      const loginResult = await authStore.login({
@@ -126,12 +189,33 @@
      const targetPath = redirect === '/' || redirect === '/home' ? roleHomePath : redirect
      router.push(targetPath)
    } catch (e) {
-     if (e.message?.startsWith('登录成功但')) {
-       ElMessage.error(e.message)
-     }
+     ElMessage.error(e.message || '登录失败，请检查账号和密码')
      refreshCaptcha()
    } finally {
      loading.value = false
+   }
+ }
+
+ async function handleRegister() {
+   const valid = await registerRef.value.validate().catch(() => false)
+   if (!valid) return
+   registering.value = true
+   try {
+     await register(registerForm)
+     ElMessage.success('注册成功，请登录')
+     form.username = registerForm.username
+     registerVisible.value = false
+     Object.assign(registerForm, {
+       username: '',
+       realName: '',
+       password: '',
+       phone: '',
+       major: '',
+       className: '',
+       email: '',
+     })
+   } finally {
+     registering.value = false
    }
  }
  </script>
@@ -146,6 +230,8 @@
    justify-content: center;
    min-height: 100vh;
    padding: 20px;
+   background-size: cover;
+   background-position: center;
  }
  .login-card {
    width: 420px;

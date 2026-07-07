@@ -2,6 +2,7 @@ package com.cupk.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.pojo.ExamRecord;
+import com.cupk.vo.ExamSessionVO;
 
 import java.util.List;
 import java.util.Map;
@@ -15,10 +16,19 @@ public interface ExamService {
     Page<Map<String, Object>> getAvailableExams(int pageNum, int pageSize, Long courseId);
 
     /** 开始考试，返回题目列表+计时信息 */
-    Map<String, Object> startExam(Long paperId);
+    ExamSessionVO startExam(Long paperId);
+
+    /** 查询当前学生进行中的考试 */
+    ExamSessionVO getInProgressExam(Long paperId);
 
     /** 提交答案 + 自动评分 */
     Map<String, Object> submitExam(Long recordId, List<Map<String, Object>> answers);
+
+    /** 自动保存答案，幂等覆盖当前草稿 */
+    Map<String, Object> saveAnswers(Long recordId, List<Map<String, Object>> answers);
+
+    /** 自动/手动提交答案 + 自动评分 */
+    Map<String, Object> submitExam(Long recordId, List<Map<String, Object>> answers, boolean autoSubmit);
 
     /** 我的考试记录列表 */
     Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status);

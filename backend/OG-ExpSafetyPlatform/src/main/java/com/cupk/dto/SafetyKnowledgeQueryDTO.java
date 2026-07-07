@@ -13,6 +13,7 @@ public class SafetyKnowledgeQueryDTO {
     private Long pageSize = 10L;
     private String keyword;
     private Long experimentId;
+    private String category;
     private String riskType;
     private Integer status;
 }

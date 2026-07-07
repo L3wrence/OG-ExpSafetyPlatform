@@ -6,12 +6,17 @@ import com.cupk.common.Result;
 import com.cupk.interceptor.UserContext;
 import com.cupk.dto.report.ReportCreateDTO;
 import com.cupk.dto.report.GradeDTO;
+import com.cupk.dto.ReportRubricGradeDTO;
+import com.cupk.dto.ReportRubricItemDTO;
+import com.cupk.dto.ReportTemplateDTO;
 import com.cupk.service.ReportService;
+import com.cupk.service.ReportRubricService;
 import jakarta.validation.Valid;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,6 +29,9 @@ public class ReportController {
 
     @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private ReportRubricService reportRubricService;
 
     // ===== 瀛︾敓绔?=====
 
@@ -72,6 +80,18 @@ public class ReportController {
         return Result.success(reportService.getReportDetail(id));
     }
 
+    @RequirePermission("report:view")
+    @GetMapping("/experiments/{experimentId}/template")
+    public Result<?> template(@PathVariable Long experimentId) {
+        return Result.success(reportRubricService.template(experimentId));
+    }
+
+    @RequirePermission("report:view")
+    @GetMapping("/experiments/{experimentId}/rubric")
+    public Result<?> rubric(@PathVariable Long experimentId) {
+        return Result.success(reportRubricService.rubric(experimentId));
+    }
+
     // ===== 鏁欏笀绔?=====
 
     /** 寰呮壒鏀规姤鍛婂垪琛?*/
@@ -89,6 +109,26 @@ public class ReportController {
     public Result<?> grade(@PathVariable Long id, @Valid @RequestBody GradeDTO dto) {
         reportService.gradeReport(id, dto.getScore(), dto.getComment());
         return Result.success();
+    }
+
+    @RequirePermission("report:grade")
+    @PutMapping("/{id}/rubric-grade")
+    public Result<?> rubricGrade(@PathVariable Long id, @Valid @RequestBody ReportRubricGradeDTO dto) {
+        reportRubricService.grade(id, dto);
+        return Result.success();
+    }
+
+    @RequirePermission("report:review")
+    @PutMapping("/experiments/{experimentId}/template")
+    public Result<?> saveTemplate(@PathVariable Long experimentId, @Valid @RequestBody ReportTemplateDTO dto) {
+        dto.setExperimentId(experimentId);
+        return Result.success(reportRubricService.saveTemplate(dto));
+    }
+
+    @RequirePermission("report:review")
+    @PutMapping("/experiments/{experimentId}/rubric")
+    public Result<?> saveRubric(@PathVariable Long experimentId, @Valid @RequestBody List<ReportRubricItemDTO> items) {
+        return Result.success(reportRubricService.saveRubric(experimentId, items));
     }
 
     /** 閫€鍥炰慨鏀?*/

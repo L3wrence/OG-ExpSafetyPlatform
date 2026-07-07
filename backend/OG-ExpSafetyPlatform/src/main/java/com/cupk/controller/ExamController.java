@@ -2,7 +2,10 @@ package com.cupk.controller;
 
 import com.cupk.common.RequirePermission;
 import com.cupk.common.Result;
+import com.cupk.dto.exam.ExamSaveDTO;
 import com.cupk.dto.exam.ExamSubmitDTO;
+import com.cupk.interceptor.UserContext;
+import com.cupk.service.AdmissionService;
 import com.cupk.service.ExamService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +26,9 @@ public class ExamController {
     @Autowired
     private ExamService examService;
 
+    @Autowired
+    private AdmissionService admissionService;
+
     /** 学生可参加的考试列表 */
     @RequirePermission("exam:take")
     @GetMapping("/available")
@@ -39,6 +45,13 @@ public class ExamController {
         return Result.success(examService.startExam(paperId));
     }
 
+    /** 查询当前学生进行中的考试 */
+    @RequirePermission("exam:take")
+    @GetMapping("/in-progress")
+    public Result<?> inProgress(@RequestParam(required = false) Long paperId) {
+        return Result.success(examService.getInProgressExam(paperId));
+    }
+
     /** 提交答案 */
     @RequirePermission("exam:take")
     @PostMapping("/{recordId}/submit")
@@ -51,7 +64,28 @@ public class ExamController {
             m.put("answer", a.getAnswer());
             return m;
         }).toList();
-        return Result.success(examService.submitExam(recordId, answers));
+        return Result.success(examService.submitExam(recordId, answers, Boolean.TRUE.equals(dto.getAutoSubmit())));
+    }
+
+    /** 自动保存答案 */
+    @RequirePermission("exam:take")
+    @PutMapping("/{recordId}/answers")
+    public Result<?> saveAnswers(@PathVariable Long recordId,
+                                 @RequestBody ExamSaveDTO dto) {
+        List<Map<String, Object>> answers = dto.getAnswers().stream().map(a -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("questionId", a.getQuestionId());
+            m.put("answer", a.getAnswer());
+            return m;
+        }).toList();
+        return Result.success(examService.saveAnswers(recordId, answers));
+    }
+
+    /** 当前学生实验准入状态 */
+    @RequirePermission("exam:take")
+    @GetMapping("/admissions/{experimentId}")
+    public Result<?> admission(@PathVariable Long experimentId) {
+        return Result.success(admissionService.getAdmissionStatus(UserContext.getUserId(), experimentId));
     }
 
     /** 我的考试记录列表 */

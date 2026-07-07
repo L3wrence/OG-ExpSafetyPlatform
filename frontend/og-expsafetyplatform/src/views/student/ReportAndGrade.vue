@@ -47,6 +47,7 @@
           <el-table-column prop="latestComment" label="评语" min-width="160" show-overflow-tooltip />
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
+              <el-button text type="primary" @click="openDetail(row)">反馈</el-button>
               <el-button text type="primary" @click="openEdit(row)">编辑</el-button>
               <el-button v-if="['DRAFT', 'RETURNED'].includes(row.status)" text type="success" @click="handleSubmit(row)">提交</el-button>
             </template>
@@ -79,15 +80,48 @@
         <el-button type="primary" :loading="saving" @click="saveReport">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="detailVisible" title="报告反馈" width="760px">
+      <div v-loading="detailLoading" class="detail-body">
+        <template v-if="detail">
+          <h2>{{ detailReport.title }}</h2>
+          <p class="detail-meta">状态：{{ reportStatusMeta(detailReport.status).label }}　实验ID：{{ detailReport.experimentId }}</p>
+          <div v-if="detail.template" class="feedback-box">
+            <b>{{ detail.template.title }}</b>
+            <p>{{ detail.template.schemaJson }}</p>
+          </div>
+          <div v-if="detail.rubric?.length" class="feedback-box">
+            <b>评分量规</b>
+            <el-table :data="detail.rubric" size="small">
+              <el-table-column prop="itemName" label="评分项" />
+              <el-table-column prop="maxScore" label="满分" width="90" />
+              <el-table-column prop="description" label="说明" />
+            </el-table>
+          </div>
+          <div v-if="detail.scoreItems?.length" class="feedback-box">
+            <b>逐项得分</b>
+            <el-table :data="detail.scoreItems" size="small">
+              <el-table-column prop="rubricItemId" label="评分项ID" width="100" />
+              <el-table-column prop="score" label="得分" width="90" />
+              <el-table-column prop="comment" label="教师反馈" />
+            </el-table>
+          </div>
+          <div v-if="detail.latestScore" class="feedback-box">
+            <b>总评</b>
+            <p>{{ detail.latestScore.score }} 分 · {{ detail.latestScore.comment || '暂无评语' }}</p>
+          </div>
+        </template>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { getExamRecords } from '@/api/exam'
-import { createReport, getMyReports, submitReport, updateReport } from '@/api/report'
+import { createReport, getMyReports, getReportDetail, submitReport, updateReport } from '@/api/report'
 
 const examRecords = ref([])
 const reports = ref([])
@@ -95,11 +129,15 @@ const examLoading = ref(false)
 const reportLoading = ref(false)
 const saving = ref(false)
 const reportVisible = ref(false)
+const detailVisible = ref(false)
 const editingReport = ref(null)
+const detail = ref(null)
+const detailLoading = ref(false)
 const reportStatus = ref('')
 const reportPage = ref(1)
 const reportTotal = ref(0)
 const reportForm = reactive({ experimentId: '', title: '', content: '', fileUrl: '' })
+const detailReport = computed(() => detail.value?.report || {})
 
 onMounted(() => Promise.allSettled([loadExamRecords(), loadReports()]))
 
@@ -143,6 +181,16 @@ function openEdit(row) {
     fileUrl: row.fileUrl || '',
   })
   reportVisible.value = true
+}
+
+async function openDetail(row) {
+  detailVisible.value = true
+  detailLoading.value = true
+  try {
+    detail.value = await getReportDetail(row.id)
+  } finally {
+    detailLoading.value = false
+  }
 }
 
 async function saveReport() {
@@ -200,6 +248,12 @@ function reportStatusMeta(status) {
 .section-title { margin-bottom: 12px; }
 .section-title h2 { color: #13233a; font-size: 18px; }
 .pagination-row { color: #667085; padding-top: 14px; }
+.detail-body { min-height: 220px; }
+.detail-body h2 { color: #13233a; font-size: 20px; margin-bottom: 8px; }
+.detail-meta { color: #667085; margin-bottom: 12px; }
+.feedback-box { border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #f8fafc; }
+.feedback-box b { display: block; color: #13233a; margin-bottom: 8px; }
+.feedback-box p { color: #344054; line-height: 1.7; white-space: pre-wrap; margin: 0; }
 @media (max-width: 1040px) { .grid { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .page-head, .section-title, .pagination-row { align-items: stretch; flex-direction: column; } }
 </style>

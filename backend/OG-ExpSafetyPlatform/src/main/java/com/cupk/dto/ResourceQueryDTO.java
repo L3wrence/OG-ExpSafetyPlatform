@@ -12,8 +12,14 @@ public class ResourceQueryDTO {
     @Max(100)
     private Long pageSize = 10L;
     private String keyword;
+    private Long courseId;
     private Long experimentId;
+    private String knowledgePoint;
+    private String riskType;
+    private String tags;
     private String resourceType;
     private Integer requiredFlag;
+    private Integer favoriteOnly;
+    private Integer invalidFlag;
     private Integer status;
 }

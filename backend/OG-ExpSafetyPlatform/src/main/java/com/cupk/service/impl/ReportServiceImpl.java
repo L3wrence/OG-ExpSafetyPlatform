@@ -2,19 +2,31 @@ package com.cupk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cupk.mapper.ExperimentMapper;
+import com.cupk.mapper.LabCourseMapper;
+import com.cupk.mapper.CourseStudentMapper;
 import com.cupk.mapper.ReportMapper;
 import com.cupk.mapper.ReportScoreMapper;
+import com.cupk.mapper.ReservationMapper;
+import com.cupk.pojo.CourseStudent;
+import com.cupk.pojo.Experiment;
+import com.cupk.pojo.LabCourse;
 import com.cupk.pojo.Report;
 import com.cupk.pojo.ReportScore;
+import com.cupk.pojo.Reservation;
+import com.cupk.service.PortalMessageService;
 import com.cupk.service.ReportService;
+import com.cupk.service.ReportRubricService;
 import com.cupk.exception.BusinessException;
 import com.cupk.interceptor.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,9 +41,29 @@ public class ReportServiceImpl implements ReportService {
     @Autowired
     private ReportScoreMapper reportScoreMapper;
 
+    @Autowired
+    private ExperimentMapper experimentMapper;
+
+    @Autowired
+    private LabCourseMapper labCourseMapper;
+
+    @Autowired
+    private CourseStudentMapper courseStudentMapper;
+
+    @Autowired
+    private ReservationMapper reservationMapper;
+
+    @Autowired
+    private ReportRubricService reportRubricService;
+
+    @Autowired
+    private PortalMessageService portalMessageService;
+
     @Override
+    @Transactional
     public Long createReport(Report report) {
         report.setStudentId(UserContext.getUserId());
+        assertCanCreate(report);
         report.setStatus("DRAFT");
         report.setCreateTime(new Date());
         reportMapper.insert(report);
@@ -39,25 +71,39 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Transactional
     public void updateReport(Long id, Report report) {
         Report existing = requireReport(id);
         requireOwner(existing, "不能修改他人的报告");
         if (!"DRAFT".equals(existing.getStatus()) && !"RETURNED".equals(existing.getStatus())) {
             throw new BusinessException(400, "报告状态不允许修改");
         }
+        if (report.getExperimentId() != null && !report.getExperimentId().equals(existing.getExperimentId())) {
+            throw new BusinessException(400, "报告所属实验不允许修改");
+        }
+        if (report.getTitle() == null || report.getTitle().trim().isEmpty()) {
+            throw new BusinessException(400, "报告标题不能为空");
+        }
+        assertExperimentWritableByStudent(existing.getStudentId(), existing.getExperimentId());
         report.setId(id);
         report.setStudentId(existing.getStudentId());
-        report.setStatus("RETURNED".equals(existing.getStatus()) ? "DRAFT" : existing.getStatus());
+        report.setExperimentId(existing.getExperimentId());
+        report.setStatus(existing.getStatus());
         report.setUpdateTime(new Date());
         reportMapper.updateById(report);
     }
 
     @Override
+    @Transactional
     public void submitReport(Long id) {
         Report report = requireReport(id);
         requireOwner(report, "不能提交他人的报告");
         if (!"DRAFT".equals(report.getStatus()) && !"RETURNED".equals(report.getStatus())) {
             throw new BusinessException(400, "报告状态不允许提交");
+        }
+        assertExperimentWritableByStudent(report.getStudentId(), report.getExperimentId());
+        if (report.getContent() == null || report.getContent().trim().isEmpty()) {
+            throw new BusinessException(400, "报告正文不能为空");
         }
         report.setStatus("SUBMITTED");
         Date now = new Date();
@@ -79,9 +125,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public Map<String, Object> getReportDetail(Long id) {
         Report report = requireReport(id);
-        if (UserContext.isStudent() && !UserContext.getUserId().equals(report.getStudentId())) {
-            throw new BusinessException(403, "不能查看他人的报告");
-        }
+        assertReadable(report);
 
         // 鏌ヨ鏈€鏂拌瘎鍒?
         LambdaQueryWrapper<ReportScore> scoreWrapper = new LambdaQueryWrapper<>();
@@ -93,6 +137,9 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> result = new HashMap<>();
         result.put("report", report);
         result.put("latestScore", latestScore);
+        result.put("template", reportRubricService.template(report.getExperimentId()));
+        result.put("rubric", reportRubricService.rubric(report.getExperimentId()));
+        result.put("scoreItems", latestScore == null ? List.of() : reportRubricService.scoreItems(latestScore.getId()).get("items"));
         return result;
     }
 
@@ -103,6 +150,15 @@ public class ReportServiceImpl implements ReportService {
         wrapper.eq(Report::getStatus, "SUBMITTED")
                .eq(experimentId != null, Report::getExperimentId, experimentId)
                .orderByAsc(Report::getLatestSubmitTime);
+        if (UserContext.isTeacher()) {
+            List<Long> experimentIds = teacherExperimentIds();
+            if (experimentIds.isEmpty()) {
+                page.setRecords(new ArrayList<>());
+                page.setTotal(0);
+                return page;
+            }
+            wrapper.in(Report::getExperimentId, experimentIds);
+        }
         return reportMapper.selectPage(page, wrapper);
     }
 
@@ -110,6 +166,7 @@ public class ReportServiceImpl implements ReportService {
     @Transactional
     public void gradeReport(Long reportId, Integer score, String comment) {
         Report target = requireReport(reportId);
+        assertWritable(target);
         if (!"SUBMITTED".equals(target.getStatus())) {
             throw new BusinessException(400, "只有已提交的报告可以评分");
         }
@@ -137,12 +194,15 @@ public class ReportServiceImpl implements ReportService {
         report.setId(reportId);
         report.setStatus("GRADED");
         reportMapper.updateById(report);
+        portalMessageService.send(target.getStudentId(), "报告评分完成", target.getTitle(),
+                "REPORT_GRADED", target.getId(), "/student/grades");
     }
 
     @Override
     @Transactional
     public void returnReport(Long reportId, String comment) {
         Report target = requireReport(reportId);
+        assertWritable(target);
         if (!"SUBMITTED".equals(target.getStatus())) {
             throw new BusinessException(400, "只有已提交的报告可以退回");
         }
@@ -170,6 +230,8 @@ public class ReportServiceImpl implements ReportService {
         report.setId(reportId);
         report.setStatus("RETURNED");
         reportMapper.updateById(report);
+        portalMessageService.send(target.getStudentId(), "报告被退回", target.getTitle(),
+                "REPORT_RETURNED", target.getId(), "/student/grades");
     }
 
     private Report requireReport(Long id) {
@@ -184,5 +246,107 @@ public class ReportServiceImpl implements ReportService {
         if (!UserContext.getUserId().equals(report.getStudentId())) {
             throw new BusinessException(403, message);
         }
+    }
+
+    private void assertReadable(Report report) {
+        if (UserContext.isStudent()) {
+            requireOwner(report, "不能查看他人的报告");
+            return;
+        }
+        if (UserContext.isTeacher()) {
+            assertTeacherOwnsExperiment(report.getExperimentId());
+        }
+    }
+
+    private void assertWritable(Report report) {
+        if (UserContext.isTeacher()) {
+            assertTeacherOwnsExperiment(report.getExperimentId());
+            return;
+        }
+        if (!UserContext.isAdmin() && !UserContext.isLabAdmin()) {
+            throw new BusinessException(403, "无权批改或退回报告");
+        }
+    }
+
+    private void assertCanCreate(Report report) {
+        if (!UserContext.isStudent()) {
+            throw new BusinessException(403, "只有学生可以创建实验报告");
+        }
+        if (report.getTitle() == null || report.getTitle().trim().isEmpty()) {
+            throw new BusinessException(400, "报告标题不能为空");
+        }
+        assertExperimentWritableByStudent(report.getStudentId(), report.getExperimentId());
+        Long duplicated = reportMapper.selectCount(new LambdaQueryWrapper<Report>()
+                .eq(Report::getStudentId, report.getStudentId())
+                .eq(Report::getExperimentId, report.getExperimentId())
+                .in(Report::getStatus, "DRAFT", "SUBMITTED", "RETURNED", "GRADED"));
+        if (duplicated != null && duplicated > 0) {
+            throw new BusinessException(409, "同一实验只能创建一份有效报告");
+        }
+    }
+
+    private void assertExperimentWritableByStudent(Long studentId, Long experimentId) {
+        Experiment experiment = experimentMapper.selectById(experimentId);
+        if (experiment == null) {
+            throw new BusinessException(404, "实验项目不存在");
+        }
+        LabCourse course = labCourseMapper.selectById(experiment.getCourseId());
+        if (course == null) {
+            throw new BusinessException(404, "课程不存在");
+        }
+        if (course.getStatus() != null && course.getStatus() == 2) {
+            throw new BusinessException(409, "课程已归档，不能创建或提交报告");
+        }
+        if (experiment.getStatus() == null || experiment.getStatus() != 1) {
+            throw new BusinessException(409, "实验未开放，不能创建或提交报告");
+        }
+        Long enrolled = courseStudentMapper.selectCount(new LambdaQueryWrapper<CourseStudent>()
+                .eq(CourseStudent::getCourseId, experiment.getCourseId())
+                .eq(CourseStudent::getStudentId, studentId)
+                .eq(CourseStudent::getStatus, 1));
+        if (enrolled == null || enrolled == 0) {
+            throw new BusinessException(403, "学生未加入该实验所属课程");
+        }
+        if (Integer.valueOf(1).equals(experiment.getReservationEnabled())) {
+            Long approved = reservationMapper.selectCount(new LambdaQueryWrapper<Reservation>()
+                    .eq(Reservation::getStudentId, studentId)
+                    .eq(Reservation::getExperimentId, experimentId)
+                    .in(Reservation::getStatus, "APPROVED", "COMPLETED", "CHECKED_IN"));
+            if (approved == null || approved == 0) {
+                throw new BusinessException(403, "提交该实验报告前需要存在已通过或已完成的预约");
+            }
+        }
+    }
+
+    private void assertTeacherOwnsExperiment(Long experimentId) {
+        Experiment experiment = experimentMapper.selectById(experimentId);
+        if (experiment == null) {
+            throw new BusinessException(404, "实验项目不存在");
+        }
+        LabCourse course = labCourseMapper.selectById(experiment.getCourseId());
+        if (course == null) {
+            throw new BusinessException(404, "课程不存在");
+        }
+        if (!UserContext.getUserId().equals(course.getTeacherId())) {
+            throw new BusinessException(403, "不能处理非本人负责课程的报告");
+        }
+    }
+
+    private List<Long> teacherExperimentIds() {
+        List<Long> courseIds = labCourseMapper.selectList(new LambdaQueryWrapper<LabCourse>()
+                        .select(LabCourse::getId)
+                        .eq(LabCourse::getTeacherId, UserContext.getUserId()))
+                .stream()
+                .map(LabCourse::getId)
+                .toList();
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+        return experimentMapper.selectList(new LambdaQueryWrapper<Experiment>()
+                        .select(Experiment::getId)
+                        .in(Experiment::getCourseId, courseIds))
+                .stream()
+                .map(Experiment::getId)
+                .toList();
     }
 }

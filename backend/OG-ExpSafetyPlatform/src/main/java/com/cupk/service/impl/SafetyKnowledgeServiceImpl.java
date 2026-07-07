@@ -44,6 +44,7 @@ public class SafetyKnowledgeServiceImpl implements SafetyKnowledgeService {
                 .like(SafetyKnowledge::getKnowledgePoint, dto.getKeyword())
                 .or().like(SafetyKnowledge::getContent, dto.getKeyword()));
         wrapper.eq(dto.getExperimentId() != null, SafetyKnowledge::getExperimentId, dto.getExperimentId());
+        wrapper.eq(StringUtils.hasText(dto.getCategory()), SafetyKnowledge::getCategory, dto.getCategory());
         wrapper.eq(StringUtils.hasText(dto.getRiskType()), SafetyKnowledge::getRiskType, dto.getRiskType());
         wrapper.eq(dto.getStatus() != null, SafetyKnowledge::getStatus, dto.getStatus());
         if (UserContext.isStudent()) {
@@ -68,6 +69,7 @@ public class SafetyKnowledgeServiceImpl implements SafetyKnowledgeService {
         assertKnowledgeWritable(dto.getExperimentId());
         SafetyKnowledge entity = new SafetyKnowledge();
         BeanUtils.copyProperties(dto, entity);
+        applyDefaults(entity);
         knowledgeMapper.insert(entity);
         return entity.getId();
     }
@@ -79,6 +81,7 @@ public class SafetyKnowledgeServiceImpl implements SafetyKnowledgeService {
         assertKnowledgeWritable(current.getExperimentId());
         assertKnowledgeWritable(dto.getExperimentId());
         BeanUtils.copyProperties(dto, current);
+        applyDefaults(current);
         knowledgeMapper.updateById(current);
     }
 
@@ -100,6 +103,20 @@ public class SafetyKnowledgeServiceImpl implements SafetyKnowledgeService {
         }
         Experiment experiment = requireExperiment(experimentId);
         AccessUtil.assertCourseWritable(requireCourse(experiment.getCourseId()));
+    }
+
+    private void applyDefaults(SafetyKnowledge entity) {
+        if (!StringUtils.hasText(entity.getCategory())) {
+            entity.setCategory("HSE_BASIC");
+        }
+        entity.setEmergencyFlag(entity.getEmergencyFlag() == null ? 0 : entity.getEmergencyFlag());
+        entity.setStatus(entity.getStatus() == null ? 1 : entity.getStatus());
+        if (Integer.valueOf(1).equals(entity.getEmergencyFlag()) || "EMERGENCY".equals(entity.getCategory())) {
+            String notice = "涉及应急处理时，以学校正式制度和现场教师要求为准。";
+            if (entity.getContent() != null && !entity.getContent().contains("学校正式制度")) {
+                entity.setContent(entity.getContent() + "\n" + notice);
+            }
+        }
     }
 
     private List<Long> currentTeacherExperimentIds() {

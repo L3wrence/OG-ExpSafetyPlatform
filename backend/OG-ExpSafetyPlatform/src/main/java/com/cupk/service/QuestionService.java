@@ -12,7 +12,9 @@ import java.util.Map;
 public interface QuestionService {
 
     /** 分页查询题库 */
-    Page<Question> pageQuestions(int pageNum, int pageSize, String type, String difficulty, String keyword, Long courseId);
+    Page<Question> pageQuestions(int pageNum, int pageSize, String type, String difficulty, String keyword,
+                                 Long courseId, Long experimentId, Long knowledgeId,
+                                 String knowledgePoint, String riskType);
 
     /** 查看题目详情 */
     Question getQuestionById(Long id);

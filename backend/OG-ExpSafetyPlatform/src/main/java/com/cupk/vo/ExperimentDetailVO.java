@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class ExperimentDetailVO {
@@ -19,4 +20,9 @@ public class ExperimentDetailVO {
     private BigDecimal learningProgress;
     private Boolean examPassed;
     private Boolean reservationAllowed;
+    private Map<String, Object> admissionStatus;
+    private Long examCount;
+    private Long reservationCount;
+    private Long reportCount;
+    private List<PortalItemVO> entrances;
 }

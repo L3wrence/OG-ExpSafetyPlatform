@@ -27,4 +27,19 @@ public interface LearningRecordMapper extends BaseMapper<LearningRecord> {
         ) x
         """)
     BigDecimal selectCourseAverageProgress(@Param("courseId") Long courseId);
+
+    @Select("""
+        SELECT COALESCE(ROUND(
+            100.0 * SUM(CASE WHEN lr.finish_flag = 1 THEN 1 ELSE 0 END)
+            / NULLIF(COUNT(r.id), 0), 2), 0)
+          FROM t_resource r
+          LEFT JOIN t_learning_record lr ON lr.resource_id = r.id
+               AND lr.student_id = #{studentId} AND lr.deleted = 0
+         WHERE r.experiment_id = #{experimentId}
+           AND r.required_flag = 1
+           AND r.status = 1
+           AND r.deleted = 0
+        """)
+    BigDecimal selectExperimentProgress(@Param("experimentId") Long experimentId,
+                                        @Param("studentId") Long studentId);
 }

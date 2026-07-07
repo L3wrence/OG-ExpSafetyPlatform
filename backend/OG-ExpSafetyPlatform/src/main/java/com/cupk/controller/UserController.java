@@ -3,6 +3,7 @@ package com.cupk.controller;
 import com.cupk.common.PageResult;
 import com.cupk.common.RequirePermission;
 import com.cupk.common.Result;
+import com.cupk.dto.ProfileUpdateDTO;
 import com.cupk.dto.UserCreateDTO;
 import com.cupk.dto.UserDeleteDTO;
 import com.cupk.dto.UserUpdateDTO;
@@ -34,6 +35,18 @@ public class UserController {
                                                     @RequestParam(defaultValue = "10") Integer pageSize,
                                                     @RequestParam(required = false) String keyword) {
         return Result.success(userService.listUsers(pageNum, pageSize, keyword));
+    }
+
+    @GetMapping("/me")
+    @RequirePermission("profile:update")
+    public Result<UserInfoVO> me() {
+        return Result.success(userService.currentUser());
+    }
+
+    @PutMapping("/me")
+    @RequirePermission("profile:update")
+    public Result<UserInfoVO> updateMe(@Valid @RequestBody ProfileUpdateDTO dto) {
+        return Result.success(userService.updateProfile(dto));
     }
 
     @PostMapping

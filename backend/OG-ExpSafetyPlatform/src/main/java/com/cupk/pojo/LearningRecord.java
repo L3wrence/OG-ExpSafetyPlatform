@@ -22,6 +22,8 @@ public class LearningRecord extends BasePojo {
     private Long experimentId;  //实验ID
     private BigDecimal progress; //学习进度
     private Integer durationSeconds; //累计学习时长
+    private Integer lastPositionSeconds; //最近学习位置
+    private String note; //个人笔记
     private Integer finishFlag; //是否完成
     private LocalDateTime firstTime;    //开始学习时间
     private LocalDateTime lastTime;     //最后学习时间
