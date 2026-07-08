@@ -166,7 +166,7 @@ public class AdminPortalServiceImpl implements AdminPortalService {
         }
         String value = role.trim().toUpperCase(Locale.ROOT);
         return switch (value) {
-            case "ADMIN", "TEACHER", "STUDENT", "LAB_ADMIN", "ALL" -> value;
+            case "ADMIN", "USER", "ALL" -> value;
             default -> "ALL";
         };
     }

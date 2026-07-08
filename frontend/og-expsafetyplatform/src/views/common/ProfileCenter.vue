@@ -69,6 +69,44 @@
           </el-form-item>
         </el-form>
       </el-card>
+
+      <el-card v-if="authStore.role !== 'admin'" shadow="never" class="panel">
+        <template #header>
+          <div class="panel-header">
+            <span>教师认证</span>
+            <el-tag :type="certificationTag.type">{{ certificationTag.label }}</el-tag>
+          </div>
+        </template>
+        <el-alert
+          v-if="teacherCertification?.reviewComment"
+          :title="teacherCertification.reviewComment"
+          :type="teacherCertification.status === 'REJECTED' ? 'warning' : 'info'"
+          show-icon
+          :closable="false"
+          class="cert-alert"
+        />
+        <el-form label-width="96px">
+          <el-form-item label="所属学校">
+            <el-input v-model="certificationForm.school" maxlength="100" placeholder="请输入所属学校" />
+          </el-form-item>
+          <el-form-item label="工号">
+            <el-input v-model="certificationForm.employeeNo" maxlength="50" placeholder="请输入教师工号" />
+          </el-form-item>
+          <el-form-item label="教育邮箱">
+            <el-input v-model="certificationForm.educationEmail" maxlength="120" placeholder="请输入教育邮箱" />
+          </el-form-item>
+          <el-form-item>
+            <el-button
+              type="primary"
+              :loading="savingCertification"
+              :disabled="teacherCertification?.status === 'PENDING' || teacherCertification?.status === 'APPROVED'"
+              @click="saveCertification"
+            >
+              提交认证
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
     </section>
   </div>
 </template>
@@ -81,16 +119,19 @@ import { useAuthStore } from '@/stores/authStore'
 import { ROLE_LABELS } from '@/utils/constant'
 import { changePassword } from '@/api/auth'
 import { getMyProfile, updateMyProfile } from '@/api/user'
+import { applyTeacherCertification, getMyTeacherCertification } from '@/api/teacherCertification'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(false)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
+const savingCertification = ref(false)
 const profileRef = ref(null)
 const passwordRef = ref(null)
+const teacherCertification = ref(null)
 
-const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '未绑定角色')
+const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '普通用户')
 
 const profileForm = reactive({
   realName: '',
@@ -105,6 +146,20 @@ const passwordForm = reactive({
   oldPassword: '',
   newPassword: '',
   confirmPassword: '',
+})
+
+const certificationForm = reactive({
+  school: '',
+  employeeNo: '',
+  educationEmail: '',
+})
+
+const certificationTag = computed(() => {
+  const status = teacherCertification.value?.status
+  if (status === 'APPROVED' || authStore.userInfo?.teacherCertified) return { label: '已认证', type: 'success' }
+  if (status === 'PENDING') return { label: '审核中', type: 'warning' }
+  if (status === 'REJECTED') return { label: '已驳回', type: 'danger' }
+  return { label: '未认证', type: 'info' }
 })
 
 const profileRules = {
@@ -146,9 +201,21 @@ async function loadProfile() {
       avatarUrl: data?.avatarUrl || '',
     })
     authStore.setUserInfo(data)
+    await loadTeacherCertification()
   } finally {
     loading.value = false
   }
+}
+
+async function loadTeacherCertification() {
+  if (authStore.role === 'admin') return
+  const data = await getMyTeacherCertification().catch(() => null)
+  teacherCertification.value = data
+  Object.assign(certificationForm, {
+    school: data?.school || '',
+    employeeNo: data?.employeeNo || '',
+    educationEmail: data?.educationEmail || profileForm.email || '',
+  })
 }
 
 async function saveProfile() {
@@ -179,6 +246,25 @@ async function savePassword() {
     router.push('/login')
   } finally {
     savingPassword.value = false
+  }
+}
+
+async function saveCertification() {
+  if (!certificationForm.school.trim() || !certificationForm.employeeNo.trim() || !certificationForm.educationEmail.trim()) {
+    ElMessage.warning('请填写学校、工号和教育邮箱')
+    return
+  }
+  savingCertification.value = true
+  try {
+    await applyTeacherCertification({
+      school: certificationForm.school.trim(),
+      employeeNo: certificationForm.employeeNo.trim(),
+      educationEmail: certificationForm.educationEmail.trim(),
+    })
+    ElMessage.success('教师认证申请已提交')
+    await loadTeacherCertification()
+  } finally {
+    savingCertification.value = false
   }
 }
 </script>
@@ -218,6 +304,9 @@ async function savePassword() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+.cert-alert {
+  margin-bottom: 12px;
 }
 @media (max-width: 960px) {
   .profile-grid {

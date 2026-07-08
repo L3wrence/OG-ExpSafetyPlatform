@@ -59,3 +59,19 @@ export function markResourceInvalid(id, invalidFlag) {
 export function getResourceStats(id) {
   return request.get(`/resources/${id}/stats`)
 }
+
+export function getResourceTimelineNotes(id, params = {}) {
+  return request.get(`/resources/${id}/timeline-notes`, { params })
+}
+
+export function createResourceTimelineNote(id, data) {
+  return request.post(`/resources/${id}/timeline-notes`, data)
+}
+
+export function deleteResourceTimelineNote(noteId) {
+  return request.delete(`/resources/timeline-notes/${noteId}`)
+}
+
+export function getResourceTimelineHotspots(experimentId) {
+  return request.get(`/resources/experiments/${experimentId}/timeline-hotspots`)
+}

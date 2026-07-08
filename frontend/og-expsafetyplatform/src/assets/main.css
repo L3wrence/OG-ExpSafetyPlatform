@@ -1,11 +1,10 @@
  /* ========================================
-   Global Styles - AmazingTeaching
+   Global Styles - Oil and Gas Experiment Teaching Platform
     ======================================== */
  
  :root {
    --el-color-primary: #177e89;
-   --sidebar-width: 220px;
-   --topbar-height: 56px;
+   --topbar-height: 64px;
  }
  
  * {
@@ -50,17 +49,17 @@
  .el-menu {
    border-right: none !important;
  }
- .el-menu-item {
+ .el-menu:not(.top-nav) .el-menu-item {
    height: 44px !important;
    line-height: 44px !important;
    margin: 2px 8px !important;
    border-radius: 8px !important;
    width: auto !important;
  }
- .el-menu-item:hover {
+ .el-menu:not(.top-nav) .el-menu-item:hover {
    background: rgba(255,255,255,0.08) !important;
  }
- .el-menu-item.is-active {
+ .el-menu:not(.top-nav) .el-menu-item.is-active {
    background: rgba(64,158,255,0.2) !important;
  }
  .el-sub-menu__title {

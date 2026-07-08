@@ -140,17 +140,13 @@ const form = reactive({
 })
 
 const roleLabelMap = {
-  student: '学生',
-  teacher: '教师',
+  user: '普通用户',
   admin: '管理员',
-  lab_admin: '实验室管理员',
 }
 
 const roleTypeMap = {
-  student: 'primary',
-  teacher: 'success',
+  user: 'primary',
   admin: 'warning',
-  lab_admin: 'danger',
 }
 
 const displayUsers = computed(() => users.value.filter((user) => {
@@ -162,8 +158,8 @@ const displayUsers = computed(() => users.value.filter((user) => {
 
 const userMetrics = computed(() => [
   { label: '用户总数', value: total.value, icon: User, color: '#409eff', bg: '#ecf5ff' },
-  { label: '教师账号', value: users.value.filter((item) => resolveRoleCode(item) === 'teacher').length, icon: Avatar, color: '#67c23a', bg: '#f0f9eb' },
-  { label: '学生账号', value: users.value.filter((item) => resolveRoleCode(item) === 'student').length, icon: UserFilled, color: '#e6a23c', bg: '#fdf6ec' },
+  { label: '普通用户', value: users.value.filter((item) => resolveRoleCode(item) === 'user').length, icon: UserFilled, color: '#67c23a', bg: '#f0f9eb' },
+  { label: '管理员', value: users.value.filter((item) => resolveRoleCode(item) === 'admin').length, icon: Avatar, color: '#e6a23c', bg: '#fdf6ec' },
   { label: '停用账号', value: users.value.filter((item) => !isUserEnabled(item)).length, icon: WarningFilled, color: '#f56c6c', bg: '#fef0f0' },
 ])
 
@@ -184,11 +180,13 @@ onMounted(async () => {
 
 async function loadRoles() {
   const roles = await getRoles()
-  roleOptions.value = (roles || []).map((role) => ({
-    ...role,
-    roleCode: normalizeRoleCode(role.roleCode),
-    roleName: role.roleName || role.name || role.roleCode,
-  }))
+  roleOptions.value = (roles || [])
+    .map((role) => ({
+      ...role,
+      roleCode: normalizeRoleCode(role.roleCode),
+      roleName: role.roleName || role.name || role.roleCode,
+    }))
+    .filter((role) => ['admin', 'user'].includes(role.roleCode))
 }
 
 async function loadUsers() {
@@ -327,7 +325,7 @@ function resolveRoleName(user) {
   if (roleCode && roleLabelMap[roleCode]) return roleLabelMap[roleCode]
 
   const role = roleOptions.value.find((item) => item.id === user.roleId || item.roleCode === roleCode)
-  return role?.roleName || '未绑定'
+  return role?.roleName || '普通用户'
 }
 
 function resolveRoleId(user) {

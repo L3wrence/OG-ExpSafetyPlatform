@@ -1,0 +1,26 @@
+package com.cupk.pojo;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.cupk.common.BasePojo;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.time.LocalDateTime;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("t_class_invite")
+public class ClassInvite extends BasePojo {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    private Long courseId;
+    private Long teachingClassId;
+    private String inviteCode;
+    private LocalDateTime expireTime;
+    private Integer maxUses;
+    private Integer usedCount;
+    private Integer status;
+    private Long createdBy;
+}

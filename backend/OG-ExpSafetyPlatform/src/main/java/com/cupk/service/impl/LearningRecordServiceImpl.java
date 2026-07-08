@@ -3,7 +3,11 @@ package com.cupk.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cupk.dto.LearningProgressDTO;
 import com.cupk.mapper.CourseStudentMapper;
+import com.cupk.mapper.ExperimentMapper;
+import com.cupk.mapper.LabCourseMapper;
 import com.cupk.pojo.CourseStudent;
+import com.cupk.pojo.Experiment;
+import com.cupk.pojo.LabCourse;
 import com.cupk.pojo.LearningRecord;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.exception.BusinessException;
@@ -27,14 +31,20 @@ public class LearningRecordServiceImpl implements LearningRecordService {
     private final LearningRecordMapper recordMapper;
     private final TeachingResourceMapper resourceMapper;
     private final CourseStudentMapper courseStudentMapper;
+    private final ExperimentMapper experimentMapper;
+    private final LabCourseMapper courseMapper;
     private final LearningTaskService learningTaskService;
 
     public LearningRecordServiceImpl(LearningRecordMapper recordMapper, TeachingResourceMapper resourceMapper,
                                      CourseStudentMapper courseStudentMapper,
+                                     ExperimentMapper experimentMapper,
+                                     LabCourseMapper courseMapper,
                                      LearningTaskService learningTaskService) {
         this.recordMapper = recordMapper;
         this.resourceMapper = resourceMapper;
         this.courseStudentMapper = courseStudentMapper;
+        this.experimentMapper = experimentMapper;
+        this.courseMapper = courseMapper;
         this.learningTaskService = learningTaskService;
     }
 
@@ -141,7 +151,7 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         LocalDateTime now = LocalDateTime.now();
         if (resource.getOpenTime() != null && resource.getOpenTime().isAfter(now)) throw new BusinessException(403, "教学资源尚未开放");
         if (resource.getCloseTime() != null && resource.getCloseTime().isBefore(now)) throw new BusinessException(403, "教学资源已过期");
-        if (resource.getCourseId() != null) {
+        if (resource.getCourseId() != null && !isPublicResource(resource) && !canManageResource(resource)) {
             Long count = courseStudentMapper.selectCount(new LambdaQueryWrapper<CourseStudent>()
                     .eq(CourseStudent::getCourseId, resource.getCourseId())
                     .eq(CourseStudent::getStudentId, UserContext.userId())
@@ -149,6 +159,22 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             if (count == null || count == 0) throw new BusinessException(403, "无权学习该课程资源");
         }
         return resource;
+    }
+
+    private boolean isPublicResource(TeachingResource resource) {
+        return "PUBLIC".equalsIgnoreCase(resource.getOpenScope()) || resource.getCourseId() == null;
+    }
+
+    private boolean canManageResource(TeachingResource resource) {
+        if (!UserContext.isTeacher()) {
+            return false;
+        }
+        Experiment experiment = experimentMapper.selectById(resource.getExperimentId());
+        if (experiment == null) {
+            return false;
+        }
+        LabCourse course = courseMapper.selectById(experiment.getCourseId());
+        return course != null && UserContext.userId().equals(course.getTeacherId());
     }
 
     @Override

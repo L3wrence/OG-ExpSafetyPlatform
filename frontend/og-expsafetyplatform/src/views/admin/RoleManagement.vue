@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">Role Administration</p>
         <h1>角色管理</h1>
-        <p class="page-desc">配置学生、教师、管理员的功能边界，统一管理角色权限范围。</p>
+        <p class="page-desc">配置普通用户与系统管理员的基础权限，教师能力由认证状态派生。</p>
       </div>
       <el-button type="primary" :icon="Plus" @click="notReady">新增角色</el-button>
     </section>
@@ -105,7 +105,7 @@
 <script setup>
 import { nextTick, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Avatar, Check, Edit, Plus, Setting, UserFilled } from '@element-plus/icons-vue'
+import { Check, Edit, Plus, Setting, UserFilled } from '@element-plus/icons-vue'
 import { getPermissionTree } from '@/api/permission'
 import { getRolePermissions, getRoles, saveRolePermissions } from '@/api/role'
 
@@ -126,8 +126,7 @@ const permissionProps = {
 
 const roleStyleMap = {
   admin: { type: 'warning', icon: Setting, color: '#e6a23c', bg: '#fdf6ec' },
-  teacher: { type: 'success', icon: Avatar, color: '#67c23a', bg: '#f0f9eb' },
-  student: { type: 'primary', icon: UserFilled, color: '#409eff', bg: '#ecf5ff' },
+  user: { type: 'primary', icon: UserFilled, color: '#409eff', bg: '#ecf5ff' },
 }
 
 onMounted(async () => {

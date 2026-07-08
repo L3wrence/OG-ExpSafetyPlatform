@@ -31,8 +31,15 @@ public final class UserContext {
         return roles().stream().anyMatch(role -> role.equalsIgnoreCase(roleCode));
     }
     public static boolean isAdmin() { return hasRole("ADMIN"); }
-    public static boolean isTeacher() { return hasRole("TEACHER"); }
-    public static boolean isStudent() { return hasRole("STUDENT"); }
-    public static boolean isLabAdmin() { return hasRole("LAB_ADMIN"); }
+    public static boolean isTeacher() {
+        return !isAdmin() && (hasPermission("course:create")
+                || hasPermission("course:update")
+                || hasPermission("course:class:manage"));
+    }
+    public static boolean isStudent() { return isUser() && !isTeacher() && !isAdmin(); }
+    public static boolean isUser() { return hasRole("USER"); }
+    public static boolean isLearner() {
+        return isUser() && !isAdmin();
+    }
     public static void clear() { HOLDER.remove(); }
 }

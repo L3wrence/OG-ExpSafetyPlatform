@@ -67,11 +67,12 @@
             <el-tag :type="statusMeta(row.status).type">{{ statusMeta(row.status).label }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="390" fixed="right">
+        <el-table-column label="操作" width="430" fixed="right">
           <template #default="{ row }">
             <el-button text type="primary" :icon="View" @click="openDetail(row)">详情</el-button>
             <el-button v-permission="'course:update'" text type="primary" :icon="Edit" :disabled="row.status === 2" @click="openEditor(row)">建设</el-button>
             <el-button v-permission="'course:update'" text type="primary" :icon="Edit" :disabled="row.status === 2" @click="openEdit(row)">基础</el-button>
+            <el-button v-permission="'course:invite:manage'" text type="primary" :icon="Collection" :disabled="row.status === 2" @click="openInvite(row)">邀请</el-button>
             <el-button v-permission="'course:publish'" text type="success" :icon="Finished" :disabled="row.status === 1 || row.status === 2" @click="publish(row)">发布</el-button>
             <el-button v-permission="'course:archive'" text type="warning" :icon="FolderChecked" :disabled="row.status === 2" @click="archive(row)">归档</el-button>
             <el-button v-permission="'course:delete'" text type="danger" :icon="Delete" :disabled="row.status === 2" @click="removeCourse(row)">删除</el-button>
@@ -320,6 +321,47 @@
         <el-button type="primary" :loading="importing" @click="submitImport">导入</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="inviteVisible" title="课堂邀请码" width="760px">
+      <el-form label-width="104px" class="invite-form">
+        <el-form-item label="教学班">
+          <el-select v-model="inviteForm.teachingClassId" clearable placeholder="不限定教学班">
+            <el-option v-for="item in classes" :key="item.id" :label="item.className" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="有效期">
+          <el-date-picker
+            v-model="inviteForm.expireTime"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            placeholder="不填则长期有效"
+          />
+        </el-form-item>
+        <el-form-item label="最大使用次数">
+          <el-input-number v-model="inviteForm.maxUses" :min="1" :max="10000" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="inviteSaving" @click="createInvite">生成邀请码</el-button>
+        </el-form-item>
+      </el-form>
+      <el-table :data="invites" stripe empty-text="暂无邀请码">
+        <el-table-column prop="inviteCode" label="邀请码" width="160" />
+        <el-table-column prop="className" label="教学班" min-width="140" />
+        <el-table-column prop="usedCount" label="已用" width="80" />
+        <el-table-column prop="maxUses" label="上限" width="80" />
+        <el-table-column prop="expireTime" label="有效期" min-width="160" />
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="90">
+          <template #default="{ row }">
+            <el-button text type="danger" :disabled="row.status !== 1" @click="disableInvite(row)">停用</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
@@ -344,10 +386,13 @@ import {
 import {
   archiveCourse,
   createCourse,
+  createCourseInvite,
   createCourseClass,
   deleteCourse,
   deleteCourseClass,
+  disableCourseInvite,
   getCourseDetail,
+  getCourseInvites,
   getCourseStudents,
   getCourses,
   importCourseStudents,
@@ -369,6 +414,7 @@ const formVisible = ref(false)
 const detailVisible = ref(false)
 const classVisible = ref(false)
 const importVisible = ref(false)
+const inviteVisible = ref(false)
 const editingCourse = ref(null)
 const editingClass = ref(null)
 const courseDetail = ref(null)
@@ -377,12 +423,14 @@ const classes = ref([])
 const students = ref([])
 const selectedStudents = ref([])
 const importResult = ref(null)
+const invites = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
 const detailTab = ref('experiments')
 const formRef = ref()
 const classFormRef = ref()
+const inviteSaving = ref(false)
 let keywordTimer = null
 
 const filters = reactive({ keyword: '', direction: '', semester: '', status: '' })
@@ -418,6 +466,12 @@ const importForm = reactive({
   teachingClassId: '',
   defaultGroupName: '',
   text: '',
+})
+
+const inviteForm = reactive({
+  teachingClassId: '',
+  expireTime: '',
+  maxUses: 100,
 })
 
 const formRules = {
@@ -516,6 +570,17 @@ async function openEdit(course) {
 
 function openEditor(course) {
   router.push(`/teacher/courses/${course.id}/edit`)
+}
+
+async function openInvite(course) {
+  editingCourse.value = course
+  inviteVisible.value = true
+  inviteForm.teachingClassId = ''
+  inviteForm.expireTime = ''
+  inviteForm.maxUses = 100
+  const detail = await getCourseDetail(course.id)
+  classes.value = detail?.teachingClasses || []
+  invites.value = await getCourseInvites(course.id)
 }
 
 async function openDetail(course) {
@@ -706,6 +771,28 @@ async function submitImport() {
   } finally {
     importing.value = false
   }
+}
+
+async function createInvite() {
+  if (!editingCourse.value?.id) return
+  inviteSaving.value = true
+  try {
+    await createCourseInvite(editingCourse.value.id, {
+      teachingClassId: inviteForm.teachingClassId || undefined,
+      expireTime: inviteForm.expireTime || undefined,
+      maxUses: inviteForm.maxUses || undefined,
+    })
+    ElMessage.success('邀请码已生成')
+    invites.value = await getCourseInvites(editingCourse.value.id)
+  } finally {
+    inviteSaving.value = false
+  }
+}
+
+async function disableInvite(row) {
+  await disableCourseInvite(row.id)
+  ElMessage.success('邀请码已停用')
+  invites.value = await getCourseInvites(editingCourse.value.id)
 }
 
 async function removeSelectedStudents() {

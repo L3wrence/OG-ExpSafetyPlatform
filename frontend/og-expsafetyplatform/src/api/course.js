@@ -63,3 +63,19 @@ export function importCourseStudents(courseId, data) {
 export function removeCourseStudents(courseId, studentIds) {
   return request.delete(`/courses/${courseId}/students`, { data: { studentIds } })
 }
+
+export function createCourseInvite(courseId, data) {
+  return request.post(`/courses/${courseId}/invites`, data)
+}
+
+export function getCourseInvites(courseId) {
+  return request.get(`/courses/${courseId}/invites`)
+}
+
+export function disableCourseInvite(inviteId) {
+  return request.put(`/courses/invites/${inviteId}/disable`)
+}
+
+export function joinCourseByInvite(inviteCode) {
+  return request.post('/courses/join', { inviteCode })
+}

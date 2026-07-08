@@ -5,13 +5,18 @@ import com.cupk.common.RequirePermission;
 import com.cupk.common.Result;
 import com.cupk.dto.CourseCreateDTO;
 import com.cupk.dto.CourseQueryDTO;
+import com.cupk.dto.ClassInviteCreateDTO;
+import com.cupk.dto.ClassJoinDTO;
 import com.cupk.dto.CourseStudentImportDTO;
 import com.cupk.dto.CourseStudentRemoveDTO;
 import com.cupk.dto.CourseUpdateDTO;
 import com.cupk.dto.TeachingClassCreateDTO;
 import com.cupk.dto.TeachingClassUpdateDTO;
+import com.cupk.service.ClassInviteService;
 import com.cupk.service.CourseService;
+import com.cupk.vo.ClassInviteVO;
 import com.cupk.vo.CourseDetailVO;
+import com.cupk.vo.CourseJoinVO;
 import com.cupk.vo.CourseListVO;
 import com.cupk.vo.CourseStudentImportResultVO;
 import com.cupk.vo.CourseStudentVO;
@@ -25,9 +30,11 @@ import java.util.List;
 @RequestMapping("/api/courses")
 public class CourseController {
     private final CourseService courseService;
+    private final ClassInviteService classInviteService;
 
-    public CourseController(CourseService courseService) {
+    public CourseController(CourseService courseService, ClassInviteService classInviteService) {
         this.courseService = courseService;
+        this.classInviteService = classInviteService;
     }
 
     @GetMapping
@@ -138,5 +145,30 @@ public class CourseController {
     public Result<Void> removeStudents(@PathVariable Long courseId, @Valid @RequestBody CourseStudentRemoveDTO dto) {
         courseService.removeStudents(courseId, dto);
         return Result.success();
+    }
+
+    @PostMapping("/{courseId}/invites")
+    @RequirePermission("course:invite:manage")
+    public Result<Long> createInvite(@PathVariable Long courseId, @Valid @RequestBody ClassInviteCreateDTO dto) {
+        return Result.success(classInviteService.create(courseId, dto));
+    }
+
+    @GetMapping("/{courseId}/invites")
+    @RequirePermission("course:invite:manage")
+    public Result<List<ClassInviteVO>> listInvites(@PathVariable Long courseId) {
+        return Result.success(classInviteService.list(courseId));
+    }
+
+    @PutMapping("/invites/{inviteId}/disable")
+    @RequirePermission("course:invite:manage")
+    public Result<Void> disableInvite(@PathVariable Long inviteId) {
+        classInviteService.disable(inviteId);
+        return Result.success();
+    }
+
+    @PostMapping("/join")
+    @RequirePermission("course:join")
+    public Result<CourseJoinVO> join(@Valid @RequestBody ClassJoinDTO dto) {
+        return Result.success(classInviteService.join(dto));
     }
 }

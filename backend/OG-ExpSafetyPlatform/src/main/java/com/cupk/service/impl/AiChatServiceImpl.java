@@ -177,7 +177,7 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private List<HseWrongQuestion> searchOwnWrongQuestions(String query, AiScope scope) {
-        if (!UserContext.isStudent() || !StringUtils.hasText(query) || scope.experimentIds().isEmpty()) {
+        if (!UserContext.isLearner() || !StringUtils.hasText(query) || scope.experimentIds().isEmpty()) {
             return List.of();
         }
         Map<Long, HseWrongQuestion> result = new LinkedHashMap<>();

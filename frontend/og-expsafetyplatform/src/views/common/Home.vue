@@ -2,14 +2,13 @@
   <div class="portal-page" v-loading="loading">
     <section class="amazing-hero" :style="{ backgroundImage: `url(${labHero})` }">
       <div class="hero-copy">
-        <p>AmazingTeaching</p>
+        <p>油气工程实验教学与考核平台</p>
         <h1>{{ roleTitle }}</h1>
         <span>{{ subtitle }}</span>
         <div class="hero-actions">
-          <el-button v-if="isStudent" type="primary" :icon="Reading" @click="go('/student/courses')">进入实验课程</el-button>
-          <el-button v-if="isStudent" :icon="Folder" @click="go('/student/resources')">浏览油气资源库</el-button>
-          <el-button v-if="authStore.role === 'teacher'" type="primary" :icon="Operation" @click="go('/teacher/experiments')">建设实验路径</el-button>
-          <el-button v-if="authStore.role === 'teacher'" :icon="Reading" @click="go('/teacher/courses')">课程建设</el-button>
+          <el-button v-if="isLearner" type="primary" :icon="Reading" @click="go('/classrooms')">进入我的课堂</el-button>
+          <el-button v-if="isLearner" :icon="Folder" @click="go('/resources')">浏览资源学习</el-button>
+          <el-button v-if="canManageClassroom" type="primary" :icon="Operation" @click="go('/teacher/courses')">管理我的课堂</el-button>
         </div>
       </div>
     </section>
@@ -31,7 +30,7 @@
       </div>
     </section>
 
-    <section v-if="isStudent" class="student-priority-grid">
+    <section v-if="isLearner" class="student-priority-grid">
       <el-card shadow="never" class="panel todo-panel">
         <template #header>
           <div class="panel-header">
@@ -95,7 +94,7 @@
       <el-card shadow="never" class="panel">
         <template #header><div class="panel-header"><span>个性化学习建议</span></div></template>
         <div class="advice-list">
-          <button type="button" @click="go('/student/courses')">从课程学习页继续完成必做资源和准备清单</button>
+          <button type="button" @click="go('/classrooms')">从课堂学习页继续完成必做资源和准备清单</button>
           <button type="button" @click="go('/student/exams')">查看正式安全考试状态，未通过实验优先复习错题</button>
           <button type="button" @click="go('/student/grades')">报告被退回时先处理教师反馈再重新提交</button>
         </div>
@@ -114,7 +113,7 @@
       </el-card>
     </section>
 
-    <section v-if="!isStudent" class="metric-grid">
+    <section v-if="!isLearner" class="metric-grid">
       <button
         v-for="metric in home.metrics"
         :key="metric.code"
@@ -128,7 +127,7 @@
       </button>
     </section>
 
-    <section v-if="!isStudent" class="content-grid">
+    <section v-if="!isLearner" class="content-grid">
       <el-card shadow="never" class="panel todo-panel">
         <template #header>
           <div class="panel-header">
@@ -283,21 +282,18 @@ const home = reactive({
 })
 
 const roleTitle = computed(() => ({
-  student: '实验学习驾驶舱',
-  teacher: '教师课程建设台',
-  lab_admin: '实验室运行总览',
+  user: '油气工程公共学习空间',
   admin: '平台治理中心',
 }[authStore.role] || '统一门户'))
 
 const subtitle = computed(() => ({
-  student: '沿着实验可视化路径完成预习、资源、准入、预约、报告和交流。',
-  teacher: '把课程内容组织成可看、可练、可追踪的油气工程实验学习路径。',
-  lab_admin: '查看今日实验、容量使用、准入状态和实验室运行情况。',
+  user: '浏览公共资源，加入课堂后完成实验教学与考核闭环。',
   admin: '维护平台用户、权限、公告和运行日志。',
 }[authStore.role] || '汇总当前账号可访问的事项。'))
 
 const unreadCount = computed(() => home.messages.filter((item) => Number(item.value) === 0).length)
-const isStudent = computed(() => authStore.role === 'student')
+const isLearner = computed(() => authStore.role === 'user')
+const canManageClassroom = computed(() => authStore.hasPermission('course:create'))
 const continueItem = computed(() => home.todos.find((item) => item.type === 'learning') || home.todos[0] || null)
 const deadlineItems = computed(() => home.todos.filter((item) => ['DUE_SOON', 'OVERDUE'].includes(item.status)).slice(0, 5))
 const admissionItems = computed(() => home.todos.filter((item) => ['admission', 'reservation', 'report'].includes(item.type)).slice(0, 6))

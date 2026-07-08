@@ -48,7 +48,7 @@
               <el-form-item label="学时"><el-input-number v-model="courseForm.hours" :min="0" :max="300" :disabled="isArchived" /></el-form-item>
             </div>
             <el-form-item label="考核方式"><el-input v-model="courseForm.assessmentMethod" :disabled="isArchived" /></el-form-item>
-            <el-form-item label="封面地址"><el-input v-model="courseForm.coverUrl" :disabled="isArchived" placeholder="可选，留空使用 AmazingTeaching 默认封面" /></el-form-item>
+            <el-form-item label="封面地址"><el-input v-model="courseForm.coverUrl" :disabled="isArchived" placeholder="可选，留空使用平台默认封面" /></el-form-item>
             <el-form-item label="课程短标语"><el-input v-model="courseForm.tagline" :disabled="isArchived" maxlength="160" /></el-form-item>
             <el-form-item label="亮点标签"><el-input v-model="courseForm.highlightTags" :disabled="isArchived" placeholder="用逗号分隔，如 实验可视化,安全准入" /></el-form-item>
             <el-form-item label="视觉主题"><el-input v-model="courseForm.visualTheme" :disabled="isArchived" placeholder="如 oilfield-lab" /></el-form-item>
@@ -57,7 +57,7 @@
           </el-form>
           <div class="course-visual-preview" :style="{ backgroundImage: `url(${courseVisual})` }">
             <div>
-              <span>AmazingTeaching 学生视角</span>
+              <span>学生学习路径预览</span>
               <strong>{{ courseForm.courseName || '课程名称' }}</strong>
               <p>{{ courseForm.tagline || '把油气工程实验拆成看得懂、能操作、可复盘的学习路径。' }}</p>
             </div>

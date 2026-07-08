@@ -279,7 +279,7 @@ public class CourseServiceImpl implements CourseService {
             });
         } else if (UserContext.isAdmin() && dto.getTeacherId() != null) {
             wrapper.eq(LabCourse::getTeacherId, dto.getTeacherId());
-        } else if (UserContext.isStudent()) {
+        } else if (UserContext.isLearner()) {
             List<Long> courseIds = studentCourseIds(UserContext.userId());
             if (courseIds.isEmpty()) {
                 wrapper.eq(LabCourse::getId, -1L);
@@ -297,18 +297,18 @@ public class CourseServiceImpl implements CourseService {
     @Override
     public CourseDetailVO detail(Long id) {
         LabCourse course = requireCourse(id);
-        if (UserContext.isStudent()) {
+        boolean learnerOnly = UserContext.isLearner() && !UserContext.isTeacher();
+        if (UserContext.isTeacher()) {
+            assertCourseManageable(course);
+        } else if (learnerOnly) {
             assertStudentEnrolled(id);
             if (!STATUS_PUBLISHED_EQUALS(course)) {
                 throw new BusinessException(403, "课程未开放");
             }
         }
-        if (UserContext.isTeacher()) {
-            assertCourseManageable(course);
-        }
         List<Experiment> experiments = experimentMapper.selectList(new LambdaQueryWrapper<Experiment>()
                 .eq(Experiment::getCourseId, id)
-                .eq(UserContext.isStudent(), Experiment::getStatus, STATUS_PUBLISHED)
+                .eq(learnerOnly, Experiment::getStatus, STATUS_PUBLISHED)
                 .orderByAsc(Experiment::getSort));
         List<Long> experimentIds = experiments.stream().map(Experiment::getId).toList();
         long resourceCount = experimentIds.isEmpty() ? 0 : resourceMapper.selectCount(
@@ -324,7 +324,7 @@ public class CourseServiceImpl implements CourseService {
         vo.setExperiments(experiments.stream().map(this::toSimpleVO).toList());
         vo.setLearningRequirement(course.getLearningRequirement());
         vo.setTeachingClasses(listClasses(id));
-        vo.setStudents(UserContext.isStudent() ? Collections.emptyList() : listStudents(id, null, null, null));
+        vo.setStudents(learnerOnly ? Collections.emptyList() : listStudents(id, null, null, null));
         vo.setTeachingClassCount(vo.getTeachingClasses().size());
         vo.setStudentCount(Math.toIntExact(courseStudentMapper.selectCount(new LambdaQueryWrapper<CourseStudent>()
                 .eq(CourseStudent::getCourseId, id)
@@ -422,9 +422,9 @@ public class CourseServiceImpl implements CourseService {
         TeachingClass teachingClass = dto.getTeachingClassId() == null ? null : requireClass(courseId, dto.getTeachingClassId());
         CourseStudentImportResultVO result = new CourseStudentImportResultVO();
         Set<String> seen = new HashSet<>();
-        Role studentRole = roleMapper.selectOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "STUDENT").last("LIMIT 1"));
-        if (studentRole == null) {
-            throw new BusinessException(500, "系统缺少学生角色，无法导入名单");
+        Role userRole = roleMapper.selectOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "USER").last("LIMIT 1"));
+        if (userRole == null) {
+            throw new BusinessException(500, "系统缺少普通用户角色，无法导入课堂成员");
         }
 
         for (int i = 0; i < dto.getStudents().size(); i++) {
@@ -442,12 +442,9 @@ public class CourseServiceImpl implements CourseService {
 
             User student = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username).last("LIMIT 1"));
             if (student == null) {
-                student = createStudentUser(item, username, studentRole.getId());
+                student = createStudentUser(item, username, userRole.getId());
             } else if (student.getStatus() == null || student.getStatus() != 1) {
                 addFailure(result, rowIndex, username, "账号已停用");
-                continue;
-            } else if (authMapper.countRole(student.getId(), "STUDENT") == 0) {
-                addFailure(result, rowIndex, username, "账号不是学生角色");
                 continue;
             }
 
@@ -547,7 +544,7 @@ public class CourseServiceImpl implements CourseService {
     private ExperimentSimpleVO toSimpleVO(Experiment entity) {
         ExperimentSimpleVO vo = new ExperimentSimpleVO();
         BeanUtils.copyProperties(entity, vo);
-        if (UserContext.isStudent()) {
+        if (UserContext.isLearner() && !UserContext.isTeacher()) {
             vo.setLearningProgress(learningRecordMapper.selectExperimentProgress(entity.getId(), UserContext.userId()));
         }
         return vo;
@@ -583,8 +580,8 @@ public class CourseServiceImpl implements CourseService {
 
     private void validateTeacher(Long teacherId) {
         User teacher = userMapper.selectById(teacherId);
-        if (teacher == null || teacher.getStatus() != 1 || authMapper.countRole(teacherId, "TEACHER") == 0) {
-            throw new BusinessException(400, "负责教师不存在或已停用");
+        if (teacher == null || teacher.getStatus() != 1 || authMapper.countApprovedTeacherCertification(teacherId) == 0) {
+            throw new BusinessException(400, "负责教师不存在、已停用或未通过教师认证");
         }
     }
 
@@ -593,8 +590,8 @@ public class CourseServiceImpl implements CourseService {
             return;
         }
         User assistant = userMapper.selectById(assistantId);
-        if (assistant == null || assistant.getStatus() != 1 || authMapper.countRole(assistantId, "TEACHER") == 0) {
-            throw new BusinessException(400, "助教不存在、已停用或不是教师角色");
+        if (assistant == null || assistant.getStatus() != 1 || authMapper.countApprovedTeacherCertification(assistantId) == 0) {
+            throw new BusinessException(400, "助教不存在、已停用或未通过教师认证");
         }
     }
 
@@ -615,18 +612,18 @@ public class CourseServiceImpl implements CourseService {
     }
 
     private void assertCourseReadable(LabCourse course) {
-        if (UserContext.isStudent()) {
-            assertStudentEnrolled(course.getId());
-            return;
-        }
         if (UserContext.isTeacher()) {
             assertCourseManageable(course);
+            return;
+        }
+        if (UserContext.isLearner()) {
+            assertStudentEnrolled(course.getId());
         }
     }
 
     private void assertCourseManageable(LabCourse course) {
         AccessUtil.requireTeacherOrAdmin();
-        if (UserContext.isAdmin() || UserContext.isLabAdmin()) {
+        if (UserContext.isAdmin()) {
             return;
         }
         if (UserContext.userId().equals(course.getTeacherId())) {

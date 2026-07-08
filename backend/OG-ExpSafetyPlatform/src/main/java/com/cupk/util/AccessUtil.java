@@ -14,8 +14,8 @@ public final class AccessUtil {
     }
 
     public static void requireStudent() {
-        if (!UserContext.isStudent()) {
-            throw new BusinessException(403, "只有学生可以执行该操作");
+        if (!UserContext.isLearner()) {
+            throw new BusinessException(403, "只有学习者可以执行该操作");
         }
     }
 
@@ -31,7 +31,7 @@ public final class AccessUtil {
 
     public static Long currentTeacherScope() {
         if (UserContext.isTeacher()) return UserContext.userId();
-        if (UserContext.isAdmin() || UserContext.isLabAdmin()) return null;
+        if (UserContext.isAdmin()) return null;
         throw new BusinessException(403, "无权查看教师统计数据");
     }
 }

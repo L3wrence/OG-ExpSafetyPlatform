@@ -59,14 +59,13 @@ public class PortalServiceImpl implements PortalService {
         home.setUserInfo(userService.currentUser());
 
         Long userId = UserContext.userId();
-        if ("STUDENT".equals(roleCode)) {
-            fillStudentHome(home, userId);
-        } else if ("TEACHER".equals(roleCode)) {
-            fillTeacherHome(home, userId);
-        } else if ("LAB_ADMIN".equals(roleCode)) {
-            fillLabAdminHome(home);
-        } else {
+        if ("ADMIN".equals(roleCode)) {
             fillAdminHome(home);
+        } else {
+            fillUserHome(home, userId);
+            if (UserContext.isTeacher()) {
+                fillTeacherHome(home, userId);
+            }
         }
 
         home.setNotices(notices(5));
@@ -123,8 +122,8 @@ public class PortalServiceImpl implements PortalService {
             return List.of();
         }
         String roleCode = primaryRole();
-        Long teacherId = "TEACHER".equals(roleCode) ? UserContext.userId() : null;
-        Long studentId = "STUDENT".equals(roleCode) ? UserContext.userId() : null;
+        Long teacherId = UserContext.isTeacher() ? UserContext.userId() : null;
+        Long studentId = UserContext.isLearner() ? UserContext.userId() : null;
         int eachLimit = Math.max(2, limit(limit) / 4 + 1);
         List<SearchResultVO> result = new ArrayList<>();
         portalMapper.searchCourses(keyword, teacherId, studentId, roleCode, eachLimit).forEach(row -> result.add(toSearch(row)));
@@ -200,9 +199,9 @@ public class PortalServiceImpl implements PortalService {
         }
     }
 
-    private void fillStudentHome(PortalHomeVO home, Long userId) {
-        home.getMetrics().add(new PortalMetricVO("courses", "我的课程", nz(portalMapper.countStudentCourses(userId)), "门", "/student/courses", "primary"));
-        home.getMetrics().add(new PortalMetricVO("learningTasks", "待完成学习", nz(portalMapper.countStudentPendingLearningTasks(userId)), "项", "/student/courses", "warning"));
+    private void fillUserHome(PortalHomeVO home, Long userId) {
+        home.getMetrics().add(new PortalMetricVO("courses", "我的课堂", nz(portalMapper.countStudentCourses(userId)), "门", "/classrooms", "primary"));
+        home.getMetrics().add(new PortalMetricVO("learningTasks", "待完成学习", nz(portalMapper.countStudentPendingLearningTasks(userId)), "项", "/classrooms", "warning"));
         home.getMetrics().add(new PortalMetricVO("exams", "待考试实验", nz(portalMapper.countStudentPendingExams(userId)), "项", "/student/exams", "warning"));
         home.getMetrics().add(new PortalMetricVO("reservations", "预约状态", nz(portalMapper.countStudentActiveReservations(userId)), "条", "/student/reserve", "success"));
         home.getMetrics().add(new PortalMetricVO("passRate", "考试通过率", nz(portalMapper.studentExamPassRate(userId)), "%", "/student/exams", "info"));
@@ -222,13 +221,6 @@ public class PortalServiceImpl implements PortalService {
         home.getMetrics().add(new PortalMetricVO("students", "所教学生", nz(portalMapper.countTeacherStudents(teacherId)), "人", "/teacher/courses", "primary"));
         addRows(home.getTodos(), portalMapper.teacherReservationTodos(teacherId, 5));
         addRows(home.getTodos(), portalMapper.teacherReportTodos(teacherId, 5));
-    }
-
-    private void fillLabAdminHome(PortalHomeVO home) {
-        home.getMetrics().add(new PortalMetricVO("todaySlots", "今日实验", nz(portalMapper.countTodaySlots()), "场", "/lab/home", "primary"));
-        home.getMetrics().add(new PortalMetricVO("todayReservations", "今日预约", nz(portalMapper.countTodayReservations()), "人次", "/lab/home", "success"));
-        home.getMetrics().add(new PortalMetricVO("capacity", "容量使用率", nz(portalMapper.todayCapacityUsage()), "%", "/lab/home", "warning"));
-        home.getMetrics().add(new PortalMetricVO("checkins", "签到情况", 0, "待接入", "/lab/home", "info"));
     }
 
     private void fillAdminHome(PortalHomeVO home) {
@@ -280,19 +272,18 @@ public class PortalServiceImpl implements PortalService {
 
     private List<PortalItemVO> defaultShortcuts(String roleCode) {
         List<PortalItemVO> items = new ArrayList<>();
-        if ("TEACHER".equals(roleCode)) {
-            items.add(shortcut("课程管理", "/teacher/courses", "Reading"));
-            items.add(shortcut("预约审核", "/teacher/reservations", "Calendar"));
-            items.add(shortcut("报告批改", "/teacher/reports", "Document"));
-        } else if ("LAB_ADMIN".equals(roleCode)) {
-            items.add(shortcut("实验室运行", "/lab/home", "Monitor"));
-            items.add(shortcut("预约审核", "/teacher/reservations", "Calendar"));
-        } else if ("ADMIN".equals(roleCode)) {
+        if ("ADMIN".equals(roleCode)) {
             items.add(shortcut("用户管理", "/admin/users", "User"));
             items.add(shortcut("角色权限", "/admin/roles", "Lock"));
             items.add(shortcut("操作日志", "/admin/logs", "List"));
         } else {
-            items.add(shortcut("我的课程", "/student/courses", "Reading"));
+            if (UserContext.isTeacher()) {
+                items.add(shortcut("课堂管理", "/teacher/courses", "Reading"));
+                items.add(shortcut("预约审核", "/teacher/reservations", "Calendar"));
+                items.add(shortcut("报告批改", "/teacher/reports", "Document"));
+            }
+            items.add(shortcut("我的课堂", "/classrooms", "Reading"));
+            items.add(shortcut("资源学习", "/resources", "Collection"));
             items.add(shortcut("安全考试", "/student/exams", "EditPen"));
             items.add(shortcut("实验预约", "/student/reserve", "Calendar"));
             items.add(shortcut("成绩报告", "/student/grades", "Document"));
@@ -310,10 +301,8 @@ public class PortalServiceImpl implements PortalService {
 
     private String primaryRole() {
         if (UserContext.isAdmin()) return "ADMIN";
-        if (UserContext.isTeacher()) return "TEACHER";
-        if (UserContext.isLabAdmin()) return "LAB_ADMIN";
-        if (UserContext.isStudent()) return "STUDENT";
-        throw new BusinessException(403, "账号未绑定有效角色");
+        if (UserContext.isUser()) return "USER";
+        return "USER";
     }
 
     private int limit(Integer limit) {

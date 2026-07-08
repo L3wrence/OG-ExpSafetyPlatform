@@ -1,247 +1,159 @@
- <template>
-   <div class="main-layout" :class="{ collapsed: appStore.sidebarCollapsed }">
-     <!-- Sidebar -->
-     <aside class="sidebar">
-       <div class="sidebar-header">
-         <div class="logo-wrapper">
-           <el-icon :size="28" color="#409eff"><Platform /></el-icon>
-           <span class="logo-text" v-show="!appStore.sidebarCollapsed">AmazingTeaching</span>
-         </div>
-       </div>
-       <el-menu
-         :default-active="currentRoute"
-         :collapse="appStore.sidebarCollapsed"
-         :router="true"
-         class="sidebar-menu"
-         background-color="transparent"
-         text-color="rgba(255,255,255,0.65)"
-         active-text-color="#fff"
-       >
-         <el-menu-item :index="homePath">
-           <el-icon><HomeFilled /></el-icon>
-           <template #title>首页</template>
-         </el-menu-item>
- 
-         <!-- Role-specific menu items -->
-         <template v-if="authStore.role === 'student'">
-           <el-menu-item v-if="can('course:view')" index="/student/courses">
-             <el-icon><Reading /></el-icon>
-             <template #title>实验课程</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('resource:view')" index="/student/resources">
-             <el-icon><Folder /></el-icon>
-             <template #title>油气资源库</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('course:view')" index="/discussions">
-             <el-icon><ChatLineRound /></el-icon>
-             <template #title>学习交流</template>
-           </el-menu-item>
-          <el-menu-item v-if="can('exam:take')" index="/student/exams">
-            <el-icon><EditPen /></el-icon>
-            <template #title>安全考试</template>
-          </el-menu-item>
-          <el-menu-item v-if="can('reservation:view')" index="/student/reserve">
-            <el-icon><Calendar /></el-icon>
-            <template #title>实验预约</template>
-          </el-menu-item>
-           <el-menu-item v-if="can('report:view')" index="/student/grades">
-             <el-icon><Trophy /></el-icon>
-             <template #title>报告与成绩</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('portal:message')" index="/messages">
-             <el-icon><Bell /></el-icon>
-             <template #title>消息与日程</template>
-           </el-menu-item>
-           <el-menu-item index="/profile">
-             <el-icon><UserFilled /></el-icon>
-             <template #title>个人中心</template>
-           </el-menu-item>
-         </template>
- 
-         <template v-if="authStore.role === 'teacher'">
-           <el-menu-item index="/teacher/dashboard">
-             <el-icon><DataBoard /></el-icon>
-             <template #title>教师工作台</template>
-           </el-menu-item>
-          <el-menu-item v-if="can('course:view')" index="/teacher/courses">
-            <el-icon><Reading /></el-icon>
-            <template #title>课程建设</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('experiment:view')" index="/teacher/experiments">
-             <el-icon><Operation /></el-icon>
-             <template #title>实验路径</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('resource:view')" index="/teacher/resources">
-             <el-icon><Folder /></el-icon>
-             <template #title>资源管理</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('exam-paper:view')" index="/teacher/exam-papers">
-             <el-icon><EditPen /></el-icon>
-             <template #title>题库与考试</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('reservation:review')" index="/teacher/reservations">
-             <el-icon><Calendar /></el-icon>
-             <template #title>预约管理</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('report:review')" index="/teacher/reports">
-             <el-icon><Document /></el-icon>
-             <template #title>报告批改</template>
-           </el-menu-item>
-           <el-menu-item index="/profile">
-             <el-icon><UserFilled /></el-icon>
-             <template #title>个人中心</template>
-           </el-menu-item>
-         </template>
+<template>
+  <div class="main-layout">
+    <header class="app-header">
+      <div class="brand-area" @click="router.push(homePath)">
+        <div class="brand-mark">
+          <el-icon :size="24"><Platform /></el-icon>
+        </div>
+        <div class="brand-copy">
+          <strong>油气工程实验教学与考核平台</strong>
+          <span>{{ roleLabel }}</span>
+        </div>
+      </div>
 
-         <template v-if="authStore.role === 'lab_admin'">
-           <el-menu-item index="/lab/home">
-             <el-icon><Monitor /></el-icon>
-             <template #title>实验室运行</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('reservation:review')" index="/teacher/reservations">
-             <el-icon><Calendar /></el-icon>
-             <template #title>预约审核</template>
-           </el-menu-item>
-           <el-menu-item index="/profile">
-             <el-icon><UserFilled /></el-icon>
-             <template #title>个人中心</template>
-           </el-menu-item>
-         </template>
- 
-         <template v-if="authStore.role === 'admin'">
-           <el-menu-item v-if="can('user:view')" index="/admin/users">
-             <el-icon><User /></el-icon>
-             <template #title>用户管理</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('role:view')" index="/admin/roles">
-             <el-icon><Avatar /></el-icon>
-             <template #title>角色管理</template>
-           </el-menu-item>
-           <el-menu-item v-if="can('permission:view')" index="/admin/permissions">
-             <el-icon><Lock /></el-icon>
-             <template #title>权限管理</template>
-           </el-menu-item>
-           <el-menu-item index="/admin/notices">
-             <el-icon><Bell /></el-icon>
-             <template #title>公告管理</template>
-           </el-menu-item>
-           <el-menu-item index="/admin/logs">
-             <el-icon><List /></el-icon>
-             <template #title>操作日志</template>
-           </el-menu-item>
-           <el-menu-item index="/profile">
-             <el-icon><UserFilled /></el-icon>
-             <template #title>个人中心</template>
-           </el-menu-item>
-         </template>
-       </el-menu>
-     </aside>
- 
-     <!-- Main Content Area -->
-     <div class="main-area">
-       <!-- Top Bar -->
-       <header class="top-bar">
-         <div class="top-bar-left">
-           <el-button
-             text
-             :aria-label="appStore.sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
-             :title="appStore.sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
-             @click="appStore.toggleSidebar"
-             class="collapse-btn"
-           >
-             <el-icon :size="20">
-               <Fold v-if="!appStore.sidebarCollapsed" />
-               <Expand v-else />
-             </el-icon>
-           </el-button>
-           <el-breadcrumb separator="/">
-             <el-breadcrumb-item :to="{ path: homePath }">首页</el-breadcrumb-item>
-             <el-breadcrumb-item v-if="pageTitle">{{ pageTitle }}</el-breadcrumb-item>
-           </el-breadcrumb>
-         </div>
-         <div class="top-bar-right">
-           <el-tooltip content="通知" placement="bottom">
-             <el-badge :value="unreadMessages" :hidden="unreadMessages === 0" :max="99">
-               <el-button text class="top-icon-btn" aria-label="通知" title="通知" @click="router.push('/messages')">
-                 <el-icon :size="18"><Bell /></el-icon>
-               </el-button>
-             </el-badge>
-           </el-tooltip>
-           <el-dropdown trigger="click">
-             <span class="user-info-dropdown">
-             <el-avatar :size="32" :src="authStore.userInfo?.avatarUrl" :icon="UserFilled" />
-               <span class="username">{{ displayName }}</span>
-               <span class="role-name">{{ roleLabel }}</span>
-               <el-icon><ArrowDown /></el-icon>
-             </span>
-             <template #dropdown>
-               <el-dropdown-menu>
-                 <el-dropdown-item @click="handleLogout">
-                 <el-icon><SwitchButton /></el-icon>退出登录
-                 </el-dropdown-item>
-               </el-dropdown-menu>
-             </template>
-           </el-dropdown>
-         </div>
-       </header>
- 
-       <!-- Page Content -->
-       <main class="content-area">
-         <router-view />
-       </main>
-     </div>
-   </div>
- </template>
- 
- <script setup>
- import { computed, onMounted, ref, watch } from 'vue'
- import { useRoute } from 'vue-router'
- import {
-   ArrowDown,
-   Avatar,
-   Bell,
-   Calendar,
-   ChatLineRound,
-   DataBoard,
-   Document,
-   EditPen,
-   Expand,
-   Fold,
-   Folder,
-   HomeFilled,
-   List,
-   Lock,
-   Monitor,
-   Operation,
-   Platform,
-   Reading,
-   SwitchButton,
-   Trophy,
-   User,
-   UserFilled,
- } from '@element-plus/icons-vue'
- import { useAppStore } from '@/stores/appStore'
- import { useAuthStore } from '@/stores/authStore'
- import { ROLE_LABELS } from '@/utils/constant'
- import { getRoleHomePath } from '@/utils/role'
- import router from '@/router'
- import { getUnreadMessageCount, recordRecentVisit } from '@/api/portal'
- 
- const route = useRoute()
- const appStore = useAppStore()
- const authStore = useAuthStore()
- 
- const currentRoute = computed(() => route.path)
- const pageTitle = computed(() => route.meta?.title || '')
- const homePath = computed(() => getRoleHomePath(authStore.role))
+      <el-menu
+        :default-active="currentRoute"
+        :router="true"
+        mode="horizontal"
+        class="top-nav"
+        :ellipsis="false"
+      >
+        <el-menu-item :index="homePath">
+          <el-icon><HomeFilled /></el-icon>
+          <span>首页</span>
+        </el-menu-item>
+
+        <template v-if="isUnifiedLearner">
+          <el-menu-item v-if="can('resource:view')" index="/resources">
+            <el-icon><Folder /></el-icon>
+            <span>资源学习</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('course:view')" index="/classrooms">
+            <el-icon><Reading /></el-icon>
+            <span>我的课堂</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('course:view')" index="/discussions">
+            <el-icon><ChatLineRound /></el-icon>
+            <span>学习交流</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('portal:message')" index="/messages">
+            <el-icon><Bell /></el-icon>
+            <span>消息</span>
+          </el-menu-item>
+        </template>
+
+        <template v-if="authStore.role === 'admin'">
+          <el-menu-item v-if="can('user:view')" index="/admin/users">
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('role:view')" index="/admin/roles">
+            <el-icon><Avatar /></el-icon>
+            <span>角色管理</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('permission:view')" index="/admin/permissions">
+            <el-icon><Lock /></el-icon>
+            <span>权限管理</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/notices">
+            <el-icon><Bell /></el-icon>
+            <span>公告管理</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/logs">
+            <el-icon><List /></el-icon>
+            <span>操作日志</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('teacher-certification:review')" index="/admin/teacher-certifications">
+            <el-icon><Document /></el-icon>
+            <span>教师认证</span>
+          </el-menu-item>
+          <el-menu-item v-if="can('resource-submission:review')" index="/admin/resource-submissions">
+            <el-icon><Folder /></el-icon>
+            <span>资源投稿</span>
+          </el-menu-item>
+        </template>
+      </el-menu>
+
+      <div class="header-actions">
+        <el-tooltip content="通知" placement="bottom">
+          <el-badge :value="unreadMessages" :hidden="unreadMessages === 0" :max="99">
+            <el-button text class="top-icon-btn" aria-label="通知" title="通知" @click="router.push('/messages')">
+              <el-icon :size="18"><Bell /></el-icon>
+            </el-button>
+          </el-badge>
+        </el-tooltip>
+        <el-dropdown trigger="click">
+          <span class="user-info-dropdown">
+            <el-avatar :size="32" :src="authStore.userInfo?.avatarUrl" :icon="UserFilled" />
+            <span class="username">{{ displayName }}</span>
+            <el-icon><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="router.push('/profile')">
+                <el-icon><UserFilled /></el-icon>个人中心
+              </el-dropdown-item>
+              <el-dropdown-item divided @click="handleLogout">
+                <el-icon><SwitchButton /></el-icon>退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </header>
+
+    <main class="content-area">
+      <router-view />
+    </main>
+  </div>
+</template>
+
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  ArrowDown,
+  Avatar,
+  Bell,
+  Calendar,
+  ChatLineRound,
+  DataBoard,
+  Document,
+  EditPen,
+  Folder,
+  HomeFilled,
+  List,
+  Lock,
+  Monitor,
+  Operation,
+  Platform,
+  Reading,
+  SwitchButton,
+  Trophy,
+  User,
+  UserFilled,
+} from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/authStore'
+import { ROLE_LABELS } from '@/utils/constant'
+import { getRoleHomePath } from '@/utils/role'
+import router from '@/router'
+import { getUnreadMessageCount, recordRecentVisit } from '@/api/portal'
+
+const route = useRoute()
+const authStore = useAuthStore()
+
+const currentRoute = computed(() => route.path)
+const pageTitle = computed(() => route.meta?.title || '')
+const homePath = computed(() => getRoleHomePath(authStore.role))
 const displayName = computed(() => authStore.userInfo?.realName || authStore.userInfo?.name || authStore.userInfo?.username || '用户')
-const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '未绑定角色')
+const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '普通用户')
+const isUnifiedLearner = computed(() => authStore.role === 'user')
 const unreadMessages = ref(0)
 
- function can(permission) {
-   return authStore.hasPermission(permission)
- }
- 
+function can(permission) {
+  return authStore.hasPermission(permission)
+}
+
 async function handleLogout() {
   await authStore.logoutRemote()
   router.push('/login')
@@ -257,151 +169,202 @@ onMounted(loadUnreadMessages)
 watch(
   () => route.fullPath,
   (path) => {
-     if (!authStore.token || path === '/login') return
-     recordRecentVisit({
-       title: route.meta?.title || '功能页面',
-       path,
-       module: String(route.name || ''),
-     }).catch(() => {})
-     loadUnreadMessages()
-   },
-   { immediate: true },
- )
- </script>
- 
- <style scoped>
- .main-layout {
-   display: flex;
-   height: 100vh;
-   background: #f0f2f5;
- }
- 
- /* Sidebar */
- .sidebar {
-   width: 220px;
-   background: linear-gradient(180deg, #12312f 0%, #24483e 52%, #5b4b35 100%);
-   display: flex;
-   flex-direction: column;
-   transition: width 0.3s;
-   overflow: hidden;
-   flex-shrink: 0;
-   z-index: 100;
- }
- .collapsed .sidebar {
-   width: 64px;
- }
- .sidebar-header {
-   height: 60px;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   border-bottom: 1px solid rgba(255,255,255,0.06);
-   padding: 0 12px;
- }
- .logo-wrapper {
-   display: flex;
-   align-items: center;
-   gap: 10px;
-   overflow: hidden;
- }
- .logo-text {
-   font-size: 17px;
-   font-weight: 600;
-   color: #fff;
-   white-space: nowrap;
- }
- .sidebar-menu {
-   flex: 1;
-   border-right: none;
-   padding: 8px 0;
- }
- .sidebar-menu:not(.el-menu--collapse) {
-   width: 220px;
- }
- 
- /* Main Area */
- .main-area {
-   flex: 1;
-   display: flex;
-   flex-direction: column;
-   overflow: hidden;
-   min-width: 0;
- }
- 
- /* Top Bar */
- .top-bar {
-   height: 56px;
-   background: #fff;
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
-   padding: 0 20px;
-   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-   flex-shrink: 0;
-   z-index: 10;
- }
- .top-bar-left {
-   display: flex;
-   align-items: center;
-   gap: 12px;
- }
- .collapse-btn {
-   padding: 4px;
- }
- .top-bar-right {
-   display: flex;
-   align-items: center;
-   gap: 8px;
- }
- .top-icon-btn {
-   padding: 6px;
-   border-radius: 8px;
- }
- .top-icon-btn:hover {
-   background: #f0f2f5;
- }
- .user-info-dropdown {
-   display: flex;
-   align-items: center;
-   gap: 8px;
-   cursor: pointer;
-   padding: 4px 8px;
-   border-radius: 8px;
-   transition: background 0.2s;
- }
- .user-info-dropdown:hover {
-   background: #f0f2f5;
- }
- .username {
-   font-size: 14px;
-   color: #333;
- }
- .role-name {
-   font-size: 12px;
-   color: #909399;
- }
- 
- /* Content */
- .content-area {
-   flex: 1;
-   overflow-y: auto;
-   padding: 20px;
-   background: #f0f2f5;
- }
- 
- /* Responsive */
- @media (max-width: 768px) {
-   .sidebar {
-     position: fixed;
-     left: 0;
-     top: 0;
-     height: 100%;
-     z-index: 1000;
-     transform: translateX(-100%);
-   }
-   .collapsed .sidebar {
-     transform: translateX(0);
-     width: 220px;
-   }
- }
- </style>
+    if (!authStore.token || path === '/login') return
+    recordRecentVisit({
+      title: pageTitle.value || '功能页面',
+      path,
+      module: String(route.name || ''),
+    }).catch(() => {})
+    loadUnreadMessages()
+  },
+  { immediate: true },
+)
+</script>
+
+<style scoped>
+.main-layout {
+  min-height: 100vh;
+  background: #f4f7f8;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 0 22px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid #e5ecef;
+  box-shadow: 0 4px 18px rgba(15, 35, 45, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.brand-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #fff;
+  background: #177e89;
+  border-radius: 8px;
+}
+
+.brand-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.brand-copy strong {
+  color: #13233a;
+  font-size: 16px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-copy span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.top-nav {
+  min-width: 0;
+  height: 64px;
+  border-bottom: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: transparent;
+}
+
+.top-nav::-webkit-scrollbar {
+  height: 0;
+}
+
+.top-nav :deep(.el-menu-item) {
+  height: 64px !important;
+  line-height: 64px !important;
+  margin: 0 2px !important;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+  color: #344054;
+}
+
+.top-nav :deep(.el-menu-item:hover) {
+  color: #177e89;
+  background: #eefafa !important;
+}
+
+.top-nav :deep(.el-menu-item.is-active) {
+  color: #177e89;
+  background: transparent !important;
+  border-bottom: 3px solid #177e89;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.top-icon-btn {
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.top-icon-btn:hover,
+.user-info-dropdown:hover {
+  background: #f0f5f6;
+}
+
+.user-info-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.username {
+  max-width: 92px;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content-area {
+  min-height: calc(100vh - 64px);
+  padding: 20px;
+}
+
+@media (max-width: 1180px) {
+  .app-header {
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr) auto;
+    padding: 0 14px;
+  }
+
+  .top-nav :deep(.el-menu-item) {
+    padding: 0 10px !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .app-header {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 58px 50px;
+    gap: 0 10px;
+    min-height: 108px;
+  }
+
+  .top-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 50px;
+  }
+
+  .top-nav :deep(.el-menu-item) {
+    height: 50px !important;
+    line-height: 50px !important;
+  }
+
+  .brand-copy strong {
+    font-size: 15px;
+  }
+
+  .content-area {
+    min-height: calc(100vh - 108px);
+    padding: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .brand-copy strong {
+    white-space: normal;
+  }
+
+  .brand-copy span,
+  .username {
+    display: none;
+  }
+}
+</style>

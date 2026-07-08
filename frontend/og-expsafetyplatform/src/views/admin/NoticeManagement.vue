@@ -132,10 +132,8 @@ const form = reactive({
 
 const roleOptions = [
   { label: '全部角色', value: 'ALL' },
-  { label: '学生', value: 'STUDENT' },
-  { label: '教师', value: 'TEACHER' },
+  { label: '普通用户', value: 'USER' },
   { label: '管理员', value: 'ADMIN' },
-  { label: '实验室管理员', value: 'LAB_ADMIN' },
 ]
 
 watch([() => filters.targetRole, () => filters.status], () => {

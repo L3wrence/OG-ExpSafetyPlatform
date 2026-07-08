@@ -114,8 +114,8 @@ public class ExamServiceImpl implements ExamService {
     @Override
     @Transactional
     public ExamSessionVO startExam(Long paperId) {
-        if (!UserContext.isStudent()) {
-            throw new BusinessException(403, "只有学生可以参加考试");
+        if (!UserContext.isLearner()) {
+            throw new BusinessException(403, "只有课堂成员可以参加考试");
         }
         ExamPaper paper = requireAvailablePaper(paperId);
         assertStudentInCourse(UserContext.getUserId(), paper.getCourseId());
@@ -158,8 +158,8 @@ public class ExamServiceImpl implements ExamService {
     @Override
     @Transactional
     public ExamSessionVO getInProgressExam(Long paperId) {
-        if (!UserContext.isStudent()) {
-            throw new BusinessException(403, "只有学生可以查询自己的考试");
+        if (!UserContext.isLearner()) {
+            throw new BusinessException(403, "只有课堂成员可以查询自己的考试");
         }
         ExamRecord record = examRecordMapper.selectOne(new LambdaQueryWrapper<ExamRecord>()
                 .eq(ExamRecord::getStudentId, UserContext.getUserId())

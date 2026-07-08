@@ -100,16 +100,18 @@ public class ResourceServiceImpl implements ResourceService {
         wrapper.eq(dto.getRequiredFlag() != null, TeachingResource::getRequiredFlag, dto.getRequiredFlag());
         wrapper.eq(dto.getInvalidFlag() != null, TeachingResource::getInvalidFlag, dto.getInvalidFlag());
         wrapper.eq(dto.getStatus() != null, TeachingResource::getStatus, dto.getStatus());
-        if (UserContext.isStudent()) {
-            wrapper.eq(TeachingResource::getStatus, 1);
-            wrapper.eq(TeachingResource::getInvalidFlag, 0);
-            wrapper.and(w -> w.isNull(TeachingResource::getOpenTime).or().le(TeachingResource::getOpenTime, LocalDateTime.now()));
-            wrapper.and(w -> w.isNull(TeachingResource::getCloseTime).or().ge(TeachingResource::getCloseTime, LocalDateTime.now()));
+        if (UserContext.isTeacher()) {
+            List<Long> experimentIds = currentTeacherExperimentIds();
             List<Long> courseIds = currentStudentCourseIds();
-            if (courseIds.isEmpty()) {
-                return new PageResult<>(Collections.emptyList(), 0L, dto.getPageNum(), dto.getPageSize());
-            }
-            wrapper.in(TeachingResource::getCourseId, courseIds);
+            wrapper.and(w -> {
+                w.eq(TeachingResource::getOpenScope, "PUBLIC").or().isNull(TeachingResource::getCourseId);
+                if (!courseIds.isEmpty()) {
+                    w.or().in(TeachingResource::getCourseId, courseIds);
+                }
+                if (!experimentIds.isEmpty()) {
+                    w.or().in(TeachingResource::getExperimentId, experimentIds);
+                }
+            });
             if (dto.getFavoriteOnly() != null && dto.getFavoriteOnly() == 1) {
                 List<Long> favoriteIds = interactionMapper.selectList(new LambdaQueryWrapper<ResourceInteraction>()
                                 .select(ResourceInteraction::getResourceId)
@@ -121,12 +123,29 @@ public class ResourceServiceImpl implements ResourceService {
                 }
                 wrapper.in(TeachingResource::getId, favoriteIds);
             }
-        } else if (UserContext.isTeacher()) {
-            List<Long> experimentIds = currentTeacherExperimentIds();
-            if (experimentIds.isEmpty()) {
-                return new PageResult<>(Collections.emptyList(), 0L, dto.getPageNum(), dto.getPageSize());
+        } else if (UserContext.isLearner()) {
+            wrapper.eq(TeachingResource::getStatus, 1);
+            wrapper.eq(TeachingResource::getInvalidFlag, 0);
+            wrapper.and(w -> w.isNull(TeachingResource::getOpenTime).or().le(TeachingResource::getOpenTime, LocalDateTime.now()));
+            wrapper.and(w -> w.isNull(TeachingResource::getCloseTime).or().ge(TeachingResource::getCloseTime, LocalDateTime.now()));
+            List<Long> courseIds = currentStudentCourseIds();
+            wrapper.and(w -> {
+                w.eq(TeachingResource::getOpenScope, "PUBLIC").or().isNull(TeachingResource::getCourseId);
+                if (!courseIds.isEmpty()) {
+                    w.or().in(TeachingResource::getCourseId, courseIds);
+                }
+            });
+            if (dto.getFavoriteOnly() != null && dto.getFavoriteOnly() == 1) {
+                List<Long> favoriteIds = interactionMapper.selectList(new LambdaQueryWrapper<ResourceInteraction>()
+                                .select(ResourceInteraction::getResourceId)
+                                .eq(ResourceInteraction::getUserId, UserContext.userId())
+                                .eq(ResourceInteraction::getFavoriteFlag, 1))
+                        .stream().map(ResourceInteraction::getResourceId).toList();
+                if (favoriteIds.isEmpty()) {
+                    return new PageResult<>(Collections.emptyList(), 0L, dto.getPageNum(), dto.getPageSize());
+                }
+                wrapper.in(TeachingResource::getId, favoriteIds);
             }
-            wrapper.in(TeachingResource::getExperimentId, experimentIds);
         }
         wrapper.orderByAsc(TeachingResource::getSort).orderByDesc(TeachingResource::getCreateTime);
         Page<TeachingResource> page = resourceMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
@@ -311,7 +330,7 @@ public class ResourceServiceImpl implements ResourceService {
     public ResourcePreviewVO preview(Long id) {
         TeachingResource resource = requireResource(id);
         assertReadable(resource);
-        LearningRecord record = UserContext.isStudent()
+        LearningRecord record = UserContext.isLearner()
                 ? learningRecordMapper.selectOne(new LambdaQueryWrapper<LearningRecord>()
                     .eq(LearningRecord::getResourceId, id)
                     .eq(LearningRecord::getStudentId, UserContext.userId()))
@@ -320,10 +339,22 @@ public class ResourceServiceImpl implements ResourceService {
         vo.setId(resource.getId());
         vo.setTitle(resource.getTitle());
         vo.setResourceType(resource.getResourceType());
+        vo.setKnowledgePoint(resource.getKnowledgePoint());
+        vo.setRiskType(resource.getRiskType());
+        vo.setTags(resource.getTags());
         vo.setContentType(resource.getContentType());
         vo.setOriginalFilename(resource.getOriginalFilename());
+        vo.setExperimentId(resource.getExperimentId());
+        vo.setCompletionRule(resource.getCompletionRule());
+        vo.setMinStudySeconds(resource.getMinStudySeconds());
+        vo.setMinProgress(resource.getMinProgress());
         vo.setInvalidFlag(resource.getInvalidFlag());
         vo.setPreviewUrl(StringUtils.hasText(resource.getUrl()) ? resource.getUrl() : "/api/files/resources/" + resource.getId());
+        Experiment experiment = experimentMapper.selectById(resource.getExperimentId());
+        if (experiment != null) {
+            vo.setExperimentName(experiment.getExpName());
+            vo.setAiSummary(aiSummary(resource, experiment));
+        }
         if (record != null) {
             vo.setProgress(record.getProgress());
             vo.setDurationSeconds(record.getDurationSeconds());
@@ -372,7 +403,10 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private void assertReadable(TeachingResource resource) {
-        if (UserContext.isStudent()) {
+        if (UserContext.isTeacher() && canWrite(resource)) {
+            return;
+        }
+        if (UserContext.isLearner()) {
             if (resource.getStatus() == null || resource.getStatus() != 1 || flag(resource.getInvalidFlag()) == 1) {
                 throw new BusinessException(403, "资源未开放或已失效");
             }
@@ -383,11 +417,25 @@ public class ResourceServiceImpl implements ResourceService {
             if (resource.getCloseTime() != null && resource.getCloseTime().isBefore(now)) {
                 throw new BusinessException(403, "资源已过期");
             }
-            if (resource.getCourseId() != null && !currentStudentCourseIds().contains(resource.getCourseId())) {
+            if (!isPublicResource(resource)
+                    && resource.getCourseId() != null
+                    && !currentStudentCourseIds().contains(resource.getCourseId())) {
                 throw new BusinessException(403, "无权访问该课程资源");
             }
         } else if (UserContext.isTeacher()) {
             assertWritable(resource);
+        }
+    }
+
+    private boolean canWrite(TeachingResource resource) {
+        try {
+            assertWritable(resource);
+            return true;
+        } catch (BusinessException e) {
+            if (e.getCode() != null && e.getCode() == 403) {
+                return false;
+            }
+            throw e;
         }
     }
 
@@ -397,6 +445,10 @@ public class ResourceServiceImpl implements ResourceService {
                 .eq(CourseStudent::getStudentId, UserContext.userId())
                 .eq(CourseStudent::getStatus, 1))
                 .stream().map(CourseStudent::getCourseId).toList();
+    }
+
+    private boolean isPublicResource(TeachingResource resource) {
+        return "PUBLIC".equalsIgnoreCase(resource.getOpenScope()) || resource.getCourseId() == null;
     }
 
     private void assertWritable(TeachingResource resource) {
@@ -533,5 +585,11 @@ public class ResourceServiceImpl implements ResourceService {
 
     private int value(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private String aiSummary(TeachingResource resource, Experiment experiment) {
+        String point = StringUtils.hasText(resource.getKnowledgePoint()) ? resource.getKnowledgePoint() : experiment.getExpName();
+        String risk = StringUtils.hasText(resource.getRiskType()) ? "，重点留意" + resource.getRiskType() + "风险" : "";
+        return "先把" + point + "放回" + experiment.getExpName() + "的操作场景理解" + risk + "。";
     }
 }

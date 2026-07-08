@@ -6,25 +6,34 @@ import com.cupk.common.Result;
 import com.cupk.dto.ResourceCreateDTO;
 import com.cupk.dto.ResourceInteractionDTO;
 import com.cupk.dto.ResourceQueryDTO;
+import com.cupk.dto.ResourceTimelineNoteDTO;
 import com.cupk.dto.ResourceUpdateDTO;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.service.LearningRecordService;
 import com.cupk.service.ResourceService;
+import com.cupk.service.ResourceTimelineNoteService;
 import com.cupk.vo.ResourcePreviewVO;
 import com.cupk.vo.ResourceStatsVO;
+import com.cupk.vo.ResourceTimelineNoteVO;
+import com.cupk.vo.ResourceTimelineStatsVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/resources")
 public class ResourceController {
     private final ResourceService resourceService;
     private final LearningRecordService learningRecordService;
+    private final ResourceTimelineNoteService timelineNoteService;
 
-    public ResourceController(ResourceService resourceService, LearningRecordService learningRecordService) {
+    public ResourceController(ResourceService resourceService, LearningRecordService learningRecordService,
+                              ResourceTimelineNoteService timelineNoteService) {
         this.resourceService = resourceService;
         this.learningRecordService = learningRecordService;
+        this.timelineNoteService = timelineNoteService;
     }
 
     @GetMapping
@@ -110,5 +119,32 @@ public class ResourceController {
     @RequirePermission("resource:view")
     public Result<ResourcePreviewVO> preview(@PathVariable Long id) {
         return Result.success(resourceService.preview(id));
+    }
+
+    @GetMapping("/{id}/timeline-notes")
+    @RequirePermission("resource:view")
+    public Result<List<ResourceTimelineNoteVO>> timelineNotes(@PathVariable Long id,
+                                                             @RequestParam(required = false) Boolean mineOnly) {
+        return Result.success(timelineNoteService.listByResource(id, mineOnly));
+    }
+
+    @PostMapping("/{id}/timeline-notes")
+    @RequirePermission("resource:view")
+    public Result<Long> createTimelineNote(@PathVariable Long id, @Valid @RequestBody ResourceTimelineNoteDTO dto) {
+        dto.setResourceId(id);
+        return Result.success(timelineNoteService.create(dto));
+    }
+
+    @DeleteMapping("/timeline-notes/{noteId}")
+    @RequirePermission("resource:view")
+    public Result<Void> deleteTimelineNote(@PathVariable Long noteId) {
+        timelineNoteService.delete(noteId);
+        return Result.success();
+    }
+
+    @GetMapping("/experiments/{experimentId}/timeline-hotspots")
+    @RequirePermission("experiment:view")
+    public Result<List<ResourceTimelineStatsVO>> timelineHotspots(@PathVariable Long experimentId) {
+        return Result.success(timelineNoteService.hotspots(experimentId));
     }
 }

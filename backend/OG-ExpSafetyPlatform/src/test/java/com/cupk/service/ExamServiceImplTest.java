@@ -59,7 +59,7 @@ class ExamServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        UserContext.set(new UserSession(10L, List.of("STUDENT"), List.of("exam:take")));
+        UserContext.set(new UserSession(10L, List.of("USER"), List.of("exam:take")));
     }
 
     @AfterEach

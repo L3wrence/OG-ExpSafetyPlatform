@@ -27,11 +27,20 @@ function readJson(key, fallback) {
 }
 
 export const useAuthStore = defineStore('auth', () => {
+  const storedUserInfo = readJson('userInfo', null)
+  const storedMenus = readJson('menus', [])
+  const storedPermissions = readJson('permissions', [])
+  const storedRole = normalizeRole(localStorage.getItem('role') || '')
+    || inferRoleFromLoginResult({
+      userInfo: storedUserInfo,
+      menus: storedMenus,
+      permissions: storedPermissions,
+    })
   const token = ref(localStorage.getItem('token') || '')
-  const userInfo = ref(readJson('userInfo', null))
-  const role = ref(normalizeRole(localStorage.getItem('role') || ''))
-  const menus = ref(readJson('menus', []))
-  const permissions = ref(readJson('permissions', []))
+  const userInfo = ref(storedUserInfo)
+  const role = ref(storedRole)
+  const menus = ref(storedMenus)
+  const permissions = ref(storedPermissions)
 
   async function login(loginForm) {
     /** @type {LoginResult} */
@@ -41,14 +50,10 @@ export const useAuthStore = defineStore('auth', () => {
     }, { silent: true })
 
     const loginUserInfo = res.userInfo || {}
-    const loginRole = inferRoleFromLoginResult(res)
+    const loginRole = inferRoleFromLoginResult(res) || 'user'
 
     if (!res.token) {
       throw new Error('登录成功但后端未返回令牌')
-    }
-
-    if (!loginRole) {
-      throw new Error('登录成功但账号未绑定学生、教师或管理员角色')
     }
 
     token.value = res.token

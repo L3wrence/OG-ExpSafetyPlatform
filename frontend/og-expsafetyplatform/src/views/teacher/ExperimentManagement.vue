@@ -2,7 +2,7 @@
   <div class="experiment-page">
     <section class="page-head">
       <div>
-        <p class="eyebrow">AmazingTeaching</p>
+        <p class="eyebrow">油气工程实验教学与考核平台</p>
         <h1>油气实验路径</h1>
         <p class="page-desc">维护工程情境、预习资源、风险认知、安全准入、实验预约、报告评分和成绩反馈闭环。</p>
       </div>
@@ -231,6 +231,22 @@
                 </el-table-column>
               </el-table>
             </el-tab-pane>
+            <el-tab-pane label="学习难点" name="hotspots">
+              <el-empty v-if="timelineHotspots.length === 0" description="暂无课程内可见的问题或风险标记" />
+              <div v-else class="hotspot-list">
+                <article v-for="item in timelineHotspots" :key="item.resourceId" class="hotspot-card">
+                  <div>
+                    <h3>{{ item.resourceTitle }}</h3>
+                    <p>{{ item.latestQuestion || '学生主要在该资源记录了笔记或风险点，可结合报告与错题继续判断。' }}</p>
+                  </div>
+                  <div class="hotspot-stats">
+                    <span><b>{{ item.questionCount || 0 }}</b>问题</span>
+                    <span><b>{{ item.riskCount || 0 }}</b>风险</span>
+                    <span><b>{{ item.noteCount || 0 }}</b>记录</span>
+                  </div>
+                </article>
+              </div>
+            </el-tab-pane>
           </el-tabs>
         </template>
       </div>
@@ -284,6 +300,7 @@ import {
   getTaskDistribution,
   updateLearningTask,
 } from '@/api/learningTask'
+import { getResourceTimelineHotspots } from '@/api/resource'
 import procedureSafety from '@/assets/amazing/procedure-safety.png'
 
 const courses = ref([])
@@ -307,6 +324,7 @@ const pageSize = ref(10)
 const total = ref(0)
 const detailTab = ref('info')
 const learningTasks = ref([])
+const timelineHotspots = ref([])
 let keywordTimer = null
 const detailReadinessItems = computed(() => {
   const experiment = detail.value?.experiment || {}
@@ -425,6 +443,7 @@ async function openDetail(row) {
     detail.value = await getExperimentDetail(row.id)
     steps.value = (detail.value?.steps || []).map((item) => ({ mediaType: 'TEXT', ...item }))
     await loadLearningTasks(row.id)
+    await loadTimelineHotspots(row.id)
   } finally {
     detailLoading.value = false
   }
@@ -432,6 +451,10 @@ async function openDetail(row) {
 
 async function loadLearningTasks(experimentId) {
   learningTasks.value = await getTaskDistribution(experimentId)
+}
+
+async function loadTimelineHotspots(experimentId) {
+  timelineHotspots.value = await getResourceTimelineHotspots(experimentId)
 }
 
 async function saveSteps() {
@@ -695,8 +718,15 @@ function riskMeta(risk) {
 .step-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .entrance-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .entrance-grid a { background: #f8fafc; border: 1px solid #edf1f5; border-radius: 8px; color: #1f6feb; padding: 14px; text-align: center; text-decoration: none; }
+.hotspot-list { display: grid; gap: 12px; }
+.hotspot-card { display: flex; justify-content: space-between; gap: 12px; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; }
+.hotspot-card h3 { color: #13233a; font-size: 16px; margin-bottom: 6px; }
+.hotspot-card p { color: #667085; line-height: 1.6; margin: 0; }
+.hotspot-stats { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hotspot-stats span { min-width: 66px; border: 1px solid #edf1f5; border-radius: 8px; padding: 8px; color: #667085; text-align: center; }
+.hotspot-stats b { display: block; color: #13233a; font-size: 18px; }
 @media (max-width: 900px) {
   .toolbar, .form-grid, .summary-grid, .path-check-grid, .info-grid, .step-meta, .step-media, .step-columns, .entrance-grid { grid-template-columns: 1fr; }
-  .page-head, .pagination-row { align-items: stretch; flex-direction: column; }
+  .page-head, .pagination-row, .hotspot-card { align-items: stretch; flex-direction: column; }
 }
 </style>

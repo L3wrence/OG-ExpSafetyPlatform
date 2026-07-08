@@ -2,7 +2,7 @@
   <div class="course-list-page">
     <section class="learning-hero" :style="{ backgroundImage: `url(${resourceCore})` }">
       <div>
-        <p>AmazingTeaching Courses</p>
+        <p>油气工程实验教学与考核平台</p>
         <h1>实验课程</h1>
         <span>把课程拆成实验场景、资源学习、安全准入、预约操作和报告复盘，按路径一步步完成。</span>
       </div>
@@ -11,9 +11,12 @@
     <section class="page-head">
       <div>
         <p class="eyebrow">Learning Path</p>
-        <h1>我的实验学习路径</h1>
-        <p class="page-desc">浏览实验课程、查看实验项目进度，并继续进入相关安全学习与实验任务。</p>
+        <h1>我的课堂</h1>
+        <p class="page-desc">通过教师导入或邀请码加入课堂后，在这里进入课程学习、实验考核、预约、报告和答疑。</p>
       </div>
+      <el-button v-if="canManageClassroom" type="primary" :icon="EditPen" @click="router.push('/teacher/courses')">
+        管理课堂
+      </el-button>
       <div class="head-stats">
         <div class="head-stat">
           <strong>{{ courseStats.total }}</strong>
@@ -27,6 +30,17 @@
           <strong>{{ courseStats.experiments }}</strong>
           <span>实验项目</span>
         </div>
+      </div>
+    </section>
+
+    <section class="join-panel">
+      <div>
+        <strong>加入课堂</strong>
+        <span>输入教师分享的邀请码，加入后即成为该课堂学生，可进入完整实验教学与考核路径。</span>
+      </div>
+      <div class="join-actions">
+        <el-input v-model="inviteCode" clearable placeholder="请输入课堂邀请码" @keyup.enter="joinClassroom" />
+        <el-button type="primary" :loading="joining" @click="joinClassroom">加入课堂</el-button>
       </div>
     </section>
 
@@ -100,6 +114,9 @@
 
             <div class="course-actions">
               <el-button :icon="View" @click="openCourseDetail(course)">查看详情</el-button>
+              <el-button v-if="canManageClassroom" :icon="EditPen" @click="router.push(`/teacher/courses/${course.id}/edit`)">
+                管理
+              </el-button>
               <el-button type="primary" :icon="VideoPlay" @click="startLearning(course)">
                 继续学习
               </el-button>
@@ -212,6 +229,7 @@ import { ElMessage } from 'element-plus'
 import {
   Calendar,
   Collection,
+  EditPen,
   Monitor,
   Search,
   StarFilled,
@@ -221,18 +239,22 @@ import {
   View,
   Warning,
 } from '@element-plus/icons-vue'
-import { getCourseDetail, getCourses } from '@/api/course'
+import { getCourseDetail, getCourses, joinCourseByInvite } from '@/api/course'
+import { useAuthStore } from '@/stores/authStore'
 import resourceCore from '@/assets/amazing/resource-core.png'
 
 const loading = ref(false)
 const detailLoading = ref(false)
 const detailVisible = ref(false)
 const router = useRouter()
+const authStore = useAuthStore()
 const courses = ref([])
 const selectedDetail = ref(null)
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(8)
+const inviteCode = ref('')
+const joining = ref(false)
 let keywordTimer = null
 
 const filters = reactive({
@@ -244,6 +266,7 @@ const filters = reactive({
 
 const directionOptions = computed(() => uniqueValues(courses.value.map((course) => course.direction)))
 const semesterOptions = computed(() => uniqueValues(courses.value.map((course) => course.semester)))
+const canManageClassroom = computed(() => authStore.hasPermission('course:create'))
 
 const courseStats = computed(() => ({
   total: total.value,
@@ -302,13 +325,30 @@ async function openCourseDetail(course) {
 }
 
 function startLearning(course) {
-  router.push(`/student/learning/${course.id}`)
+  router.push(`/classrooms/${course.id}/learn`)
 }
 
 function goExperiment(experiment) {
   const courseId = selectedDetail.value?.course?.id
   if (!courseId) return
-  router.push({ path: `/student/learning/${courseId}`, query: { experimentId: experiment.id } })
+  router.push({ path: `/classrooms/${courseId}/learn`, query: { experimentId: experiment.id } })
+}
+
+async function joinClassroom() {
+  const code = inviteCode.value.trim()
+  if (!code) {
+    ElMessage.warning('请输入课堂邀请码')
+    return
+  }
+  joining.value = true
+  try {
+    const result = await joinCourseByInvite(code)
+    ElMessage.success(`已加入课堂：${result?.courseName || '课堂'}`)
+    inviteCode.value = ''
+    await loadCourses()
+  } finally {
+    joining.value = false
+  }
 }
 
 function progressOf(course) {
@@ -451,6 +491,36 @@ function uniqueValues(values) {
   border: 1px solid #e7ebf0;
   border-radius: 8px;
   padding: 14px;
+}
+
+.join-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+  background: #fff;
+  border: 1px solid #e7ebf0;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.join-panel strong {
+  display: block;
+  color: #13233a;
+  margin-bottom: 4px;
+}
+
+.join-panel span {
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.join-actions {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 360px;
 }
 
 .content-grid {
@@ -784,6 +854,16 @@ function uniqueValues(values) {
 
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .join-panel,
+  .join-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .join-actions {
+    flex-basis: auto;
   }
 
   .status-tabs {

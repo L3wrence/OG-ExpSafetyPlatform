@@ -51,7 +51,7 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        UserContext.set(new UserSession(10L, List.of("STUDENT"), List.of("report:create")));
+        UserContext.set(new UserSession(10L, List.of("USER"), List.of("report:create")));
     }
 
     @AfterEach

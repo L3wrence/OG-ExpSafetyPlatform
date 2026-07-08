@@ -12,6 +12,7 @@ import com.cupk.dto.UserCreateDTO;
 import com.cupk.dto.UserUpdateDTO;
 import com.cupk.exception.BusinessException;
 import com.cupk.interceptor.UserContext;
+import com.cupk.mapper.AuthMapper;
 import com.cupk.mapper.OperationLogMapper;
 import com.cupk.mapper.UserMapper;
 import com.cupk.pojo.OperationLog;
@@ -52,16 +53,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final PermissionService permissionService;
     private final RoleService roleService;
     private final OperationLogMapper operationLogMapper;
+    private final AuthMapper authMapper;
 
     public UserServiceImpl(UserRoleService userRoleService, TokenService tokenService,
                            RolePermissionService rolePermissionService, PermissionService permissionService,
-                           RoleService roleService, OperationLogMapper operationLogMapper) {
+                           RoleService roleService, OperationLogMapper operationLogMapper, AuthMapper authMapper) {
         this.userRoleService = userRoleService;
         this.tokenService = tokenService;
         this.rolePermissionService = rolePermissionService;
         this.permissionService = permissionService;
         this.roleService = roleService;
         this.operationLogMapper = operationLogMapper;
+        this.authMapper = authMapper;
     }
 
     @Override
@@ -71,9 +74,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (existUser != null) {
             throw new BusinessException(400, "该学号已存在");
         }
-        Role studentRole = roleService.getOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "STUDENT"));
-        if (studentRole == null) {
-            throw new BusinessException(500, "系统未初始化学生角色");
+        Role userRole = roleService.getOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "USER"));
+        if (userRole == null) {
+            throw new BusinessException(500, "系统未初始化普通用户角色");
         }
         User user = new User();
         user.setUsername(dto.getUsername());
@@ -85,8 +88,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setEmail(dto.getEmail());
         user.setStatus(1);
         save(user);
-        saveUserRole(user.getId(), studentRole.getId());
-        writeLog(user.getId(), user.getUsername(), "用户中心", "注册", "学生自助注册", "SUCCESS");
+        saveUserRole(user.getId(), userRole.getId());
+        writeLog(user.getId(), user.getUsername(), "用户中心", "注册", "普通用户自助注册", "SUCCESS");
         return user.getId();
     }
 
@@ -118,9 +121,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .or().like(User::getRealName, keyword));
         wrapper.orderByDesc(User::getCreateTime);
         page(page, wrapper);
-        Map<Long, List<String>> roleCodes = roleCodesByUserId(page.getRecords().stream().map(User::getId).toList());
         List<UserInfoVO> records = page.getRecords().stream()
-                .map(user -> toUserInfo(user, roleCodes.getOrDefault(user.getId(), List.of())))
+                .map(this::toUserInfo)
                 .toList();
         return new PageResult<>(records, page.getTotal(), page.getCurrent(), page.getSize());
     }
@@ -138,8 +140,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String token = tokenService.createToken(user.getId());
 
         LoginResultVO result = new LoginResultVO();
+        UserInfoVO userInfo = toUserInfo(user);
         result.setToken(token);
-        result.setUserInfo(toUserInfo(user));
+        result.setRole(userInfo.getRole());
+        result.setRoles(userInfo.getRoles());
+        result.setUserInfo(userInfo);
         result.setMenus(getUserMenus(user.getId()));
         result.setPermissions(getUserPermissionCodes(user.getId()));
         writeLog(user.getId(), user.getUsername(), "用户中心", "登录", "登录成功", "SUCCESS");
@@ -252,35 +257,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public List<String> getUserPermissionCodes(Long userId) {
-        List<Long> roleIds = getUserRoleIds(userId);
-        if (roleIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<Long> permissionIds = rolePermissionService.list(new LambdaQueryWrapper<RolePermission>()
-                        .in(RolePermission::getRoleId, roleIds))
-                .stream().map(RolePermission::getPermissionId).distinct().toList();
-        if (permissionIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return permissionService.list(new LambdaQueryWrapper<Permission>()
-                        .in(Permission::getId, permissionIds)
-                        .eq(Permission::getType, 2))
-                .stream().map(Permission::getCode).toList();
+        return authMapper.selectPermissionCodes(userId);
     }
 
     private List<MenuVO> getUserMenus(Long userId) {
-        List<Long> roleIds = getUserRoleIds(userId);
-        if (roleIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<Long> permissionIds = rolePermissionService.list(new LambdaQueryWrapper<RolePermission>()
-                        .in(RolePermission::getRoleId, roleIds))
-                .stream().map(RolePermission::getPermissionId).distinct().toList();
-        if (permissionIds.isEmpty()) {
+        List<String> permissionCodes = getUserPermissionCodes(userId);
+        if (permissionCodes.isEmpty()) {
             return new ArrayList<>();
         }
         List<Permission> menus = permissionService.list(new LambdaQueryWrapper<Permission>()
-                .in(Permission::getId, permissionIds)
+                .in(Permission::getCode, permissionCodes)
                 .eq(Permission::getType, 1)
                 .orderByAsc(Permission::getSort));
         return buildMenuTree(menus, 0L);
@@ -313,28 +299,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (roleId == null) {
             return;
         }
-        if (roleService.getById(roleId) == null) {
+        Role requestedRole = roleService.getById(roleId);
+        if (requestedRole == null) {
             throw new BusinessException(400, "角色不存在");
+        }
+        if (!"ADMIN".equalsIgnoreCase(requestedRole.getRoleCode())) {
+            requestedRole = roleService.getOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "USER"));
+        }
+        if (requestedRole == null) {
+            throw new BusinessException(500, "系统未初始化普通用户角色");
         }
         UserRole userRole = new UserRole();
         userRole.setUserId(userId);
-        userRole.setRoleId(roleId);
+        userRole.setRoleId(requestedRole.getId());
         userRoleService.save(userRole);
     }
 
     private UserInfoVO toUserInfo(User user) {
-        return toUserInfo(user, getUserRoleIds(user.getId()).stream()
-                .map(roleService::getById)
-                .filter(role -> role != null)
-                .map(Role::getRoleCode)
-                .toList());
+        return toUserInfo(user, authMapper.selectRoleCodes(user.getId()));
     }
 
     private UserInfoVO toUserInfo(User user, List<String> roles) {
         UserInfoVO vo = new UserInfoVO();
         BeanUtils.copyProperties(user, vo);
         vo.setRoles(roles);
+        vo.setRole(primaryRole(roles));
+        vo.setTeacherCertified(authMapper.countApprovedTeacherCertification(user.getId()) > 0);
         return vo;
+    }
+
+    private String primaryRole(List<String> roles) {
+        for (String role : List.of("ADMIN", "USER")) {
+            if (roles.stream().anyMatch(item -> role.equalsIgnoreCase(item))) {
+                return role;
+            }
+        }
+        return roles.isEmpty() ? null : roles.get(0);
     }
 
     private Map<Long, List<String>> roleCodesByUserId(List<Long> userIds) {

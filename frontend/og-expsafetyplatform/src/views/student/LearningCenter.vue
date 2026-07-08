@@ -2,7 +2,7 @@
   <div class="learning-page">
     <section class="page-head">
       <div>
-        <p class="eyebrow">AmazingTeaching</p>
+        <p class="eyebrow">油气工程实验教学与考核平台</p>
         <h1>{{ courseTitle }}</h1>
         <p class="page-desc">油气工程实验教学与考核路径：预习资源、风险认知、安全准入、实验预约、报告复盘和成绩反馈。</p>
       </div>
@@ -135,6 +135,17 @@
                   <div>
                     <h3>{{ resource.title }}</h3>
                     <p>{{ resource.resourceType || 'RESOURCE' }} · {{ resource.requiredFlag ? '必学' : '选学' }} · {{ resource.completionRule || 'CONFIRM' }}</p>
+                    <div class="resource-tags">
+                      <el-tag v-if="resource.knowledgePoint" size="small" type="primary">{{ resource.knowledgePoint }}</el-tag>
+                      <el-tag v-if="resource.riskType" size="small" type="warning">{{ resource.riskType }}</el-tag>
+                      <el-tag v-for="tag in resourceTags(resource)" :key="tag" size="small">{{ tag }}</el-tag>
+                    </div>
+                    <div v-if="resourceAnchors(resource).length" class="resource-anchor">
+                      对应步骤：
+                      <button v-for="step in resourceAnchors(resource)" :key="step.id || step.stepNo" type="button" @click="activeTab = 'steps'">
+                        {{ step.stepNo }}. {{ step.title }}
+                      </button>
+                    </div>
                   </div>
                   <div class="resource-actions">
                     <el-button :icon="View" @click="previewResource(resource)">预览</el-button>
@@ -154,6 +165,12 @@
                     <h3>{{ step.title }}</h3>
                     <p>{{ step.content }}</p>
                     <a v-if="step.mediaUrl" :href="step.mediaUrl" target="_blank" rel="noreferrer">查看图文/视频资料</a>
+                    <div v-if="stepResources(step).length" class="step-resources">
+                      <span>关联资源</span>
+                      <button v-for="resource in stepResources(step)" :key="resource.id" type="button" @click="previewResource(resource)">
+                        {{ resource.title }}
+                      </button>
+                    </div>
                   </div>
                   <div class="safety-column">
                     <h4>风险提示</h4>
@@ -440,6 +457,37 @@ function previewResource(resource) {
   viewerVisible.value = true
 }
 
+function resourceTags(resource) {
+  return String(resource.tags || '')
+    .split(/[,，;；\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+}
+
+function resourceAnchors(resource) {
+  return (detail.value?.steps || []).filter((step) => stepMatchesResource(step, resource)).slice(0, 2)
+}
+
+function stepResources(step) {
+  return (detail.value?.resources || []).filter((resource) => stepMatchesResource(step, resource)).slice(0, 3)
+}
+
+function stepMatchesResource(step, resource) {
+  const haystack = [
+    resource.title,
+    resource.knowledgePoint,
+    resource.riskType,
+    resource.tags,
+  ].filter(Boolean).join(' ').toLowerCase()
+  const needles = [step.title, step.safetyTip, step.content]
+    .filter(Boolean)
+    .flatMap((text) => String(text).split(/[,，;；、\s]+/))
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length >= 2)
+  return needles.some((item) => haystack.includes(item))
+}
+
 async function refreshCurrentExperiment() {
   if (activeExperimentId.value) {
     await selectExperiment(activeExperimentId.value)
@@ -691,6 +739,10 @@ function reservationStatusMeta(status) {
 .resource-card { display: flex; justify-content: space-between; gap: 12px; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; }
 .resource-card h3, .step-card h3 { color: #13233a; font-size: 16px; margin-bottom: 6px; }
 .resource-card p, .step-card p, .report-guide p { color: #667085; line-height: 1.65; margin: 0; }
+.resource-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.resource-anchor, .step-resources { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: #667085; margin-top: 8px; }
+.resource-anchor button, .step-resources button { border: 1px solid #dbeafe; background: #f8fbff; color: #1f6feb; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+.resource-anchor button:hover, .step-resources button:hover { border-color: #93c5fd; }
 .resource-actions, .task-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
 .step-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(220px, 0.8fr); gap: 12px; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; }
 .step-no { width: 34px; height: 34px; border-radius: 50%; background: #eef6ff; color: #1f6feb; display: flex; align-items: center; justify-content: center; font-weight: 700; }

@@ -249,12 +249,13 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private void assertReadable(Report report) {
-        if (UserContext.isStudent()) {
-            requireOwner(report, "不能查看他人的报告");
-            return;
-        }
         if (UserContext.isTeacher()) {
             assertTeacherOwnsExperiment(report.getExperimentId());
+            return;
+        }
+        if (UserContext.isLearner()) {
+            requireOwner(report, "不能查看他人的报告");
+            return;
         }
     }
 
@@ -263,14 +264,14 @@ public class ReportServiceImpl implements ReportService {
             assertTeacherOwnsExperiment(report.getExperimentId());
             return;
         }
-        if (!UserContext.isAdmin() && !UserContext.isLabAdmin()) {
+        if (!UserContext.isAdmin()) {
             throw new BusinessException(403, "无权批改或退回报告");
         }
     }
 
     private void assertCanCreate(Report report) {
-        if (!UserContext.isStudent()) {
-            throw new BusinessException(403, "只有学生可以创建实验报告");
+        if (!UserContext.isLearner()) {
+            throw new BusinessException(403, "只有课堂成员可以创建实验报告");
         }
         if (report.getTitle() == null || report.getTitle().trim().isEmpty()) {
             throw new BusinessException(400, "报告标题不能为空");

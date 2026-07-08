@@ -5,8 +5,8 @@
          <div class="platform-logo">
            <el-icon :size="40" color="#409eff"><Platform /></el-icon>
          </div>
-         <h2 class="platform-title">AmazingTeaching</h2>
-         <p class="platform-subtitle">油气工程实验可视化学习平台</p>
+         <h2 class="platform-title">油气工程实验教学与考核平台</h2>
+         <p class="platform-subtitle">实验教学、资源学习、安全准入与考核反馈一体化</p>
        </div>
  
        <el-form
@@ -19,7 +19,7 @@
          <el-form-item prop="username">
            <el-input
              v-model="form.username"
-             placeholder="学号 / 工号 / 管理员账号"
+             placeholder="账号 / 工号 / 管理员账号"
              :prefix-icon="User"
              size="large"
            />
@@ -66,10 +66,10 @@
        </div>
      </div>
 
-     <el-dialog v-model="registerVisible" title="学生账号注册" width="520px">
+     <el-dialog v-model="registerVisible" title="平台注册" width="520px">
        <el-form ref="registerRef" :model="registerForm" :rules="registerRules" label-width="96px">
-         <el-form-item label="学号" prop="username">
-           <el-input v-model="registerForm.username" maxlength="50" />
+         <el-form-item label="账号" prop="username">
+           <el-input v-model="registerForm.username" maxlength="50" placeholder="用于登录的平台账号" />
          </el-form-item>
          <el-form-item label="姓名" prop="realName">
            <el-input v-model="registerForm.realName" maxlength="50" />
@@ -151,7 +151,7 @@
 
  const registerRules = {
    username: [
-     { required: true, message: '请输入学号', trigger: 'blur' },
+     { required: true, message: '请输入账号', trigger: 'blur' },
      { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' },
    ],
    realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],

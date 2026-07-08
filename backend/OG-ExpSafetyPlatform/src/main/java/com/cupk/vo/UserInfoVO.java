@@ -15,5 +15,7 @@ public class UserInfoVO {
     private String className;
     private String email;
     private Integer status;
+    private String role;
+    private Boolean teacherCertified;
     private List<String> roles;
 }

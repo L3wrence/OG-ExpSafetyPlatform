@@ -2,7 +2,7 @@
   <div class="resource-page">
     <section class="resource-hero" :style="{ backgroundImage: `url(${resourceCore})` }">
       <div>
-        <p>AmazingTeaching Resources</p>
+        <p>油气工程实验教学与考核平台</p>
         <h1>油气资源库</h1>
         <span>像逛知识视频库一样发现实验指导书、微课、事故案例、设备说明和虚拟仿真实验。</span>
       </div>
@@ -12,8 +12,9 @@
       <div>
         <p class="eyebrow">Oil & Gas Library</p>
         <h1>教学资源与虚拟实验</h1>
-        <p class="page-desc">检索实验指导书、课件视频、设备说明、事故案例和虚拟仿真实验入口。</p>
+        <p class="page-desc">检索平台资源和用户投稿资源，学习、收藏、记录进度，也可以分享你发现的优质油气工程资源。</p>
       </div>
+      <el-button type="primary" @click="openSubmission">投稿资源</el-button>
     </section>
 
     <section class="panel">
@@ -33,16 +34,18 @@
           <div class="resource-main">
             <div class="resource-title">
               <h2>{{ resource.title }}</h2>
-              <el-tag :type="resource.requiredFlag ? 'warning' : 'info'">{{ resource.requiredFlag ? '必学' : '拓展' }}</el-tag>
+              <el-tag :type="resource.sourceType === 'SUBMISSION' ? 'success' : (resource.requiredFlag ? 'warning' : 'info')">
+                {{ resource.sourceType === 'SUBMISSION' ? '用户投稿' : (resource.requiredFlag ? '必学' : '拓展') }}
+              </el-tag>
             </div>
             <p>{{ resource.description || '暂无资源说明。' }}</p>
             <div class="meta-row">
               <span>{{ typeLabel(resource.resourceType) }}</span>
               <span>{{ resource.knowledgePoint || '未设置知识点' }}</span>
               <span>{{ resource.riskType || '通用风险' }}</span>
-              <span>查看 {{ resource.viewCount || 0 }}</span>
-              <span>收藏 {{ resource.favoriteCount || 0 }}</span>
-              <span>点赞 {{ resource.likeCount || 0 }}</span>
+              <span v-if="resource.sourceType !== 'SUBMISSION'">查看 {{ resource.viewCount || 0 }}</span>
+              <span v-if="resource.sourceType !== 'SUBMISSION'">收藏 {{ resource.favoriteCount || 0 }}</span>
+              <span v-if="resource.sourceType !== 'SUBMISSION'">点赞 {{ resource.likeCount || 0 }}</span>
             </div>
             <div class="tag-row">
               <el-tag v-for="tag in splitTags(resource.tags)" :key="tag" size="small">{{ tag }}</el-tag>
@@ -59,10 +62,12 @@
             <span class="hint">本次学习分钟，已累计 {{ durationTotal(resource.id) }} 分钟</span>
             <div class="action-row">
               <el-button :icon="View" @click="preview(resource)">预览</el-button>
-              <el-button :icon="Download" @click="download(resource)">下载</el-button>
-              <el-button :icon="Star" @click="favorite(resource)">收藏</el-button>
-              <el-button :icon="Pointer" @click="like(resource)">点赞</el-button>
-              <el-button type="primary" :icon="Check" @click="saveProgress(resource)">记录进度</el-button>
+              <template v-if="resource.sourceType !== 'SUBMISSION'">
+                <el-button :icon="Download" @click="download(resource)">下载</el-button>
+                <el-button :icon="Star" @click="favorite(resource)">收藏</el-button>
+                <el-button :icon="Pointer" @click="like(resource)">点赞</el-button>
+                <el-button type="primary" :icon="Check" @click="saveProgress(resource)">记录进度</el-button>
+              </template>
             </div>
           </div>
         </article>
@@ -74,6 +79,52 @@
       </div>
     </section>
     <ResourceViewer v-model="viewerVisible" :resource-id="activeResourceId" @completed="loadResources" />
+
+    <el-dialog v-model="submissionVisible" title="投稿油气工程资源" width="720px">
+      <el-form label-width="92px">
+        <el-form-item label="标题">
+          <el-input v-model="submissionForm.title" maxlength="120" placeholder="请输入资源标题" />
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="submissionForm.resourceType" placeholder="请选择类型">
+            <el-option v-for="item in resourceTypes" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="知识点">
+          <el-input v-model="submissionForm.knowledgePoint" maxlength="100" placeholder="如 钻井液密度、管输压降" />
+        </el-form-item>
+        <el-form-item label="风险类型">
+          <el-input v-model="submissionForm.riskType" maxlength="100" placeholder="如 高压、易燃、腐蚀" />
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-input v-model="submissionForm.tags" maxlength="200" placeholder="多个标签用逗号分隔" />
+        </el-form-item>
+        <el-form-item label="外链">
+          <el-input v-model="submissionForm.url" maxlength="500" placeholder="推荐填写可访问的视频、文档或网页链接" />
+        </el-form-item>
+        <el-form-item label="简介">
+          <el-input v-model="submissionForm.description" type="textarea" :rows="3" maxlength="500" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <el-divider>我的投稿</el-divider>
+      <el-table :data="mySubmissions" size="small" empty-text="暂无投稿">
+        <el-table-column prop="title" label="标题" min-width="160" />
+        <el-table-column prop="status" label="状态" width="100" />
+        <el-table-column prop="reviewComment" label="审核意见" min-width="180" />
+      </el-table>
+      <template #footer>
+        <el-button @click="submissionVisible = false">关闭</el-button>
+        <el-button type="primary" :loading="submissionSaving" @click="submitPublicResource">提交审核</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="publicPreviewVisible" :title="publicPreview?.title || '资源预览'" width="860px">
+      <div class="public-preview">
+        <p>{{ publicPreview?.aiSummary || '该资源来自用户投稿，审核通过后进入公共学习区。' }}</p>
+        <iframe v-if="publicPreview?.previewUrl" :src="publicPreview.previewUrl" title="公共资源预览" />
+        <el-empty v-else description="该资源暂未配置可预览地址" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -84,6 +135,7 @@ import { Check, Download, Pointer, Search, Star, View } from '@element-plus/icon
 import ResourceViewer from '@/components/learning/ResourceViewer.vue'
 import { getMyLearningRecords, updateLearningProgress } from '@/api/learningRecord'
 import { getResources, interactResource, markResourceDownload } from '@/api/resource'
+import { getMyResourceSubmissions, getPublicResourcePreview, getPublicResources, submitResource } from '@/api/resourceSubmission'
 import resourceCore from '@/assets/amazing/resource-core.png'
 
 const resourceTypes = [
@@ -119,13 +171,27 @@ const total = ref(0)
 const loading = ref(false)
 const viewerVisible = ref(false)
 const activeResourceId = ref(null)
+const submissionVisible = ref(false)
+const submissionSaving = ref(false)
+const mySubmissions = ref([])
+const publicPreviewVisible = ref(false)
+const publicPreview = ref(null)
+const submissionForm = reactive({
+  title: '',
+  resourceType: 'LINK',
+  knowledgePoint: '',
+  riskType: '',
+  tags: '',
+  url: '',
+  description: '',
+})
 
 onMounted(loadResources)
 
 async function loadResources() {
   loading.value = true
   try {
-    const [resourceResult, recordResult] = await Promise.all([
+    const [resourceResult, publicResult, recordResult] = await Promise.all([
       getResources({
         pageNum: pageNum.value,
         pageSize: 8,
@@ -134,10 +200,20 @@ async function loadResources() {
         resourceType: filters.resourceType || undefined,
         favoriteOnly: filters.favoriteOnly || undefined,
       }),
+      getPublicResources({
+        pageNum: pageNum.value,
+        pageSize: 8,
+        keyword: filters.keyword || undefined,
+        resourceType: filters.resourceType || undefined,
+      }).catch(() => ({ records: [], total: 0 })),
       getMyLearningRecords(),
     ])
-    resources.value = resourceResult?.records || []
-    total.value = resourceResult?.total || 0
+    const platformResources = (resourceResult?.records || []).map((item) => ({ ...item, sourceType: 'PLATFORM' }))
+    const publicResources = filters.favoriteOnly
+      ? []
+      : (publicResult?.records || []).map((item) => ({ ...item, sourceType: 'SUBMISSION' }))
+    resources.value = [...platformResources, ...publicResources]
+    total.value = Number(resourceResult?.total || 0) + Number(publicResult?.total || 0)
     records.value = Array.isArray(recordResult) ? recordResult : (recordResult?.records || [])
     initDrafts()
   } finally {
@@ -154,8 +230,50 @@ function initDrafts() {
 }
 
 async function preview(resource) {
+  if (resource.sourceType === 'SUBMISSION') {
+    publicPreview.value = await getPublicResourcePreview(resource.id)
+    publicPreviewVisible.value = true
+    return
+  }
   activeResourceId.value = resource.id
   viewerVisible.value = true
+}
+
+async function openSubmission() {
+  submissionVisible.value = true
+  mySubmissions.value = submissionRecords(await getMyResourceSubmissions().catch(() => []))
+}
+
+async function submitPublicResource() {
+  if (!submissionForm.title.trim()) {
+    ElMessage.warning('请输入资源标题')
+    return
+  }
+  if (!submissionForm.url.trim()) {
+    ElMessage.warning('请填写资源外链')
+    return
+  }
+  submissionSaving.value = true
+  try {
+    await submitResource({
+      title: submissionForm.title.trim(),
+      resourceType: submissionForm.resourceType,
+      knowledgePoint: submissionForm.knowledgePoint || undefined,
+      riskType: submissionForm.riskType || undefined,
+      tags: submissionForm.tags || undefined,
+      url: submissionForm.url.trim(),
+      description: submissionForm.description || undefined,
+    })
+    ElMessage.success('投稿已提交，审核通过后将进入公共资源库')
+    Object.assign(submissionForm, { title: '', resourceType: 'LINK', knowledgePoint: '', riskType: '', tags: '', url: '', description: '' })
+    mySubmissions.value = submissionRecords(await getMyResourceSubmissions().catch(() => []))
+  } finally {
+    submissionSaving.value = false
+  }
+}
+
+function submissionRecords(result) {
+  return Array.isArray(result) ? result : (result?.records || [])
 }
 
 async function download(resource) {
@@ -251,6 +369,8 @@ function typeLabel(type) {
 .hint { color: #7b8794; font-size: 12px; }
 .action-row { margin-top: 10px; }
 .pagination-row { justify-content: space-between; color: #667085; padding-top: 14px; }
+.public-preview p { color: #667085; line-height: 1.6; margin-bottom: 12px; }
+.public-preview iframe { width: 100%; min-height: 520px; border: 1px solid #e7ebf0; border-radius: 8px; }
 @media (max-width: 760px) {
   .page-head, .pagination-row { align-items: stretch; flex-direction: column; }
   .resource-hero > div { padding: 22px; background: rgba(255, 255, 255, 0.88); }

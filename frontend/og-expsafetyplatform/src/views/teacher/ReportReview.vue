@@ -2,7 +2,7 @@
   <div class="business-page">
     <section class="page-head">
       <div>
-        <p class="eyebrow">AmazingTeaching</p>
+        <p class="eyebrow">油气工程实验教学与考核平台</p>
         <h1>报告批改</h1>
         <p class="page-desc">完成油气实验报告评分、逐项反馈和成绩闭环，帮助学生复盘实验数据与安全反思。</p>
       </div>

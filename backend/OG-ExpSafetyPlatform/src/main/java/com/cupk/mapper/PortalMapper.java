@@ -410,7 +410,7 @@ public interface PortalMapper {
                ep.status, '/student/exams' AS path
           FROM t_exam_paper ep
           JOIN t_course_student cs ON cs.course_id = ep.course_id
-         WHERE #{roleCode} = 'STUDENT'
+         WHERE #{roleCode} = 'USER'
            AND cs.student_id = #{userId} AND cs.status = 1 AND cs.deleted = 0
            AND ep.status = 'PUBLISHED' AND ep.deleted = 0
            AND ep.end_time IS NOT NULL
@@ -430,9 +430,8 @@ public interface PortalMapper {
           LEFT JOIN t_experiment e ON e.id = ts.experiment_id AND e.deleted = 0
           LEFT JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
          WHERE ts.slot_date >= CURRENT_DATE()
-           AND (#{roleCode} = 'LAB_ADMIN'
-                OR (#{roleCode} = 'TEACHER' AND c.teacher_id = #{userId})
-                OR (#{roleCode} = 'STUDENT' AND EXISTS (
+           AND ((#{roleCode} = 'TEACHER' AND c.teacher_id = #{userId})
+                OR (#{roleCode} = 'USER' AND EXISTS (
                      SELECT 1 FROM t_reservation rv
                       WHERE rv.time_slot_id = ts.id AND rv.student_id = #{userId}
                         AND rv.deleted = 0 AND rv.status IN ('PENDING', 'APPROVED'))))

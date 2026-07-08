@@ -155,8 +155,8 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Map<String, Object> createReservation(Reservation reservation) {
-        if (!UserContext.isStudent()) {
-            throw new BusinessException(403, "只有学生可以预约实验");
+        if (!UserContext.isLearner()) {
+            throw new BusinessException(403, "只有课堂成员可以预约实验");
         }
         Long studentId = UserContext.getUserId();
         Long timeSlotId = reservation.getTimeSlotId();
@@ -268,7 +268,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     private void assertExperimentWritable(Long experimentId) {
         if (!UserContext.isTeacher()) {
-            if (UserContext.isAdmin() || UserContext.isLabAdmin()) {
+            if (UserContext.isAdmin()) {
                 return;
             }
             throw new BusinessException(403, "无权维护实验预约");
