@@ -1,83 +1,89 @@
 <template>
   <div class="course-list-page">
-    <section class="learning-hero" :style="{ backgroundImage: `url(${resourceCore})` }">
-      <div>
-        <p>油气工程实验教学与考核平台</p>
-        <h1>实验课程</h1>
-        <span>把课程拆成实验场景、资源学习、安全准入、预约操作和报告复盘，按路径一步步完成。</span>
-      </div>
-    </section>
-
-    <section class="page-head">
-      <div>
-        <p class="eyebrow">Learning Path</p>
-        <h1>我的课堂</h1>
-        <p class="page-desc">通过教师导入或邀请码加入课堂后，在这里进入课程学习、实验考核、预约、报告和答疑。</p>
-      </div>
-      <el-button v-if="canManageClassroom" type="primary" :icon="EditPen" @click="router.push('/teacher/courses')">
-        管理课堂
-      </el-button>
-      <div class="head-stats">
-        <div class="head-stat">
-          <strong>{{ courseStats.total }}</strong>
-          <span>课程总数</span>
+    <div class="classroom-upper">
+      <section class="classroom-nav">
+        <div class="classroom-tabs">
+          <button
+            v-for="tab in classroomTabs"
+            :key="tab.name"
+            :class="{ active: viewFilter === tab.name }"
+            type="button"
+            @click="viewFilter = tab.name"
+          >
+            {{ tab.label }}
+          </button>
         </div>
-        <div class="head-stat">
-          <strong>{{ courseStats.open }}</strong>
-          <span>开放课程</span>
+        <div class="head-stats">
+          <div class="head-stat">
+            <strong>{{ courseStats.total }}</strong>
+            <span>我的课堂</span>
+          </div>
+          <div class="head-stat">
+            <strong>{{ courseStats.managed }}</strong>
+            <span>我管理的</span>
+          </div>
+          <div class="head-stat">
+            <strong>{{ courseStats.learning }}</strong>
+            <span>我学习的</span>
+          </div>
         </div>
-        <div class="head-stat">
-          <strong>{{ courseStats.experiments }}</strong>
-          <span>实验项目</span>
+      </section>
+
+      <section class="filter-bar">
+        <el-input
+          v-model="filters.keyword"
+          :prefix-icon="Search"
+          clearable
+          placeholder="搜索课堂名称"
+          class="keyword-input"
+        />
+        <el-select v-model="filters.direction" placeholder="专业方向" clearable>
+          <el-option v-for="item in directionOptions" :key="item" :label="item" :value="item" />
+        </el-select>
+        <el-select v-model="filters.semester" placeholder="开设学期" clearable>
+          <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
+        </el-select>
+        <el-radio-group v-model="filters.status" class="status-tabs">
+          <el-radio-button label="">全部</el-radio-button>
+          <el-radio-button :label="1">正在进行</el-radio-button>
+          <el-radio-button :label="2">已结束</el-radio-button>
+        </el-radio-group>
+      </section>
+
+      <section class="action-strip">
+        <div class="join-panel">
+          <div>
+            <strong>加入教学课堂</strong>
+            <span>输入教师分享的邀请码，加入后即成为该课堂学生。</span>
+          </div>
+          <div class="join-actions">
+            <el-input ref="inviteInputRef" v-model="inviteCode" clearable placeholder="请输入课堂邀请码" @keyup.enter="joinClassroom" />
+            <el-button type="primary" :loading="joining" @click="joinClassroom">加入</el-button>
+          </div>
         </div>
-      </div>
-    </section>
-
-    <section class="join-panel">
-      <div>
-        <strong>加入课堂</strong>
-        <span>输入教师分享的邀请码，加入后即成为该课堂学生，可进入完整实验教学与考核路径。</span>
-      </div>
-      <div class="join-actions">
-        <el-input v-model="inviteCode" clearable placeholder="请输入课堂邀请码" @keyup.enter="joinClassroom" />
-        <el-button type="primary" :loading="joining" @click="joinClassroom">加入课堂</el-button>
-      </div>
-    </section>
-
-    <section class="filter-bar">
-      <el-input
-        v-model="filters.keyword"
-        :prefix-icon="Search"
-        clearable
-        placeholder="搜索课程名称或编号"
-        class="keyword-input"
-      />
-      <el-select v-model="filters.direction" placeholder="专业方向" clearable>
-        <el-option v-for="item in directionOptions" :key="item" :label="item" :value="item" />
-      </el-select>
-      <el-select v-model="filters.semester" placeholder="开设学期" clearable>
-        <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
-      </el-select>
-      <el-radio-group v-model="filters.status" class="status-tabs">
-        <el-radio-button label="">全部</el-radio-button>
-        <el-radio-button :label="1">开放</el-radio-button>
-        <el-radio-button :label="0">停用</el-radio-button>
-      </el-radio-group>
-    </section>
+        <div class="create-panel">
+          <div>
+            <strong>创建教学课堂</strong>
+            <span>{{ canManageClassroom ? '建设实验章节、任务、考核与报告。' : '完成教师认证后可创建和管理课堂。' }}</span>
+          </div>
+          <el-button :type="canManageClassroom ? 'success' : 'warning'" :icon="EditPen" @click="handleCreateClassroom">
+            {{ canManageClassroom ? '创建课堂' : '去认证' }}
+          </el-button>
+        </div>
+      </section>
+    </div>
 
     <section class="content-grid">
       <div class="course-panel">
         <div v-loading="loading" class="course-grid">
-          <article v-for="course in courses" :key="course.id" class="course-card">
+          <article v-for="course in visibleCourses" :key="course.id" class="course-card">
             <div class="course-cover" :style="coverStyle(course)">
               <div class="cover-icon">
                 <el-icon :size="26"><Monitor /></el-icon>
               </div>
               <div class="cover-meta">
                 <span>{{ course.courseCode || '-' }}</span>
-                <el-tag size="small" :type="course.status === 1 ? 'success' : 'info'">
-                  {{ course.status === 1 ? '开放' : '停用' }}
-                </el-tag>
+                <el-tag size="small" :type="courseRelationMeta(course).type">{{ courseRelationMeta(course).label }}</el-tag>
               </div>
             </div>
 
@@ -86,7 +92,7 @@
                 <h2>{{ course.courseName }}</h2>
                 <el-tag size="small" effect="plain">{{ course.direction || '未分类' }}</el-tag>
               </div>
-              <p class="course-summary">{{ course.description || '暂无课程说明' }}</p>
+              <p class="course-summary"><b>课程简介：</b>{{ course.description || '暂无课程简介' }}</p>
               <p class="course-tagline">{{ course.tagline || '从真实实验场景进入，完成资源学习、准入测评、预约操作与报告复盘。' }}</p>
 
               <div class="course-meta">
@@ -113,17 +119,18 @@
             </div>
 
             <div class="course-actions">
-              <el-button :icon="View" @click="openCourseDetail(course)">查看详情</el-button>
-              <el-button v-if="canManageClassroom" :icon="EditPen" @click="router.push(`/teacher/courses/${course.id}/edit`)">
-                管理
-              </el-button>
-              <el-button type="primary" :icon="VideoPlay" @click="startLearning(course)">
-                继续学习
-              </el-button>
+              <template v-if="isManagedCourse(course)">
+                <el-button :icon="View" @click="enterClassroom(course)">课堂详细</el-button>
+                <el-button type="danger" plain :icon="Delete" @click="removeCourse(course)">删除</el-button>
+              </template>
+              <template v-else>
+                <el-button :icon="View" @click="openCourseDetail(course)">查看详情</el-button>
+                <el-button type="primary" :icon="VideoPlay" @click="enterClassroom(course)">进入学习</el-button>
+              </template>
             </div>
           </article>
 
-          <el-empty v-if="!loading && courses.length === 0" description="暂无符合条件的课程" />
+          <el-empty v-if="!loading && visibleCourses.length === 0" description="暂无符合条件的课堂" />
         </div>
 
         <div class="pagination-row">
@@ -225,12 +232,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Calendar,
   Collection,
+  Connection,
+  Delete,
   EditPen,
   Monitor,
+  Plus,
   Search,
   StarFilled,
   TrendCharts,
@@ -239,7 +249,7 @@ import {
   View,
   Warning,
 } from '@element-plus/icons-vue'
-import { getCourseDetail, getCourses, joinCourseByInvite } from '@/api/course'
+import { deleteCourse, getCourseDetail, getCourses, joinCourseByInvite } from '@/api/course'
 import { useAuthStore } from '@/stores/authStore'
 import resourceCore from '@/assets/amazing/resource-core.png'
 
@@ -254,7 +264,9 @@ const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(8)
 const inviteCode = ref('')
+const inviteInputRef = ref(null)
 const joining = ref(false)
+const viewFilter = ref('all')
 let keywordTimer = null
 
 const filters = reactive({
@@ -264,20 +276,34 @@ const filters = reactive({
   status: '',
 })
 
+const classroomTabs = [
+  { name: 'all', label: '全部' },
+  { name: 'managed', label: '我管理的' },
+  { name: 'learning', label: '我学习的' },
+  { name: 'hidden', label: '已隐藏' },
+]
+
 const directionOptions = computed(() => uniqueValues(courses.value.map((course) => course.direction)))
 const semesterOptions = computed(() => uniqueValues(courses.value.map((course) => course.semester)))
 const canManageClassroom = computed(() => authStore.hasPermission('course:create'))
+const visibleCourses = computed(() => courses.value.filter((course) => {
+  if (viewFilter.value === 'managed') return isManagedCourse(course)
+  if (viewFilter.value === 'learning') return isLearningCourse(course)
+  if (viewFilter.value === 'hidden') return false
+  return true
+}))
 
 const courseStats = computed(() => ({
-  total: total.value,
-  open: courses.value.filter((course) => course.status === 1).length,
+  total: courses.value.length,
+  managed: courses.value.filter(isManagedCourse).length,
+  learning: courses.value.filter(isLearningCourse).length,
   experiments: courses.value.reduce((sum, course) => sum + Number(course.experimentCount || 0), 0),
 }))
 
 const courseOverview = computed(() => [
   { label: '当前页资源', detail: '课程关联教学资源数量', value: courses.value.reduce((sum, course) => sum + Number(course.resourceCount || 0), 0), type: 'primary' },
   { label: '当前页实验', detail: '课程关联实验项目数量', value: courseStats.value.experiments, type: 'success' },
-  { label: '开放课程', detail: '当前筛选结果中的开放课程', value: courseStats.value.open, type: 'warning' },
+  { label: '进行中课堂', detail: '当前筛选结果中的进行中课堂', value: courses.value.filter((course) => course.status === 1).length, type: 'warning' },
 ])
 
 watch(() => filters.keyword, () => {
@@ -324,10 +350,6 @@ async function openCourseDetail(course) {
   }
 }
 
-function startLearning(course) {
-  router.push(`/classrooms/${course.id}/learn`)
-}
-
 function goExperiment(experiment) {
   const courseId = selectedDetail.value?.course?.id
   if (!courseId) return
@@ -349,6 +371,48 @@ async function joinClassroom() {
   } finally {
     joining.value = false
   }
+}
+
+function handleCreateClassroom() {
+  if (canManageClassroom.value) {
+    router.push({ path: '/teacher/courses', query: { create: '1' } })
+    return
+  }
+  ElMessage.info('请先完成教师认证，认证通过后可创建教学课堂')
+  router.push({ path: '/profile', query: { panel: 'teacher-certification' } })
+}
+
+function focusInvite() {
+  inviteInputRef.value?.focus?.()
+}
+
+function isManagedCourse(course) {
+  return course?.relationType === 'MANAGED'
+}
+
+function isLearningCourse(course) {
+  return course?.relationType === 'LEARNING'
+}
+
+function enterClassroom(course) {
+  if (isManagedCourse(course)) {
+    router.push(`/teacher/courses/${course.id}/edit`)
+    return
+  }
+  router.push(`/classrooms/${course.id}/learn`)
+}
+
+async function removeCourse(course) {
+  await ElMessageBox.confirm(`确认删除课堂“${course.courseName}”吗？删除后该课堂建设与学习入口将不可用。`, '删除课堂', { type: 'warning' })
+  await deleteCourse(course.id)
+  ElMessage.success('课堂已删除')
+  await loadCourses()
+}
+
+function courseRelationMeta(course) {
+  if (isManagedCourse(course)) return { label: '我管理的', type: 'success' }
+  if (isLearningCourse(course)) return { label: '我学习的', type: 'primary' }
+  return { label: course.status === 1 ? '正在进行' : '已结束', type: course.status === 1 ? 'success' : 'info' }
 }
 
 function progressOf(course) {
@@ -386,6 +450,19 @@ function uniqueValues(values) {
 .course-list-page {
   max-width: 1240px;
   margin: 0 auto;
+  height: calc(100vh - 92px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.classroom-upper {
+  flex: 0 0 auto;
+  background: #f5f7fa;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding-top: 4px;
 }
 
 .learning-hero {
@@ -429,7 +506,7 @@ function uniqueValues(values) {
   justify-content: space-between;
   align-items: flex-end;
   gap: 20px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .eyebrow {
@@ -455,25 +532,94 @@ function uniqueValues(values) {
 
 .head-stats {
   display: grid;
-  grid-template-columns: repeat(3, 92px);
-  gap: 10px;
+  grid-template-columns: repeat(3, 76px);
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.classroom-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid #e7ebf0;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.classroom-tabs {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+}
+
+.classroom-tabs button {
+  border: 0;
+  background: transparent;
+  color: #344054;
+  padding: 8px 0;
+  font-size: 15px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+}
+
+.classroom-tabs button.active {
+  color: #13233a;
+  border-bottom-color: #13233a;
+  font-weight: 700;
+}
+
+.action-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.create-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e7ebf0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.create-panel strong {
+  display: block;
+  color: #13233a;
+  margin-bottom: 4px;
+}
+
+.create-panel span {
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .head-stat {
   background: #fff;
   border: 1px solid #e7ebf0;
   border-radius: 8px;
-  padding: 12px 10px;
+  padding: 7px 8px;
   text-align: center;
 }
 
 .head-stat strong {
   display: block;
   color: #13233a;
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .head-stat span {
@@ -483,26 +629,26 @@ function uniqueValues(values) {
 
 .filter-bar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 150px 140px auto;
-  gap: 12px;
+  grid-template-columns: minmax(260px, 420px) 150px 150px auto;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
   background: #fff;
   border: 1px solid #e7ebf0;
   border-radius: 8px;
-  padding: 14px;
+  padding: 9px 12px;
 }
 
 .join-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 0;
   background: #fff;
   border: 1px solid #e7ebf0;
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 10px 14px;
 }
 
 .join-panel strong {
@@ -520,18 +666,25 @@ function uniqueValues(values) {
 .join-actions {
   display: flex;
   gap: 10px;
-  flex: 0 0 360px;
+  flex: 0 0 330px;
 }
 
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 20px;
 }
 
 .course-panel {
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .course-grid {
@@ -700,6 +853,9 @@ function uniqueValues(values) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .panel-section {
@@ -844,6 +1000,11 @@ function uniqueValues(values) {
   .page-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .classroom-nav,
+  .action-strip {
+    grid-template-columns: 1fr;
   }
 
   .head-stats,

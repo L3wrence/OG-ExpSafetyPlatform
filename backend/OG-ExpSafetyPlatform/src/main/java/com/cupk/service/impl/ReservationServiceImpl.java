@@ -127,10 +127,11 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public Page<Map<String, Object>> getAvailableSlots(Long labId, String date, int pageNum, int pageSize) {
+    public Page<Map<String, Object>> getAvailableSlots(Long labId, Long experimentId, String date, int pageNum, int pageSize) {
         Page<LabTimeSlot> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<LabTimeSlot> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(labId != null, LabTimeSlot::getLabId, labId)
+               .eq(experimentId != null, LabTimeSlot::getExperimentId, experimentId)
                .eq(date != null && !date.isEmpty(), LabTimeSlot::getDate, date)
                .eq(LabTimeSlot::getStatus, "AVAILABLE")
                .apply("booked_count < capacity")

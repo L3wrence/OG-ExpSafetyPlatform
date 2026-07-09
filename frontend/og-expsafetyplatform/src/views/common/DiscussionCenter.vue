@@ -3,8 +3,8 @@
     <section class="page-head">
       <div>
         <p class="eyebrow">Discussion</p>
-        <h1>课程讨论与答疑</h1>
-        <p class="page-desc">围绕课程和实验发布问题，查看教师回复与已解决问题。</p>
+        <h1>公共学习交流</h1>
+        <p class="page-desc">面向所有用户的油气工程学习交流；课堂内讨论请进入“我的课堂”。</p>
       </div>
       <el-button type="primary" :icon="Plus" @click="openCreate">提问</el-button>
     </section>
@@ -12,7 +12,7 @@
     <section class="discussion-layout">
       <div class="panel">
         <div class="toolbar">
-          <el-input v-model="filters.courseId" clearable placeholder="课程ID" />
+          <el-input v-if="filters.courseId" v-model="filters.courseId" clearable placeholder="课堂ID" />
           <el-input v-model="filters.experimentId" clearable placeholder="实验ID" />
           <el-select v-model="filters.status" clearable placeholder="状态">
             <el-option label="开放" value="OPEN" />
@@ -83,8 +83,8 @@
 
     <el-dialog v-model="createVisible" title="发布问题" width="620px">
       <el-form :model="createForm" label-width="90px">
-        <el-form-item label="课程ID" required><el-input v-model="createForm.courseId" /></el-form-item>
-        <el-form-item label="实验ID"><el-input v-model="createForm.experimentId" /></el-form-item>
+        <el-form-item v-if="createForm.courseId" label="课堂ID"><el-input v-model="createForm.courseId" /></el-form-item>
+        <el-form-item v-if="createForm.courseId" label="实验ID"><el-input v-model="createForm.experimentId" /></el-form-item>
         <el-form-item label="标题" required><el-input v-model="createForm.title" /></el-form-item>
         <el-form-item label="内容" required><el-input v-model="createForm.content" type="textarea" :rows="6" /></el-form-item>
         <el-form-item label="匿名展示"><el-switch v-model="createForm.isAnonymous" /></el-form-item>
@@ -126,7 +126,7 @@ const createForm = reactive({
   isAnonymous: false,
 })
 
-const canManage = computed(() => ['teacher', 'admin'].includes(authStore.role))
+const canManage = computed(() => authStore.role === 'admin' || authStore.hasPermission('course:update'))
 
 onMounted(async () => {
   await loadTopics()
@@ -169,15 +169,15 @@ function openCreate() {
 }
 
 async function submitTopic() {
-  if (!createForm.courseId || !createForm.title.trim() || !createForm.content.trim()) {
-    ElMessage.warning('请填写课程ID、标题和内容')
+  if (!createForm.title.trim() || !createForm.content.trim()) {
+    ElMessage.warning('请填写标题和内容')
     return
   }
   saving.value = true
   try {
     const result = await createDiscussion({
-      courseId: Number(createForm.courseId),
-      experimentId: createForm.experimentId ? Number(createForm.experimentId) : undefined,
+      courseId: createForm.courseId ? Number(createForm.courseId) : undefined,
+      experimentId: createForm.courseId && createForm.experimentId ? Number(createForm.experimentId) : undefined,
       title: createForm.title.trim(),
       content: createForm.content.trim(),
       isAnonymous: createForm.isAnonymous ? 1 : 0,

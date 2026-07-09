@@ -73,7 +73,11 @@ public class DiscussionServiceImpl implements DiscussionService {
                 .orderByDesc(DiscussionTopic::getIsFeatured)
                 .orderByDesc(DiscussionTopic::getUpdateTime)
                 .orderByDesc(DiscussionTopic::getCreateTime);
-        applyScope(wrapper);
+        if (courseId == null && experimentId == null) {
+            wrapper.isNull(DiscussionTopic::getCourseId);
+        } else {
+            applyScope(wrapper);
+        }
         Page<DiscussionTopic> page = topicMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
         List<DiscussionTopicVO> records = page.getRecords().stream().map(topic -> toTopicVO(topic, false)).toList();
         return new PageResult<>(records, page.getTotal(), page.getCurrent(), page.getSize());
@@ -82,7 +86,9 @@ public class DiscussionServiceImpl implements DiscussionService {
     @Override
     public DiscussionTopicVO detail(Long id) {
         DiscussionTopic topic = requireTopic(id);
-        assertCourseReadable(topic.getCourseId());
+        if (topic.getCourseId() != null) {
+            assertCourseReadable(topic.getCourseId());
+        }
         return toTopicVO(topic, true);
     }
 
@@ -92,10 +98,12 @@ public class DiscussionServiceImpl implements DiscussionService {
         if (!UserContext.isStudent() && !UserContext.isTeacher() && !UserContext.isAdmin()) {
             throw new BusinessException(403, "无权发布课程讨论");
         }
-        assertCourseReadable(dto.getCourseId());
+        if (dto.getCourseId() != null) {
+            assertCourseReadable(dto.getCourseId());
+        }
         if (dto.getExperimentId() != null) {
             Experiment experiment = requireExperiment(dto.getExperimentId());
-            if (!dto.getCourseId().equals(experiment.getCourseId())) {
+            if (dto.getCourseId() == null || !dto.getCourseId().equals(experiment.getCourseId())) {
                 throw new BusinessException(400, "实验不属于当前课程");
             }
         }
@@ -108,7 +116,7 @@ public class DiscussionServiceImpl implements DiscussionService {
         topic.setReplyCount(0);
         topicMapper.insert(topic);
 
-        LabCourse course = courseMapper.selectById(dto.getCourseId());
+        LabCourse course = dto.getCourseId() == null ? null : courseMapper.selectById(dto.getCourseId());
         if (course != null && course.getTeacherId() != null && !course.getTeacherId().equals(UserContext.userId())) {
             messageService.send(course.getTeacherId(), "有新的课程提问", topic.getTitle(),
                     "DISCUSSION", topic.getId(), "/discussions?topicId=" + topic.getId());
@@ -120,7 +128,9 @@ public class DiscussionServiceImpl implements DiscussionService {
     @Transactional
     public Long reply(Long topicId, DiscussionReplyCreateDTO dto) {
         DiscussionTopic topic = requireTopic(topicId);
-        assertCourseReadable(topic.getCourseId());
+        if (topic.getCourseId() != null) {
+            assertCourseReadable(topic.getCourseId());
+        }
         DiscussionReply reply = new DiscussionReply();
         reply.setTopicId(topicId);
         reply.setUserId(UserContext.userId());
@@ -218,6 +228,12 @@ public class DiscussionServiceImpl implements DiscussionService {
     }
 
     private void assertCourseWritable(Long courseId) {
+        if (courseId == null) {
+            if (UserContext.isAdmin()) {
+                return;
+            }
+            throw new BusinessException(403, "只有管理员可以管理公共讨论状态");
+        }
         LabCourse course = requireCourse(courseId);
         if (UserContext.isAdmin()) {
             return;

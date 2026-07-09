@@ -5,10 +5,12 @@ import com.cupk.dto.LearningProgressDTO;
 import com.cupk.mapper.CourseStudentMapper;
 import com.cupk.mapper.ExperimentMapper;
 import com.cupk.mapper.LabCourseMapper;
+import com.cupk.mapper.TeachingClassMapper;
 import com.cupk.pojo.CourseStudent;
 import com.cupk.pojo.Experiment;
 import com.cupk.pojo.LabCourse;
 import com.cupk.pojo.LearningRecord;
+import com.cupk.pojo.TeachingClass;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.exception.BusinessException;
 import com.cupk.interceptor.UserContext;
@@ -33,18 +35,21 @@ public class LearningRecordServiceImpl implements LearningRecordService {
     private final CourseStudentMapper courseStudentMapper;
     private final ExperimentMapper experimentMapper;
     private final LabCourseMapper courseMapper;
+    private final TeachingClassMapper teachingClassMapper;
     private final LearningTaskService learningTaskService;
 
     public LearningRecordServiceImpl(LearningRecordMapper recordMapper, TeachingResourceMapper resourceMapper,
                                      CourseStudentMapper courseStudentMapper,
                                      ExperimentMapper experimentMapper,
                                      LabCourseMapper courseMapper,
+                                     TeachingClassMapper teachingClassMapper,
                                      LearningTaskService learningTaskService) {
         this.recordMapper = recordMapper;
         this.resourceMapper = resourceMapper;
         this.courseStudentMapper = courseStudentMapper;
         this.experimentMapper = experimentMapper;
         this.courseMapper = courseMapper;
+        this.teachingClassMapper = teachingClassMapper;
         this.learningTaskService = learningTaskService;
     }
 
@@ -174,7 +179,16 @@ public class LearningRecordServiceImpl implements LearningRecordService {
             return false;
         }
         LabCourse course = courseMapper.selectById(experiment.getCourseId());
-        return course != null && UserContext.userId().equals(course.getTeacherId());
+        if (course == null) {
+            return false;
+        }
+        if (UserContext.userId().equals(course.getTeacherId())) {
+            return true;
+        }
+        return teachingClassMapper.selectCount(new LambdaQueryWrapper<TeachingClass>()
+                .eq(TeachingClass::getCourseId, course.getId())
+                .and(w -> w.eq(TeachingClass::getTeacherId, UserContext.userId())
+                        .or().eq(TeachingClass::getAssistantId, UserContext.userId()))) > 0;
     }
 
     @Override

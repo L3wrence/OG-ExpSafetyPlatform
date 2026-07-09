@@ -15,12 +15,14 @@ import com.cupk.mapper.ExperimentMapper;
 import com.cupk.mapper.LabCourseMapper;
 import com.cupk.mapper.LearningRecordMapper;
 import com.cupk.mapper.ResourceInteractionMapper;
+import com.cupk.mapper.TeachingClassMapper;
 import com.cupk.mapper.TeachingResourceMapper;
 import com.cupk.pojo.CourseStudent;
 import com.cupk.pojo.Experiment;
 import com.cupk.pojo.LabCourse;
 import com.cupk.pojo.LearningRecord;
 import com.cupk.pojo.ResourceInteraction;
+import com.cupk.pojo.TeachingClass;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.service.PortalMessageService;
 import com.cupk.service.ResourceService;
@@ -65,17 +67,20 @@ public class ResourceServiceImpl implements ResourceService {
     private final TeachingResourceMapper resourceMapper;
     private final ExperimentMapper experimentMapper;
     private final LabCourseMapper courseMapper;
+    private final TeachingClassMapper teachingClassMapper;
     private final CourseStudentMapper courseStudentMapper;
     private final ResourceInteractionMapper interactionMapper;
     private final LearningRecordMapper learningRecordMapper;
     private final PortalMessageService messageService;
 
     public ResourceServiceImpl(TeachingResourceMapper resourceMapper, ExperimentMapper experimentMapper,
-                               LabCourseMapper courseMapper, CourseStudentMapper courseStudentMapper, ResourceInteractionMapper interactionMapper,
+                               LabCourseMapper courseMapper, TeachingClassMapper teachingClassMapper,
+                               CourseStudentMapper courseStudentMapper, ResourceInteractionMapper interactionMapper,
                                LearningRecordMapper learningRecordMapper, PortalMessageService messageService) {
         this.resourceMapper = resourceMapper;
         this.experimentMapper = experimentMapper;
         this.courseMapper = courseMapper;
+        this.teachingClassMapper = teachingClassMapper;
         this.courseStudentMapper = courseStudentMapper;
         this.interactionMapper = interactionMapper;
         this.learningRecordMapper = learningRecordMapper;
@@ -97,6 +102,7 @@ public class ResourceServiceImpl implements ResourceService {
         wrapper.eq(StringUtils.hasText(dto.getRiskType()), TeachingResource::getRiskType, dto.getRiskType());
         wrapper.like(StringUtils.hasText(dto.getTags()), TeachingResource::getTags, dto.getTags());
         wrapper.eq(StringUtils.hasText(dto.getResourceType()), TeachingResource::getResourceType, dto.getResourceType());
+        wrapper.eq(StringUtils.hasText(dto.getOpenScope()), TeachingResource::getOpenScope, dto.getOpenScope());
         wrapper.eq(dto.getRequiredFlag() != null, TeachingResource::getRequiredFlag, dto.getRequiredFlag());
         wrapper.eq(dto.getInvalidFlag() != null, TeachingResource::getInvalidFlag, dto.getInvalidFlag());
         wrapper.eq(dto.getStatus() != null, TeachingResource::getStatus, dto.getStatus());
@@ -381,10 +387,19 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private List<Long> currentTeacherExperimentIds() {
-        List<Long> courseIds = courseMapper.selectList(new LambdaQueryWrapper<LabCourse>()
+        List<Long> ownCourseIds = courseMapper.selectList(new LambdaQueryWrapper<LabCourse>()
                 .select(LabCourse::getId)
                 .eq(LabCourse::getTeacherId, UserContext.userId()))
                 .stream().map(LabCourse::getId).toList();
+        List<Long> authorizedCourseIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                        .select(TeachingClass::getCourseId)
+                        .and(w -> w.eq(TeachingClass::getTeacherId, UserContext.userId())
+                                .or().eq(TeachingClass::getAssistantId, UserContext.userId())))
+                .stream().map(TeachingClass::getCourseId).toList();
+        List<Long> courseIds = new java.util.ArrayList<>();
+        courseIds.addAll(ownCourseIds);
+        courseIds.addAll(authorizedCourseIds);
+        courseIds = courseIds.stream().distinct().toList();
         if (courseIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -453,7 +468,12 @@ public class ResourceServiceImpl implements ResourceService {
 
     private void assertWritable(TeachingResource resource) {
         Experiment experiment = requireExperiment(resource.getExperimentId());
-        AccessUtil.assertCourseWritable(requireCourse(experiment.getCourseId()));
+        LabCourse course = requireCourse(experiment.getCourseId());
+        AccessUtil.requireTeacherOrAdmin();
+        if (UserContext.isAdmin() || UserContext.userId().equals(course.getTeacherId()) || isTeachingClassManager(course.getId())) {
+            return;
+        }
+        throw new BusinessException(403, "不能修改其他教师负责的课程");
     }
 
     private Experiment requireExperiment(Long id) {
@@ -470,6 +490,16 @@ public class ResourceServiceImpl implements ResourceService {
             throw new BusinessException(404, "课程不存在");
         }
         return course;
+    }
+
+    private boolean isTeachingClassManager(Long courseId) {
+        if (!UserContext.isTeacher()) {
+            return false;
+        }
+        return teachingClassMapper.selectCount(new LambdaQueryWrapper<TeachingClass>()
+                .eq(TeachingClass::getCourseId, courseId)
+                .and(w -> w.eq(TeachingClass::getTeacherId, UserContext.userId())
+                        .or().eq(TeachingClass::getAssistantId, UserContext.userId()))) > 0;
     }
 
     private void validateResourceType(String resourceType) {

@@ -70,7 +70,7 @@
         </el-form>
       </el-card>
 
-      <el-card v-if="authStore.role !== 'admin'" shadow="never" class="panel">
+      <el-card v-if="authStore.role !== 'admin'" ref="certificationPanel" shadow="never" class="panel">
         <template #header>
           <div class="panel-header">
             <span>教师认证</span>
@@ -112,8 +112,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/authStore'
 import { ROLE_LABELS } from '@/utils/constant'
@@ -122,6 +122,7 @@ import { getMyProfile, updateMyProfile } from '@/api/user'
 import { applyTeacherCertification, getMyTeacherCertification } from '@/api/teacherCertification'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const loading = ref(false)
 const savingProfile = ref(false)
@@ -129,6 +130,7 @@ const savingPassword = ref(false)
 const savingCertification = ref(false)
 const profileRef = ref(null)
 const passwordRef = ref(null)
+const certificationPanel = ref(null)
 const teacherCertification = ref(null)
 
 const roleLabel = computed(() => ROLE_LABELS[authStore.role] || '普通用户')
@@ -186,7 +188,14 @@ const passwordRules = {
   ],
 }
 
-onMounted(loadProfile)
+onMounted(async () => {
+  await loadProfile()
+  scrollToCertificationPanel()
+})
+
+watch(() => route.query.panel, () => {
+  scrollToCertificationPanel()
+})
 
 async function loadProfile() {
   loading.value = true
@@ -216,6 +225,14 @@ async function loadTeacherCertification() {
     employeeNo: data?.employeeNo || '',
     educationEmail: data?.educationEmail || profileForm.email || '',
   })
+}
+
+async function scrollToCertificationPanel() {
+  if (route.query.panel !== 'teacher-certification' || authStore.role === 'admin') {
+    return
+  }
+  await nextTick()
+  certificationPanel.value?.$el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
 }
 
 async function saveProfile() {

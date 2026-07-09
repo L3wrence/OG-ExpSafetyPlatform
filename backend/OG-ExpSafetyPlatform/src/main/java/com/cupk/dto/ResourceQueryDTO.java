@@ -22,4 +22,5 @@ public class ResourceQueryDTO {
     private Integer favoriteOnly;
     private Integer invalidFlag;
     private Integer status;
+    private String openScope;
 }

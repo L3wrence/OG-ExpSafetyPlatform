@@ -85,6 +85,12 @@
         meta: { title: '课堂学习路径', permission: 'course:view' },
       },
       {
+        path: 'classrooms/:courseId/chapters/:experimentId',
+        name: 'UnifiedClassroomChapterLearning',
+        component: () => import('@/views/student/ChapterLearning.vue'),
+        meta: { title: '章节详情', permission: 'course:view' },
+      },
+      {
         path: 'student/courses',
         name: 'StudentCourseList',
         redirect: '/classrooms',
@@ -102,14 +108,12 @@
       {
         path: 'student/exams',
         name: 'StudentExamCenter',
-        component: () => import('@/views/student/ExamCenter.vue'),
-        meta: { title: '安全考试', role: 'user', permission: 'exam:take' },
+        redirect: '/classrooms?module=exam',
       },
       {
         path: 'student/reserve',
         name: 'StudentReservationCenter',
-        component: () => import('@/views/student/ReservationCenter.vue'),
-        meta: { title: '实验预约', role: 'user', permission: 'reservation:view' },
+        redirect: '/classrooms?module=reservation',
       },
       {
         path: 'student/grades',
@@ -132,7 +136,7 @@
         path: 'teacher/courses/:courseId/edit',
         name: 'TeacherCourseEditor',
         component: () => import('@/views/teacher/CourseEditor.vue'),
-        meta: { title: '课堂建设', role: 'user', permission: 'course:update' },
+        meta: { title: '课堂详细', role: 'user', permission: 'course:update' },
       },
       {
         path: 'teacher/resources',

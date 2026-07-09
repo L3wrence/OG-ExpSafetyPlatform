@@ -1,13 +1,11 @@
 package com.cupk.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
 public class DiscussionTopicCreateDTO {
-    @NotNull(message = "课程ID不能为空")
     private Long courseId;
     private Long experimentId;
     @NotBlank(message = "问题标题不能为空")

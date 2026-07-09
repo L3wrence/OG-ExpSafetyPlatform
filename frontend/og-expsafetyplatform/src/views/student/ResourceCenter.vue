@@ -199,6 +199,7 @@ async function loadResources() {
         experimentId: filters.experimentId || undefined,
         resourceType: filters.resourceType || undefined,
         favoriteOnly: filters.favoriteOnly || undefined,
+        openScope: 'PUBLIC',
       }),
       getPublicResources({
         pageNum: pageNum.value,

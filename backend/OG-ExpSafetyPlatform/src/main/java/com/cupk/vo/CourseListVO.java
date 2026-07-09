@@ -27,4 +27,5 @@ public class CourseListVO {
     private String assessmentMethod;    //考核方式
     private Integer teachingClassCount; //教学班数量
     private Integer studentCount;       //学生数量
+    private String relationType;        //当前用户与课堂关系：MANAGED/LEARNING
 }

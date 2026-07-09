@@ -167,8 +167,8 @@
                 <div v-for="(step, index) in steps" :key="index" class="step-card">
                   <div class="step-meta">
                     <el-input-number v-model="step.stepNo" :min="1" />
-                    <el-input v-model="step.title" placeholder="步骤标题" />
-                    <el-select v-model="step.mediaType" placeholder="媒体">
+                    <el-input v-model="step.title" placeholder="步骤标题，将作为学生章节小标题" />
+                    <el-select v-model="step.mediaType" placeholder="展示类型">
                       <el-option label="文本" value="TEXT" />
                       <el-option label="图片" value="IMAGE" />
                       <el-option label="视频" value="VIDEO" />
@@ -178,11 +178,11 @@
                     <el-button text type="danger" :icon="Delete" @click="steps.splice(index, 1)">删除</el-button>
                   </div>
                   <div class="step-columns">
-                    <el-input v-model="step.content" type="textarea" :rows="4" placeholder="操作步骤" />
+                    <el-input v-model="step.content" type="textarea" :rows="4" placeholder="步骤文字说明，学生章节详情左侧将显示这里的内容" />
                     <el-input v-model="step.safetyTip" type="textarea" :rows="4" placeholder="风险提示/安全提醒" />
                   </div>
                   <div class="step-media">
-                    <el-input v-model="step.mediaUrl" placeholder="图片或视频地址" />
+                    <el-input v-model="step.mediaUrl" placeholder="步骤视频、图片或资料链接，选择视频类型时学生端会内嵌播放" />
                     <el-input v-model="step.flowchartData" placeholder="流程图数据" />
                   </div>
                 </div>

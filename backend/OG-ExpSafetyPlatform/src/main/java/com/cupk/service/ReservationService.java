@@ -30,7 +30,7 @@ public interface ReservationService {
     // ===== 学生预约 =====
 
     /** 可预约时间段（含剩余容量） */
-    Page<Map<String, Object>> getAvailableSlots(Long labId, String date, int pageNum, int pageSize);
+    Page<Map<String, Object>> getAvailableSlots(Long labId, Long experimentId, String date, int pageNum, int pageSize);
 
     /** 提交预约申请（含资格校验+并发控制） */
     Map<String, Object> createReservation(Reservation reservation);

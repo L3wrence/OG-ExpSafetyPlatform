@@ -367,7 +367,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Collection,
@@ -405,6 +405,7 @@ import { useAuthStore } from '@/stores/authStore'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const saving = ref(false)
 const detailLoading = ref(false)
@@ -432,6 +433,7 @@ const formRef = ref()
 const classFormRef = ref()
 const inviteSaving = ref(false)
 let keywordTimer = null
+let createQueryHandled = false
 
 const filters = reactive({ keyword: '', direction: '', semester: '', status: '' })
 const studentFilters = reactive({ keyword: '', teachingClassId: '', groupName: '' })
@@ -519,7 +521,14 @@ watch([() => filters.direction, () => filters.semester, () => filters.status], (
   loadCourses()
 })
 
-onMounted(loadCourses)
+onMounted(async () => {
+  await loadCourses()
+  openCreateFromQuery()
+})
+
+watch(() => route.query.create, () => {
+  openCreateFromQuery()
+})
 
 async function loadCourses() {
   loading.value = true
@@ -543,6 +552,14 @@ function openCreate() {
   editingCourse.value = null
   resetForm()
   formVisible.value = true
+}
+
+function openCreateFromQuery() {
+  if (route.query.create !== '1' || createQueryHandled) {
+    return
+  }
+  createQueryHandled = true
+  openCreate()
 }
 
 async function openEdit(course) {

@@ -69,10 +69,11 @@ public class ReservationController {
     @RequirePermission("reservation:view")
     @GetMapping("/available-slots")
     public Result<?> availableSlots(@RequestParam(required = false) Long labId,
+                                     @RequestParam(required = false) Long experimentId,
                                      @RequestParam(required = false) String date,
                                      @RequestParam(defaultValue = "1") int pageNum,
                                      @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(reservationService.getAvailableSlots(labId, date, pageNum, pageSize));
+        return Result.success(reservationService.getAvailableSlots(labId, experimentId, date, pageNum, pageSize));
     }
 
     /** 鎻愪氦棰勭害鐢宠 */

@@ -290,7 +290,8 @@ public class CourseServiceImpl implements CourseService {
         wrapper.orderByAsc(LabCourse::getSort).orderByDesc(LabCourse::getCreateTime);
 
         Page<LabCourse> page = courseMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
-        List<CourseListVO> records = page.getRecords().stream().map(this::toListVO).toList();
+        String relationType = UserContext.isTeacher() ? "MANAGED" : (UserContext.isLearner() ? "LEARNING" : null);
+        List<CourseListVO> records = page.getRecords().stream().map(course -> toListVO(course, relationType)).toList();
         return new PageResult<>(records, page.getTotal(), page.getCurrent(), page.getSize());
     }
 
@@ -487,9 +488,10 @@ public class CourseServiceImpl implements CourseService {
         log("STUDENT_REMOVE", "移出课程学生：" + course.getCourseName() + "，人数" + dto.getStudentIds().size(), "SUCCESS");
     }
 
-    private CourseListVO toListVO(LabCourse course) {
+    private CourseListVO toListVO(LabCourse course, String relationType) {
         CourseListVO vo = new CourseListVO();
         BeanUtils.copyProperties(course, vo);
+        vo.setRelationType(relationType);
         User teacher = userMapper.selectById(course.getTeacherId());
         vo.setTeacherName(teacher == null ? "未知教师" : teacher.getRealName());
         List<Experiment> experiments = experimentMapper.selectList(new LambdaQueryWrapper<Experiment>()
