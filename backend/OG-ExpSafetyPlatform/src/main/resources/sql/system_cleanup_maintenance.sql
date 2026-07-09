@@ -56,7 +56,36 @@ LEFT JOIN t_question q ON q.id = f.question_id
 WHERE u.id IS NULL OR q.id IS NULL;
 
 DELETE FROM t_recent_visit
-WHERE path IS NULL OR path = '' OR path IN ('/', '/login');
+WHERE path IS NULL
+   OR path = ''
+   OR path IN ('/', '/login')
+   OR path LIKE '/teacher/resources%'
+   OR path LIKE '/teacher/experiments%'
+   OR path LIKE '/teacher/exam-papers%'
+   OR path LIKE '/teacher/reservations%'
+   OR path LIKE '/teacher/reports%'
+   OR path LIKE '/teacher/dashboard%'
+   OR path LIKE '/student/grades%'
+   OR path LIKE '/student/exams%'
+   OR path LIKE '/student/reserve%';
+
+UPDATE t_user_shortcut
+SET path = '/classrooms'
+WHERE path LIKE '/teacher/courses%'
+   OR path LIKE '/teacher/resources%'
+   OR path LIKE '/teacher/experiments%'
+   OR path LIKE '/teacher/exam-papers%'
+   OR path LIKE '/teacher/reservations%'
+   OR path LIKE '/teacher/reports%'
+   OR path LIKE '/teacher/dashboard%'
+   OR path LIKE '/student/grades%'
+   OR path LIKE '/student/exams%'
+   OR path LIKE '/student/reserve%'
+   OR path LIKE '/student/courses%';
+
+UPDATE t_user_shortcut
+SET path = '/resources'
+WHERE path LIKE '/student/resources%';
 
 INSERT INTO t_permission (name, code, type, parent_id, path, icon, sort)
 SELECT p.name, p.code, 2, 0, NULL, NULL, p.sort
@@ -91,46 +120,12 @@ SELECT r.id, p.id
 FROM t_role r
 JOIN t_permission p ON p.code IN (
     'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
-    'course:view', 'course:create', 'course:update', 'course:delete',
-    'experiment:view', 'experiment:create', 'experiment:update', 'experiment:delete',
-    'resource:view', 'resource:create', 'resource:update', 'resource:delete',
-    'safety:view', 'safety:create', 'safety:update', 'safety:delete',
-    'question:view', 'question:create', 'question:update', 'question:delete',
-    'exam-paper:view', 'exam:create', 'exam:update', 'exam:delete', 'exam:statistics',
-    'reservation:view', 'reservation:manage', 'reservation:review',
-    'report:view', 'report:grade', 'report:review',
-    'recommend:view', 'ai:ask', 'dashboard:view'
+    'course:view', 'course:join', 'experiment:view',
+    'resource:view', 'learning:update:self',
+    'exam:take', 'reservation:view', 'report:view', 'report:submit', 'safety:view',
+    'ai:ask', 'teacher-certification:apply', 'resource-submission:create'
 )
-WHERE r.role_code = 'TEACHER'
-  AND NOT EXISTS (
-      SELECT 1 FROM t_role_permission rp
-      WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
-INSERT INTO t_role_permission (role_id, permission_id)
-SELECT r.id, p.id
-FROM t_role r
-JOIN t_permission p ON p.code IN (
-    'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
-    'course:view', 'experiment:view', 'resource:view', 'learning:update:self', 'safety:view',
-    'exam:take', 'reservation:view', 'report:view', 'report:submit',
-    'recommend:view', 'ai:ask', 'dashboard:view'
-)
-WHERE r.role_code = 'STUDENT'
-  AND NOT EXISTS (
-      SELECT 1 FROM t_role_permission rp
-      WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
-INSERT INTO t_role_permission (role_id, permission_id)
-SELECT r.id, p.id
-FROM t_role r
-JOIN t_permission p ON p.code IN (
-    'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
-    'course:view', 'experiment:view', 'resource:view', 'safety:view',
-    'reservation:view', 'reservation:review', 'dashboard:view'
-)
-WHERE r.role_code = 'LAB_ADMIN'
+WHERE r.role_code = 'USER'
   AND NOT EXISTS (
       SELECT 1 FROM t_role_permission rp
       WHERE rp.role_id = r.id AND rp.permission_id = p.id

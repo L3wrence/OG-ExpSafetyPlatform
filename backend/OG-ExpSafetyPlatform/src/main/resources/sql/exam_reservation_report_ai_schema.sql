@@ -257,18 +257,3 @@ WHERE r.role_code = 'STUDENT'
       SELECT 1 FROM t_role_permission rp
       WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );
-
-INSERT INTO t_role_permission (role_id, permission_id)
-SELECT r.id, p.id
-FROM t_role r
-JOIN t_permission p ON p.code IN (
-    'reservation:view', 'reservation:manage', 'reservation:review',
-    'exam:statistics',
-    'report:view',
-    'recommend:view'
-)
-WHERE r.role_code = 'LAB_ADMIN'
-  AND NOT EXISTS (
-      SELECT 1 FROM t_role_permission rp
-      WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );

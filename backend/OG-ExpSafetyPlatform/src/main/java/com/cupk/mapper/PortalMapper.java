@@ -83,7 +83,7 @@ public interface PortalMapper {
                CONCAT('学习任务：', lt.task_name) AS title,
                lt.deadline AS time,
                'learning' AS type,
-               CONCAT('/student/learning/', lt.course_id, '?experimentId=', lt.experiment_id) AS path,
+               CONCAT('/classrooms/', lt.course_id, '/learn?module=tasks&experimentId=', lt.experiment_id) AS path,
                CASE
                    WHEN lt.deadline IS NOT NULL AND lt.deadline < NOW() THEN 'OVERDUE'
                    WHEN lt.deadline IS NOT NULL AND lt.deadline <= DATE_ADD(NOW(), INTERVAL 2 DAY) THEN 'DUE_SOON'
@@ -107,7 +107,8 @@ public interface PortalMapper {
     List<Map<String, Object>> studentLearningTodos(@Param("studentId") Long studentId, @Param("limit") Integer limit);
 
     @Select("""
-        SELECT ep.id, ep.title, ep.end_time AS time, 'exam' AS type, '/student/exams' AS path
+        SELECT ep.id, ep.title, ep.end_time AS time, 'exam' AS type,
+               CONCAT('/classrooms/', ep.course_id, '/learn?module=exam') AS path
           FROM t_exam_paper ep
           JOIN t_course_student cs ON cs.course_id = ep.course_id
          WHERE cs.student_id = #{studentId}
@@ -125,8 +126,10 @@ public interface PortalMapper {
 
     @Select("""
         SELECT rv.id, CONCAT('预约状态：', rv.status) AS title, rv.create_time AS time,
-               'reservation' AS type, '/student/reserve' AS path
+               'reservation' AS type,
+               COALESCE(CONCAT('/classrooms/', e.course_id, '/learn?module=reservation'), '/classrooms') AS path
           FROM t_reservation rv
+          LEFT JOIN t_experiment e ON e.id = rv.experiment_id AND e.deleted = 0
          WHERE rv.student_id = #{studentId} AND rv.deleted = 0
          ORDER BY rv.create_time DESC
          LIMIT #{limit}
@@ -134,8 +137,10 @@ public interface PortalMapper {
     List<Map<String, Object>> studentReservationTodos(@Param("studentId") Long studentId, @Param("limit") Integer limit);
 
     @Select("""
-        SELECT rp.id, rp.title, rp.update_time AS time, 'report' AS type, '/student/grades' AS path
+        SELECT rp.id, rp.title, rp.update_time AS time, 'report' AS type,
+               COALESCE(CONCAT('/classrooms/', e.course_id, '/learn?module=reports'), '/classrooms') AS path
           FROM t_report rp
+          LEFT JOIN t_experiment e ON e.id = rp.experiment_id AND e.deleted = 0
          WHERE rp.student_id = #{studentId} AND rp.deleted = 0
            AND rp.status IN ('DRAFT', 'RETURNED')
          ORDER BY rp.update_time DESC
@@ -148,7 +153,7 @@ public interface PortalMapper {
                CONCAT('准入即将到期：', e.exp_name) AS title,
                ea.valid_until AS time,
                'admission' AS type,
-               CONCAT('/student/learning/', e.course_id, '?experimentId=', e.id) AS path,
+               CONCAT('/classrooms/', e.course_id, '/learn?module=reservation&experimentId=', e.id) AS path,
                ea.status
           FROM t_experiment_admission ea
           JOIN t_experiment e ON e.id = ea.experiment_id AND e.deleted = 0
@@ -211,7 +216,7 @@ public interface PortalMapper {
 
     @Select("""
         SELECT rv.id, CONCAT('预约待审核：', COALESCE(e.exp_name, '实验')) AS title, rv.create_time AS time,
-               'reservation' AS type, '/teacher/reservations' AS path
+               'reservation' AS type, CONCAT('/teacher/courses/', c.id, '/edit') AS path
           FROM t_reservation rv
           JOIN t_experiment e ON e.id = rv.experiment_id AND e.deleted = 0
           JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
@@ -223,7 +228,7 @@ public interface PortalMapper {
 
     @Select("""
         SELECT rp.id, CONCAT('报告待批改：', rp.title) AS title, rp.latest_submit_time AS time,
-               'report' AS type, '/teacher/reports' AS path
+               'report' AS type, CONCAT('/teacher/courses/', c.id, '/edit') AS path
           FROM t_report rp
           JOIN t_experiment e ON e.id = rp.experiment_id AND e.deleted = 0
           JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
@@ -320,7 +325,7 @@ public interface PortalMapper {
 
     @Select("""
         SELECT c.id, c.course_name AS title, c.description, 'course' AS type,
-               CASE WHEN #{roleCode} = 'TEACHER' THEN '/teacher/courses' ELSE '/student/courses' END AS path
+               '/classrooms' AS path
           FROM t_lab_course c
          WHERE c.deleted = 0
            AND (#{teacherId} IS NULL OR c.teacher_id = #{teacherId})
@@ -340,7 +345,7 @@ public interface PortalMapper {
 
     @Select("""
         SELECT e.id, e.exp_name AS title, e.objective AS description, 'experiment' AS type,
-               CASE WHEN #{roleCode} = 'TEACHER' THEN '/teacher/courses' ELSE '/student/courses' END AS path
+               '/classrooms' AS path
           FROM t_experiment e
           JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
          WHERE e.deleted = 0
@@ -361,7 +366,7 @@ public interface PortalMapper {
 
     @Select("""
         SELECT r.id, r.title, r.resource_type AS description, 'resource' AS type,
-               CASE WHEN #{roleCode} = 'TEACHER' THEN '/teacher/resources' ELSE '/student/courses' END AS path
+               '/resources' AS path
           FROM t_resource r
           JOIN t_experiment e ON e.id = r.experiment_id AND e.deleted = 0
           JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
@@ -383,7 +388,7 @@ public interface PortalMapper {
 
     @Select("""
         SELECT sk.id, sk.knowledge_point AS title, sk.content AS description, 'knowledge' AS type,
-               CASE WHEN #{roleCode} = 'TEACHER' THEN '/teacher/knowledge' ELSE '/student/knowledge' END AS path
+               '/classrooms' AS path
           FROM t_safety_knowledge sk
           LEFT JOIN t_experiment e ON e.id = sk.experiment_id AND e.deleted = 0
           LEFT JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
@@ -407,7 +412,7 @@ public interface PortalMapper {
         SELECT ep.id, ep.title, 'exam' AS type,
                DATE_FORMAT(ep.start_time, '%Y-%m-%d %H:%i:%s') AS start_time,
                DATE_FORMAT(ep.end_time, '%Y-%m-%d %H:%i:%s') AS end_time,
-               ep.status, '/student/exams' AS path
+               ep.status, '/classrooms' AS path
           FROM t_exam_paper ep
           JOIN t_course_student cs ON cs.course_id = ep.course_id
          WHERE #{roleCode} = 'USER'
@@ -425,7 +430,7 @@ public interface PortalMapper {
         SELECT ts.id, COALESCE(e.exp_name, '实验预约') AS title, 'reservation' AS type,
                CONCAT(DATE_FORMAT(ts.slot_date, '%Y-%m-%d'), ' ', CAST(ts.start_time AS CHAR)) AS start_time,
                CONCAT(DATE_FORMAT(ts.slot_date, '%Y-%m-%d'), ' ', CAST(ts.end_time AS CHAR)) AS end_time,
-               ts.status, CASE WHEN #{roleCode} = 'TEACHER' THEN '/teacher/reservations' ELSE '/student/reserve' END AS path
+               ts.status, '/classrooms' AS path
           FROM t_lab_time_slot ts
           LEFT JOIN t_experiment e ON e.id = ts.experiment_id AND e.deleted = 0
           LEFT JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0

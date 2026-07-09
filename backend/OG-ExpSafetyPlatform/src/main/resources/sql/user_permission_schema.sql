@@ -65,10 +65,6 @@ INSERT INTO t_role (role_name, role_code, description)
 SELECT '学生', 'STUDENT', '学习实验课程并查看个人数据'
 WHERE NOT EXISTS (SELECT 1 FROM t_role WHERE role_code = 'STUDENT');
 
-INSERT INTO t_role (role_name, role_code, description)
-SELECT '实验室管理员', 'LAB_ADMIN', '查看实验室运行统计并管理预约'
-WHERE NOT EXISTS (SELECT 1 FROM t_role WHERE role_code = 'LAB_ADMIN');
-
 INSERT INTO t_permission (name, code, type, parent_id, path, icon, sort)
 SELECT p.name, p.code, p.type, p.parent_id, p.path, p.icon, p.sort
 FROM (
@@ -148,20 +144,6 @@ JOIN t_permission p ON p.code IN (
     'dashboard:view'
 )
 WHERE r.role_code = 'STUDENT'
-  AND NOT EXISTS (
-      SELECT 1 FROM t_role_permission rp
-      WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
-INSERT INTO t_role_permission (role_id, permission_id)
-SELECT r.id, p.id
-FROM t_role r
-JOIN t_permission p ON p.code IN (
-    'course:view', 'experiment:view', 'resource:view', 'safety:view',
-    'portal:view', 'profile:update', 'profile:password', 'portal:message', 'portal:search',
-    'dashboard:view'
-)
-WHERE r.role_code = 'LAB_ADMIN'
   AND NOT EXISTS (
       SELECT 1 FROM t_role_permission rp
       WHERE rp.role_id = r.id AND rp.permission_id = p.id

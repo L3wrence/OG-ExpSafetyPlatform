@@ -64,7 +64,7 @@
         path: 'discussions',
         name: 'DiscussionCenter',
         component: () => import('@/views/common/DiscussionCenter.vue'),
-        meta: { title: '课程讨论', permission: 'course:view' },
+        meta: { title: '学习交流', permission: 'course:view' },
       },
       {
         path: 'resources',
@@ -118,8 +118,7 @@
       {
         path: 'student/grades',
         name: 'StudentReportAndGrade',
-        component: () => import('@/views/student/ReportAndGrade.vue'),
-        meta: { title: '成绩反馈', role: 'user', permission: 'report:view' },
+        redirect: '/classrooms',
       },
       {
         path: 'teacher/dashboard',
@@ -141,32 +140,27 @@
       {
         path: 'teacher/resources',
         name: 'TeacherResourceManagement',
-        component: () => import('@/views/teacher/ResourceManagement.vue'),
-        meta: { title: '资源管理', role: 'user', permission: 'resource:update' },
+        redirect: '/classrooms',
       },
       {
         path: 'teacher/experiments',
         name: 'TeacherExperimentManagement',
-        component: () => import('@/views/teacher/ExperimentManagement.vue'),
-        meta: { title: '实验路径', role: 'user', permission: 'experiment:view' },
+        redirect: '/classrooms',
       },
       {
         path: 'teacher/exam-papers',
         name: 'TeacherExamPaperManagement',
-        component: () => import('@/views/teacher/ExamPaperManagement.vue'),
-        meta: { title: '试卷管理', role: 'user', permission: 'exam-paper:view' },
+        redirect: '/classrooms',
       },
       {
         path: 'teacher/reservations',
         name: 'TeacherReservationReview',
-        component: () => import('@/views/teacher/ReservationReview.vue'),
-        meta: { title: '预约审核', role: 'user', permission: 'reservation:review' },
+        redirect: '/classrooms',
       },
       {
         path: 'teacher/reports',
         name: 'TeacherReportReview',
-        component: () => import('@/views/teacher/ReportReview.vue'),
-        meta: { title: '报告批改', role: 'user', permission: 'report:review' },
+        redirect: '/classrooms',
       },
       {
         path: 'admin/users',

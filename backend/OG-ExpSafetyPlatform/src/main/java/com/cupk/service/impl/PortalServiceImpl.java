@@ -202,9 +202,9 @@ public class PortalServiceImpl implements PortalService {
     private void fillUserHome(PortalHomeVO home, Long userId) {
         home.getMetrics().add(new PortalMetricVO("courses", "我的课堂", nz(portalMapper.countStudentCourses(userId)), "门", "/classrooms", "primary"));
         home.getMetrics().add(new PortalMetricVO("learningTasks", "待完成学习", nz(portalMapper.countStudentPendingLearningTasks(userId)), "项", "/classrooms", "warning"));
-        home.getMetrics().add(new PortalMetricVO("exams", "待考试实验", nz(portalMapper.countStudentPendingExams(userId)), "项", "/student/exams", "warning"));
-        home.getMetrics().add(new PortalMetricVO("reservations", "预约状态", nz(portalMapper.countStudentActiveReservations(userId)), "条", "/student/reserve", "success"));
-        home.getMetrics().add(new PortalMetricVO("passRate", "考试通过率", nz(portalMapper.studentExamPassRate(userId)), "%", "/student/exams", "info"));
+        home.getMetrics().add(new PortalMetricVO("exams", "待考试实验", nz(portalMapper.countStudentPendingExams(userId)), "项", "/classrooms", "warning"));
+        home.getMetrics().add(new PortalMetricVO("reservations", "预约状态", nz(portalMapper.countStudentActiveReservations(userId)), "条", "/classrooms", "success"));
+        home.getMetrics().add(new PortalMetricVO("passRate", "考试通过率", nz(portalMapper.studentExamPassRate(userId)), "%", "/classrooms", "info"));
         addRows(home.getTodos(), portalMapper.studentLearningTodos(userId, 5));
         addRows(home.getTodos(), portalMapper.studentExamTodos(userId, 4));
         addRows(home.getTodos(), portalMapper.studentReservationTodos(userId, 3));
@@ -215,10 +215,10 @@ public class PortalServiceImpl implements PortalService {
     private void fillTeacherHome(PortalHomeVO home, Long teacherId) {
         int reservations = nz(portalMapper.countTeacherPendingReservations(teacherId));
         int reports = nz(portalMapper.countTeacherPendingReports(teacherId));
-        home.getMetrics().add(new PortalMetricVO("pendingReservations", "待审核预约", reservations, "条", "/teacher/reservations", "warning"));
-        home.getMetrics().add(new PortalMetricVO("pendingReports", "待批改报告", reports, "份", "/teacher/reports", "danger"));
-        home.getMetrics().add(new PortalMetricVO("lowPassWarnings", "低通过率预警", nz(portalMapper.countTeacherLowPassWarnings(teacherId)), "项", "/teacher/dashboard", "warning"));
-        home.getMetrics().add(new PortalMetricVO("students", "所教学生", nz(portalMapper.countTeacherStudents(teacherId)), "人", "/teacher/courses", "primary"));
+        home.getMetrics().add(new PortalMetricVO("pendingReservations", "待审核预约", reservations, "条", "/classrooms", "warning"));
+        home.getMetrics().add(new PortalMetricVO("pendingReports", "待批改报告", reports, "份", "/classrooms", "danger"));
+        home.getMetrics().add(new PortalMetricVO("lowPassWarnings", "低通过率预警", nz(portalMapper.countTeacherLowPassWarnings(teacherId)), "项", "/classrooms", "warning"));
+        home.getMetrics().add(new PortalMetricVO("students", "所教学生", nz(portalMapper.countTeacherStudents(teacherId)), "人", "/classrooms", "primary"));
         addRows(home.getTodos(), portalMapper.teacherReservationTodos(teacherId, 5));
         addRows(home.getTodos(), portalMapper.teacherReportTodos(teacherId, 5));
     }
@@ -278,15 +278,10 @@ public class PortalServiceImpl implements PortalService {
             items.add(shortcut("操作日志", "/admin/logs", "List"));
         } else {
             if (UserContext.isTeacher()) {
-                items.add(shortcut("课堂管理", "/teacher/courses", "Reading"));
-                items.add(shortcut("预约审核", "/teacher/reservations", "Calendar"));
-                items.add(shortcut("报告批改", "/teacher/reports", "Document"));
+                items.add(shortcut("课堂管理", "/classrooms", "Reading"));
             }
             items.add(shortcut("我的课堂", "/classrooms", "Reading"));
             items.add(shortcut("资源学习", "/resources", "Collection"));
-            items.add(shortcut("安全考试", "/student/exams", "EditPen"));
-            items.add(shortcut("实验预约", "/student/reserve", "Calendar"));
-            items.add(shortcut("成绩报告", "/student/grades", "Document"));
         }
         return items;
     }

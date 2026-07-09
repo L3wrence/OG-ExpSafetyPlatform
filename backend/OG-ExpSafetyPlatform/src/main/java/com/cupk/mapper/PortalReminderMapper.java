@@ -13,7 +13,7 @@ public interface PortalReminderMapper {
                ep.id AS bizId,
                CONCAT('考试即将截止：', ep.title) AS title,
                CONCAT('正式安全考试将于 ', DATE_FORMAT(ep.end_time, '%Y-%m-%d %H:%i'), ' 截止，请及时完成。') AS content,
-               '/student/exams' AS path,
+               CONCAT('/classrooms/', ep.course_id, '/learn?module=exam') AS path,
                ep.end_time AS eventTime
           FROM t_exam_paper ep
           JOIN t_course_student cs ON cs.course_id = ep.course_id
@@ -37,7 +37,7 @@ public interface PortalReminderMapper {
                rv.id AS bizId,
                CONCAT('预约即将开始：', COALESCE(e.exp_name, '实验')) AS title,
                CONCAT('你的实验预约将于 ', DATE_FORMAT(TIMESTAMP(COALESCE(ts.slot_date, ts.date), ts.start_time), '%Y-%m-%d %H:%i'), ' 开始，请按要求到场。') AS content,
-               '/student/reserve' AS path,
+               COALESCE(CONCAT('/classrooms/', e.course_id, '/learn?module=reservation'), '/classrooms') AS path,
                TIMESTAMP(COALESCE(ts.slot_date, ts.date), ts.start_time) AS eventTime
           FROM t_reservation rv
           JOIN t_lab_time_slot ts ON ts.id = rv.time_slot_id
@@ -54,7 +54,7 @@ public interface PortalReminderMapper {
                lt.id AS bizId,
                CONCAT('报告即将截止：', COALESCE(e.exp_name, lt.task_name)) AS title,
                CONCAT('报告相关任务将于 ', DATE_FORMAT(lt.deadline, '%Y-%m-%d %H:%i'), ' 截止，请及时提交。') AS content,
-               '/student/grades' AS path,
+               CONCAT('/classrooms/', lt.course_id, '/learn?module=reports') AS path,
                lt.deadline AS eventTime
           FROM t_learning_task lt
           JOIN t_course_student cs ON cs.course_id = lt.course_id
@@ -80,7 +80,7 @@ public interface PortalReminderMapper {
                ea.id AS bizId,
                CONCAT('准入资格即将过期：', COALESCE(e.exp_name, '实验')) AS title,
                CONCAT('你的实验准入资格将于 ', DATE_FORMAT(ea.valid_until, '%Y-%m-%d %H:%i'), ' 过期，如需参加实验请尽快完成预约。') AS content,
-               CONCAT('/student/learning/', e.course_id, '?experimentId=', e.id) AS path,
+               CONCAT('/classrooms/', e.course_id, '/learn?module=reservation&experimentId=', e.id) AS path,
                ea.valid_until AS eventTime
           FROM t_experiment_admission ea
           JOIN t_experiment e ON e.id = ea.experiment_id AND e.deleted = 0
