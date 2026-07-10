@@ -24,10 +24,6 @@ export function confirmChecklistTask(id) {
   return request.post(`/learning-tasks/${id}/confirm-checklist`)
 }
 
-export function completeSafetyKnowledgeTask(knowledgeId) {
-  return request.post(`/learning-tasks/safety-knowledge/${knowledgeId}/complete`)
-}
-
 export function getTaskDistribution(experimentId) {
   return request.get(`/learning-tasks/experiments/${experimentId}/distribution`)
 }

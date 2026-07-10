@@ -245,6 +245,40 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         }
     }
 
+    @Override
+    @Transactional
+    public Map<String, Object> smartAssemble(Long paperId, Map<String, Object> rule) {
+        ExamPaper paper = requirePaper(paperId);
+        assertCourseWritable(paper.getCourseId());
+        int count = intRule(rule, "count", 10);
+        int score = intRule(rule, "score", 5);
+        if (count <= 0 || count > 200) {
+            throw new BusinessException(400, "抽题数量必须在1到200之间");
+        }
+        LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Question::getCourseId, paper.getCourseId())
+                .eq(paper.getExperimentId() != null, Question::getExperimentId, paper.getExperimentId())
+                .eq(stringRule(rule, "experimentId") != null, Question::getExperimentId, longRule(rule, "experimentId"))
+                .eq(StringUtils.hasText(stringRule(rule, "type")), Question::getType, stringRule(rule, "type"))
+                .eq(StringUtils.hasText(stringRule(rule, "difficulty")), Question::getDifficulty, stringRule(rule, "difficulty"))
+                .eq(StringUtils.hasText(stringRule(rule, "knowledgePoint")), Question::getKnowledgePoint, stringRule(rule, "knowledgePoint"))
+                .in(Question::getType, List.of("SINGLE", "MULTIPLE", "JUDGE"));
+        List<Question> candidates = questionMapper.selectList(wrapper);
+        Collections.shuffle(candidates);
+        if (candidates.isEmpty()) {
+            throw new BusinessException(400, "当前条件下没有可用于组卷的题目");
+        }
+        int actual = Math.min(count, candidates.size());
+        List<Long> questionIds = candidates.stream().limit(actual).map(Question::getId).toList();
+        List<Integer> scores = questionIds.stream().map(id -> score).toList();
+        addQuestions(paperId, questionIds, scores);
+        Map<String, Object> result = new HashMap<>();
+        result.put("requestedCount", count);
+        result.put("actualCount", actual);
+        result.put("candidateCount", candidates.size());
+        return result;
+    }
+
     private ExamPaper requirePaper(Long id) {
         ExamPaper paper = examPaperMapper.selectById(id);
         if (paper == null) {
@@ -303,5 +337,23 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         paper.setMultipleScorePolicy(StringUtils.hasText(paper.getMultipleScorePolicy()) ? paper.getMultipleScorePolicy() : "ALL_OR_NOTHING");
         paper.setRandomEnabled(paper.getRandomEnabled() == null ? 0 : paper.getRandomEnabled());
         paper.setRandomCount(paper.getRandomCount() == null ? 0 : paper.getRandomCount());
+    }
+
+    private String stringRule(Map<String, Object> rule, String key) {
+        if (rule == null || rule.get(key) == null) {
+            return null;
+        }
+        String value = String.valueOf(rule.get(key)).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private Long longRule(Map<String, Object> rule, String key) {
+        String value = stringRule(rule, key);
+        return value == null ? null : Long.valueOf(value);
+    }
+
+    private int intRule(Map<String, Object> rule, String key, int fallback) {
+        String value = stringRule(rule, key);
+        return value == null ? fallback : Integer.parseInt(value);
     }
 }

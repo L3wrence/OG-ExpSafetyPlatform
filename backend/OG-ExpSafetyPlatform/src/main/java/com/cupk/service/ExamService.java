@@ -31,7 +31,7 @@ public interface ExamService {
     Map<String, Object> submitExam(Long recordId, List<Map<String, Object>> answers, boolean autoSubmit);
 
     /** 我的考试记录列表 */
-    Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status);
+    Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status, Long courseId);
 
     /** 考试详情（含每题答题） */
     Map<String, Object> getRecordDetail(Long recordId);

@@ -14,7 +14,6 @@ import com.cupk.pojo.LabCourse;
 import com.cupk.pojo.OperationLog;
 import com.cupk.pojo.Report;
 import com.cupk.pojo.Reservation;
-import com.cupk.pojo.SafetyKnowledge;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.pojo.User;
 import com.cupk.exception.BusinessException;
@@ -47,7 +46,6 @@ public class ExperimentServiceImpl implements ExperimentService {
     private final LabCourseMapper courseMapper;
     private final ExperimentStepMapper stepMapper;
     private final TeachingResourceMapper resourceMapper;
-    private final SafetyKnowledgeMapper knowledgeMapper;
     private final BusinessReferenceMapper businessReferenceMapper;
     private final LearningRecordService learningRecordService;
     private final ExamRecordMapper examRecordMapper;
@@ -60,7 +58,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
     public ExperimentServiceImpl(ExperimentMapper experimentMapper, LabCourseMapper courseMapper,
                                  ExperimentStepMapper stepMapper, TeachingResourceMapper resourceMapper,
-                                 SafetyKnowledgeMapper knowledgeMapper, BusinessReferenceMapper businessReferenceMapper,
+                                 BusinessReferenceMapper businessReferenceMapper,
                                  LearningRecordService learningRecordService, ExamRecordMapper examRecordMapper,
                                  ExamPaperMapper examPaperMapper, ReservationMapper reservationMapper,
                                  ReportMapper reportMapper, OperationLogMapper operationLogMapper, UserMapper userMapper,
@@ -69,7 +67,6 @@ public class ExperimentServiceImpl implements ExperimentService {
         this.courseMapper = courseMapper;
         this.stepMapper = stepMapper;
         this.resourceMapper = resourceMapper;
-        this.knowledgeMapper = knowledgeMapper;
         this.businessReferenceMapper = businessReferenceMapper;
         this.learningRecordService = learningRecordService;
         this.examRecordMapper = examRecordMapper;
@@ -131,7 +128,6 @@ public class ExperimentServiceImpl implements ExperimentService {
         }
         stepMapper.delete(new LambdaQueryWrapper<ExperimentStep>().eq(ExperimentStep::getExperimentId, id));
         resourceMapper.delete(new LambdaQueryWrapper<TeachingResource>().eq(TeachingResource::getExperimentId, id));
-        knowledgeMapper.delete(new LambdaQueryWrapper<SafetyKnowledge>().eq(SafetyKnowledge::getExperimentId, id));
         experimentMapper.deleteById(id);
         log("DELETE", "删除实验项目：" + entity.getExpName(), "SUCCESS");
     }
@@ -217,10 +213,6 @@ public class ExperimentServiceImpl implements ExperimentService {
                 .eq(TeachingResource::getExperimentId, id)
                 .eq(UserContext.isStudent(), TeachingResource::getStatus, 1)
                 .orderByAsc(TeachingResource::getSort).orderByAsc(TeachingResource::getId)));
-        vo.setSafetyKnowledge(knowledgeMapper.selectList(new LambdaQueryWrapper<SafetyKnowledge>()
-                .eq(SafetyKnowledge::getExperimentId, id)
-                .eq(UserContext.isStudent(), SafetyKnowledge::getStatus, 1)
-                .orderByAsc(SafetyKnowledge::getId)));
 
         if (UserContext.isStudent()) {
             BigDecimal progress = learningRecordService.experimentProgress(id, UserContext.userId()).getProgress();

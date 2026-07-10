@@ -37,4 +37,7 @@ public interface ExamPaperService {
 
     /** 调整题目排序 */
     void updateQuestionOrder(Long paperId, List<Map<String, Integer>> orders);
+
+    /** 按筛选条件自动抽题组卷 */
+    Map<String, Object> smartAssemble(Long paperId, Map<String, Object> rule);
 }

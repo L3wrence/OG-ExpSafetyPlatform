@@ -91,6 +91,22 @@
         meta: { title: '章节详情', permission: 'course:view' },
       },
       {
+        path: 'classrooms/:courseId/exams/:paperId/take',
+        name: 'ClassroomExamTaking',
+        component: () => import('@/views/student/ExamTaking.vue'),
+        meta: { title: '试卷答题', permission: 'exam:take' },
+      },
+      {
+        path: 'classrooms/:courseId/safety-exams',
+        name: 'ClassroomSafetyExamCenter',
+        redirect: (to) => `/classrooms/${to.params.courseId}/learn?module=exam`,
+      },
+      {
+        path: 'safety-exams',
+        name: 'StudentSafetyExamCenter',
+        redirect: '/classrooms',
+      },
+      {
         path: 'student/courses',
         name: 'StudentCourseList',
         redirect: '/classrooms',
@@ -108,7 +124,7 @@
       {
         path: 'student/exams',
         name: 'StudentExamCenter',
-        redirect: '/classrooms?module=exam',
+        redirect: '/classrooms',
       },
       {
         path: 'student/reserve',
@@ -138,6 +154,12 @@
         meta: { title: '课堂详细', role: 'user', permission: 'course:update' },
       },
       {
+        path: 'teacher/courses/:courseId/safety-exams',
+        name: 'TeacherCourseSafetyExamManager',
+        component: () => import('@/views/teacher/SafetyExamManager.vue'),
+        meta: { title: '课堂题库与组卷', role: 'user', permission: 'question:view' },
+      },
+      {
         path: 'teacher/resources',
         name: 'TeacherResourceManagement',
         redirect: '/classrooms',
@@ -150,6 +172,11 @@
       {
         path: 'teacher/exam-papers',
         name: 'TeacherExamPaperManagement',
+        redirect: '/classrooms',
+      },
+      {
+        path: 'teacher/safety-exams',
+        name: 'TeacherSafetyExamManager',
         redirect: '/classrooms',
       },
       {

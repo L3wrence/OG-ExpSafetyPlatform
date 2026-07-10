@@ -140,7 +140,10 @@
         <section v-if="activeStep === 'exam'" class="work-section">
           <div class="section-title">
             <h2>考试管理</h2>
-            <el-button type="primary" :icon="Plus" @click="openExamCreate">新增试卷</el-button>
+            <div class="section-actions">
+              <el-button :icon="Document" @click="router.push(`/teacher/courses/${courseId}/safety-exams`)">题库管理</el-button>
+              <el-button type="primary" :icon="Plus" @click="router.push(`/teacher/courses/${courseId}/safety-exams?tab=papers&create=paper`)">创建试卷</el-button>
+            </div>
           </div>
           <div class="inline-toolbar">
             <el-input v-model="examFilters.keyword" :prefix-icon="Search" clearable placeholder="搜索试卷标题" @keyup.enter="loadExamPapersInline" />
@@ -657,7 +660,7 @@
           <el-form-item label="风险类型"><el-input v-model="reservationExperimentForm.riskTypes" type="textarea" :rows="2" /></el-form-item>
           <el-form-item label="PPE要求"><el-input v-model="reservationExperimentForm.ppeRequirements" type="textarea" :rows="2" /></el-form-item>
           <el-form-item label="前置知识"><el-input v-model="reservationExperimentForm.prerequisiteKnowledge" type="textarea" :rows="2" /></el-form-item>
-          <el-form-item label="HSE要求"><el-input v-model="reservationExperimentForm.safetyRequirement" type="textarea" :rows="3" /></el-form-item>
+          <el-form-item label="安全要求"><el-input v-model="reservationExperimentForm.safetyRequirement" type="textarea" :rows="3" /></el-form-item>
           <el-form-item label="数据记录"><el-input v-model="reservationExperimentForm.dataRecordRequirement" type="textarea" :rows="2" /></el-form-item>
           <el-form-item label="异常处理"><el-input v-model="reservationExperimentForm.abnormalHandling" type="textarea" :rows="2" /></el-form-item>
           <el-form-item label="应急处置"><el-input v-model="reservationExperimentForm.emergencyProcedure" type="textarea" :rows="2" /></el-form-item>
@@ -834,7 +837,7 @@ const qaSaving = ref(false)
 const inviteLoading = ref(false)
 const stepSaving = ref(false)
 const detail = ref(null)
-const activeStep = ref('basic')
+const activeStep = ref(String(route.query.step || 'basic'))
 const classDialogVisible = ref(false)
 const experimentDialogVisible = ref(false)
 const examDialogVisible = ref(false)
@@ -921,7 +924,6 @@ const resourceTypes = [
   { label: '教学视频', value: 'TEACHING_VIDEO' },
   { label: '微课', value: 'MICRO_COURSE' },
   { label: '仪器操作视频', value: 'INSTRUMENT_VIDEO' },
-  { label: 'HSE安全培训视频', value: 'HSE_VIDEO' },
   { label: '设备说明书', value: 'DEVICE_MANUAL' },
   { label: '实验案例', value: 'EXPERIMENT_CASE' },
   { label: '事故案例', value: 'ACCIDENT_CASE' },
@@ -989,10 +991,10 @@ async function loadSupportingData() {
   const [inviteResult, paperResult, reportResult, resourceResult, reservationResult, slotResult] = await Promise.allSettled([
     getCourseInvites(courseId.value),
     getExamPapers({ courseId: courseId.value, pageNum: 1, pageSize: 100, keyword: examFilters.keyword || undefined, status: examFilters.status || undefined }),
-    getPendingReports({ courseId: courseId.value, pageNum: 1, pageSize: 200 }),
+    getPendingReports({ courseId: courseId.value, pageNum: 1, pageSize: 100 }),
     getResources({ courseId: courseId.value, publicFlag: 0, pageNum: 1, pageSize: 100 }),
-    getPendingReservations({ pageNum: 1, pageSize: 200 }),
-    getTimeSlots({ pageNum: 1, pageSize: 200 }),
+    getPendingReservations({ pageNum: 1, pageSize: 100 }),
+    getTimeSlots({ pageNum: 1, pageSize: 100 }),
   ])
   invites.value = inviteResult.status === 'fulfilled' ? (inviteResult.value || []) : []
   examPapers.value = paperResult.status === 'fulfilled' ? (paperResult.value?.records || paperResult.value || []) : []
@@ -1003,7 +1005,7 @@ async function loadSupportingData() {
 }
 
 async function loadReportsInline() {
-  const result = await getPendingReports({ courseId: courseId.value, pageNum: 1, pageSize: 200 })
+  const result = await getPendingReports({ courseId: courseId.value, pageNum: 1, pageSize: 100 })
   pendingReports.value = result?.records || result || []
 }
 
@@ -1044,7 +1046,7 @@ async function loadExamPapersInline() {
 async function loadPendingReservationsInline() {
   reservationLoading.value = true
   try {
-    const result = await getPendingReservations({ pageNum: 1, pageSize: 200 })
+    const result = await getPendingReservations({ pageNum: 1, pageSize: 100 })
     pendingReservations.value = filterCourseReservations(result?.records || result || [])
   } finally {
     reservationLoading.value = false
@@ -1056,7 +1058,7 @@ async function loadTimeSlotsInline() {
   try {
     const result = await getTimeSlots({
       pageNum: 1,
-      pageSize: 200,
+      pageSize: 100,
       date: slotFilters.date || undefined,
       status: slotFilters.status || undefined,
     })

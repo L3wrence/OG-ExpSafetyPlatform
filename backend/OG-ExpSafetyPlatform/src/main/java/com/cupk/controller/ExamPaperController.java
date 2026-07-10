@@ -109,4 +109,11 @@ public class ExamPaperController {
         examPaperService.updateQuestionOrder(id, orders);
         return Result.success();
     }
+
+    /** 智能组卷：按题型、知识点、难度、实验范围抽题后写入试卷 */
+    @RequirePermission("exam:update")
+    @PostMapping("/{id}/smart-assemble")
+    public Result<?> smartAssemble(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return Result.success(examPaperService.smartAssemble(id, body));
+    }
 }

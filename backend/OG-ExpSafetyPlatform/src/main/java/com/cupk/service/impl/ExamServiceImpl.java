@@ -101,8 +101,11 @@ public class ExamServiceImpl implements ExamService {
             item.put("endTime", paper.getEndTime());
             item.put("attemptLimit", limit);
             item.put("usedAttempts", usedAttempts);
-            item.put("remainingAttempts", Math.max(limit - usedAttempts, 0));
-            if (usedAttempts < limit) {
+            ExamRecord inProgress = findInProgressRecord(studentId, paper.getId());
+            item.put("inProgress", inProgress != null);
+            item.put("recordId", inProgress == null ? null : inProgress.getId());
+            item.put("remainingAttempts", inProgress != null ? Math.max(limit - usedAttempts + 1, 1) : Math.max(limit - usedAttempts, 0));
+            if (inProgress != null || usedAttempts < limit) {
                 records.add(item);
             }
         }
@@ -336,11 +339,24 @@ public class ExamServiceImpl implements ExamService {
     }
 
     @Override
-    public Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status) {
+    public Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status, Long courseId) {
         Page<ExamRecord> page = new Page<>(pageNum, pageSize);
+        List<Long> paperIds = null;
+        if (courseId != null) {
+            paperIds = examPaperMapper.selectList(new LambdaQueryWrapper<ExamPaper>()
+                    .select(ExamPaper::getId)
+                    .eq(ExamPaper::getCourseId, courseId)).stream().map(ExamPaper::getId).toList();
+            if (paperIds.isEmpty()) {
+                page.setRecords(Collections.emptyList());
+                page.setTotal(0);
+                return page;
+            }
+        }
         LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ExamRecord::getStudentId, UserContext.getUserId())
                .eq(status != null && !status.isEmpty(), ExamRecord::getStatus, status)
+               .ne(status == null || status.isEmpty(), ExamRecord::getStatus, ExamRecordStatus.IN_PROGRESS.name())
+               .in(paperIds != null, ExamRecord::getPaperId, paperIds)
                .orderByDesc(ExamRecord::getCreateTime);
         return examRecordMapper.selectPage(page, wrapper);
     }

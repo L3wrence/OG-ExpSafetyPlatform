@@ -387,28 +387,6 @@ public interface PortalMapper {
                                               @Param("limit") Integer limit);
 
     @Select("""
-        SELECT sk.id, sk.knowledge_point AS title, sk.content AS description, 'knowledge' AS type,
-               '/classrooms' AS path
-          FROM t_safety_knowledge sk
-          LEFT JOIN t_experiment e ON e.id = sk.experiment_id AND e.deleted = 0
-          LEFT JOIN t_lab_course c ON c.id = e.course_id AND c.deleted = 0
-         WHERE sk.deleted = 0 AND sk.status = 1
-           AND (#{teacherId} IS NULL OR c.teacher_id = #{teacherId})
-           AND (#{studentId} IS NULL OR sk.experiment_id IS NULL OR EXISTS (
-                 SELECT 1 FROM t_course_student cs
-                  WHERE cs.course_id = c.id AND cs.student_id = #{studentId}
-                    AND cs.status = 1 AND cs.deleted = 0))
-           AND (sk.knowledge_point LIKE CONCAT('%', #{keyword}, '%') OR sk.content LIKE CONCAT('%', #{keyword}, '%'))
-         ORDER BY sk.update_time DESC
-         LIMIT #{limit}
-        """)
-    List<Map<String, Object>> searchKnowledge(@Param("keyword") String keyword,
-                                              @Param("teacherId") Long teacherId,
-                                              @Param("studentId") Long studentId,
-                                              @Param("roleCode") String roleCode,
-                                              @Param("limit") Integer limit);
-
-    @Select("""
         SELECT ep.id, ep.title, 'exam' AS type,
                DATE_FORMAT(ep.start_time, '%Y-%m-%d %H:%i:%s') AS start_time,
                DATE_FORMAT(ep.end_time, '%Y-%m-%d %H:%i:%s') AS end_time,

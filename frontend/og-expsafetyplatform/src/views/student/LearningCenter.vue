@@ -174,7 +174,7 @@
         <el-tabs v-model="examTab" @tab-change="loadExamTab">
           <el-tab-pane label="可参加考核" name="available">
             <div class="toolbar">
-              <el-input :model-value="courseId" disabled placeholder="当前课堂ID" />
+              <el-input :model-value="courseTitle" disabled placeholder="当前课堂" />
               <el-button type="primary" :icon="Search" @click="loadAvailableExams">查询</el-button>
             </div>
             <el-table v-loading="examLoading" :data="availableExams" stripe>
@@ -186,14 +186,18 @@
               <el-table-column prop="remainingAttempts" label="剩余次数" width="100" />
               <el-table-column label="操作" width="130" fixed="right">
                 <template #default="{ row }">
-                  <el-button type="primary" :icon="VideoPlay" @click="startPaper(row)">开始考核</el-button>
+                  <el-button type="primary" :icon="VideoPlay" @click="router.push(`/classrooms/${courseId}/exams/${row.id}/take`)">
+                    {{ row.inProgress ? '继续答题' : '开始考核' }}
+                  </el-button>
                 </template>
               </el-table-column>
             </el-table>
           </el-tab-pane>
           <el-tab-pane label="考核记录" name="records">
             <el-table v-loading="examLoading" :data="examRecords" stripe>
-              <el-table-column prop="paperId" label="试卷ID" width="90" />
+              <el-table-column label="试卷" min-width="160">
+                <template #default="{ row }">{{ examPaperTitle(row.paperId) }}</template>
+              </el-table-column>
               <el-table-column prop="totalScore" label="得分" width="90" />
               <el-table-column label="状态" width="120">
                 <template #default="{ row }"><el-tag :type="examStatus(row.status).type">{{ examStatus(row.status).label }}</el-tag></template>
@@ -347,39 +351,13 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="examVisible" :title="examSession.paperTitle || '安全知识考核'" width="860px" top="4vh">
-      <div class="exam-meta">
-        <el-tag type="primary">剩余 {{ countdownText }}</el-tag>
-        <el-tag v-if="lastSaveTime">已保存 {{ lastSaveTime }}</el-tag>
-      </div>
-      <div class="question-list">
-        <article v-for="(question, index) in examSession.questions" :key="question.id" class="question-box">
-          <div class="question-title">
-            <strong>{{ index + 1 }}. {{ question.content }}</strong>
-            <el-tag>{{ questionTypeLabel(question.type) }} / {{ question.score || 0 }} 分</el-tag>
-          </div>
-          <el-radio-group v-if="['SINGLE', 'JUDGE'].includes(question.type)" v-model="answers[question.id]">
-            <el-radio v-for="option in normalizedOptions(question)" :key="option.value" :label="option.value">{{ option.label }}</el-radio>
-          </el-radio-group>
-          <el-checkbox-group v-else-if="question.type === 'MULTIPLE'" v-model="answers[question.id]">
-            <el-checkbox v-for="option in normalizedOptions(question)" :key="option.value" :label="option.value">{{ option.label }}</el-checkbox>
-          </el-checkbox-group>
-          <el-input v-else v-model="answers[question.id]" type="textarea" :rows="3" />
-        </article>
-      </div>
-      <template #footer>
-        <el-button @click="saveCurrentAnswers">保存</el-button>
-        <el-button @click="examVisible = false">稍后提交</el-button>
-        <el-button type="primary" :loading="examSubmitting" @click="submitCurrentExam">提交试卷</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   ArrowDown,
   ArrowUp,
@@ -406,7 +384,7 @@ import { askAi } from '@/api/ai'
 import { getCourseDetail } from '@/api/course'
 import { getExperimentDetail } from '@/api/experiment'
 import { createDiscussion, getDiscussionDetail, getDiscussions, replyDiscussion } from '@/api/discussion'
-import { getAvailableExams, getExamRecords, getWrongQuestions, saveExamAnswers, startExam, submitExam } from '@/api/exam'
+import { getAvailableExams, getExamRecords, getWrongQuestions } from '@/api/exam'
 import { getLearningPath } from '@/api/learningTask'
 import { getMyLearningRecords } from '@/api/learningRecord'
 import { createReport, getMyReports, submitReport, updateReport } from '@/api/report'
@@ -445,18 +423,11 @@ const discussionForm = reactive({ experimentId: null, title: '', content: '', is
 const reportSaving = ref(false)
 const reportSubmitting = ref(false)
 const reportForm = reactive({ id: null, title: '', content: '', fileUrl: '', status: '' })
-const examTab = ref('available')
+const examTab = ref(String(route.query.examTab || 'available'))
 const examLoading = ref(false)
 const availableExams = ref([])
 const examRecords = ref([])
 const wrongQuestions = ref([])
-const examVisible = ref(false)
-const examSubmitting = ref(false)
-const examSession = reactive({ recordId: null, paperId: null, paperTitle: '', questions: [], endTime: '' })
-const answers = reactive({})
-const remainingSeconds = ref(0)
-const lastSaveTime = ref('')
-let countdownTimer = null
 const resourceSaving = ref(false)
 const resourceFile = ref(null)
 const resourceForm = reactive({ experimentId: null, title: '', resourceType: 'DOCUMENT', url: '' })
@@ -536,14 +507,11 @@ const pendingTasks = computed(() => {
   })
   return result
 })
-const countdownText = computed(() => {
-  const min = Math.floor(remainingSeconds.value / 60)
-  const sec = remainingSeconds.value % 60
-  return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
-})
-
 watch(() => route.query.module, (value) => {
   if (value && value !== activeModule.value) activeModule.value = String(value)
+})
+watch(() => route.query.examTab, (value) => {
+  if (value) examTab.value = String(value)
 })
 
 watch(activeModule, () => reloadModule())
@@ -554,8 +522,6 @@ watch(selectedExperimentId, async (value) => {
 })
 
 onMounted(loadClassroom)
-onUnmounted(stopExamTimer)
-
 async function loadClassroom() {
   courseDetail.value = await getCourseDetail(courseId.value)
   if (experiments.value.length) {
@@ -842,11 +808,8 @@ async function loadAvailableExams() {
 async function loadExamRecords() {
   examLoading.value = true
   try {
-    const result = await getExamRecords({ pageNum: 1, pageSize: 100 })
-    examRecords.value = (result?.records || []).filter((item) => {
-      const paper = availableExams.value.find((exam) => exam.id === item.paperId)
-      return !paper || Number(paper.courseId || courseId.value) === Number(courseId.value)
-    })
+    const result = await getExamRecords({ pageNum: 1, pageSize: 100, courseId: courseId.value })
+    examRecords.value = (result?.records || []).filter((item) => item.status !== 'IN_PROGRESS')
   } finally {
     examLoading.value = false
   }
@@ -862,66 +825,9 @@ async function loadWrongQuestions() {
   }
 }
 
-async function startPaper(paper) {
-  const result = await startExam(paper.id)
-  if (!result) return
-  Object.assign(examSession, {
-    recordId: result.recordId,
-    paperId: result.paperId || paper.id,
-    paperTitle: result.paperTitle || paper.title,
-    questions: result.questions || [],
-    endTime: result.endTime,
-  })
-  Object.keys(answers).forEach((key) => delete answers[key])
-  examSession.questions.forEach((question) => {
-    const saved = result?.answers?.[question.id] ?? result?.answers?.[String(question.id)]
-    answers[question.id] = question.type === 'MULTIPLE' ? String(saved || '').split(',').filter(Boolean) : (saved || '')
-  })
-  startExamTimer(result.endTime)
-  examVisible.value = true
-}
-
-async function saveCurrentAnswers() {
-  if (!examSession.recordId) return
-  await saveExamAnswers(examSession.recordId, { answers: answerPayload() })
-  lastSaveTime.value = new Date().toLocaleTimeString()
-  ElMessage.success('答案已保存')
-}
-
-async function submitCurrentExam() {
-  await ElMessageBox.confirm('确认提交安全知识考核吗？', '提交确认', { type: 'warning' })
-  examSubmitting.value = true
-  try {
-    const result = await submitExam(examSession.recordId, { answers: answerPayload() })
-    stopExamTimer()
-    examVisible.value = false
-    ElMessageBox.alert(`得分：${result?.totalScore || 0}，结果：${result?.passed ? '通过' : '未通过'}`, '提交成功', { type: result?.passed ? 'success' : 'warning' })
-    await Promise.allSettled([loadAvailableExams(), loadExamRecords(), loadTaskPaths()])
-  } finally {
-    examSubmitting.value = false
-  }
-}
-
-function answerPayload() {
-  return examSession.questions.map((question) => ({
-    questionId: question.id,
-    answer: Array.isArray(answers[question.id]) ? answers[question.id].join(',') : answers[question.id],
-  }))
-}
-
-function startExamTimer(endTime) {
-  stopExamTimer()
-  const end = new Date(endTime).getTime()
-  const tick = () => {
-    remainingSeconds.value = Math.max(0, Math.floor((end - Date.now()) / 1000))
-  }
-  tick()
-  countdownTimer = window.setInterval(tick, 1000)
-}
-
-function stopExamTimer() {
-  if (countdownTimer) window.clearInterval(countdownTimer)
-  countdownTimer = null
+function examPaperTitle(paperId) {
+  const paper = availableExams.value.find((item) => Number(item.id) === Number(paperId))
+  return paper?.title || `试卷 ${paperId || '-'}`
 }
 
 function onResourceFile(file) {
@@ -1026,7 +932,6 @@ function taskTypeLabel(type) {
   return {
     READ_RESOURCE: '阅读资源',
     WATCH_VIDEO: '观看视频',
-    SAFETY_KNOWLEDGE: '安全知识',
     PRACTICE: '练习',
     EXAM: '安全考核',
     REPORT: '报告提交',
@@ -1039,7 +944,7 @@ function taskTargetModule(task) {
   const type = String(task?.taskType || '').toUpperCase()
   const name = String(task?.taskName || '')
   if (['REPORT', 'SUBMIT_REPORT'].includes(type) || name.includes('报告')) return 'report'
-  if (['EXAM', 'PRACTICE', 'SAFETY_KNOWLEDGE'].includes(type) || name.includes('考核') || name.includes('考试')) return 'exam'
+  if (['EXAM', 'PRACTICE'].includes(type) || name.includes('考核') || name.includes('考试')) return 'exam'
   if (name.includes('预约')) return 'reservation'
   if (['READ_RESOURCE', 'WATCH_VIDEO'].includes(type)) return 'chapter'
   return 'chapters'
@@ -1066,26 +971,6 @@ function examStatus(status) {
   }[status] || { label: status || '未知', type: 'info' }
 }
 
-function normalizedOptions(question) {
-  if (question.type === 'JUDGE') return [{ value: 'TRUE', label: '正确' }, { value: 'FALSE', label: '错误' }]
-  try {
-    const parsed = typeof question.options === 'string' ? JSON.parse(question.options || '[]') : question.options
-    if (Array.isArray(parsed)) return parsed.map((item, index) => optionFromValue(item, index))
-    return Object.entries(parsed || {}).map(([value, label]) => ({ value, label: `${value}. ${label}` }))
-  } catch {
-    return String(question.options || '').split(/\n|;/).filter(Boolean).map((item, index) => optionFromValue(item, index))
-  }
-}
-
-function optionFromValue(item, index) {
-  if (typeof item === 'object') return { value: item.value || item.key || String.fromCharCode(65 + index), label: item.label || item.text || item.content }
-  const value = String(item).match(/^([A-Z])[\.\、:：]/)?.[1] || String.fromCharCode(65 + index)
-  return { value, label: String(item) }
-}
-
-function questionTypeLabel(type) {
-  return { SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', SHORT_ANSWER: '简答题' }[type] || type || '题目'
-}
 </script>
 
 <style scoped>
@@ -1153,10 +1038,6 @@ function questionTypeLabel(type) {
 .record-summary div { background: #f8fafc; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; }
 .record-summary strong { display: block; color: #13233a; font-size: 24px; }
 .record-summary span { color: #667085; font-size: 12px; }
-.exam-meta { display: flex; gap: 10px; margin-bottom: 12px; }
-.question-list { max-height: 58vh; overflow: auto; }
-.question-box { border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-.question-title { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: #13233a; }
 @media (max-width: 1100px) {
   .classroom-page { height: auto; min-height: 0; overflow: visible; }
   .classroom-page, .discussion-grid, .reservation-grid { grid-template-columns: 1fr; }

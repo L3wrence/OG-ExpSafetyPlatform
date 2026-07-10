@@ -15,7 +15,6 @@ public class LearningTaskCreateDTO {
     @NotBlank(message = "任务类型不能为空")
     private String taskType;
     private Long targetResourceId;
-    private Long targetKnowledgeId;
     private Long targetPaperId;
     private Long prerequisiteTaskId;
     private Integer requiredFlag = 1;

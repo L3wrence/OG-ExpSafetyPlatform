@@ -92,9 +92,10 @@ public class ExamController {
     @RequirePermission("exam:take")
     @GetMapping("/records")
     public Result<?> myRecords(@RequestParam(defaultValue = "1") int pageNum,
-                                @RequestParam(defaultValue = "10") int pageSize,
-                                @RequestParam(required = false) String status) {
-        return Result.success(examService.getMyRecords(pageNum, pageSize, status));
+                               @RequestParam(defaultValue = "10") int pageSize,
+                               @RequestParam(required = false) String status,
+                               @RequestParam(required = false) Long courseId) {
+        return Result.success(examService.getMyRecords(pageNum, pageSize, status, courseId));
     }
 
     /** 考试详情（含每题答题） */

@@ -145,7 +145,6 @@ const resourceTypes = [
   { label: '教学视频', value: 'TEACHING_VIDEO' },
   { label: '微课', value: 'MICRO_COURSE' },
   { label: '仪器操作视频', value: 'INSTRUMENT_VIDEO' },
-  { label: 'HSE安全培训视频', value: 'HSE_VIDEO' },
   { label: '设备说明书', value: 'DEVICE_MANUAL' },
   { label: '实验案例', value: 'EXPERIMENT_CASE' },
   { label: '事故案例', value: 'ACCIDENT_CASE' },

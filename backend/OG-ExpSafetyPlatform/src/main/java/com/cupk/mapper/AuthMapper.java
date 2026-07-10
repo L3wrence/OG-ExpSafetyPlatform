@@ -62,7 +62,6 @@ public interface AuthMapper {
             SELECT 'reservation:view' UNION ALL
             SELECT 'report:view' UNION ALL
             SELECT 'report:submit' UNION ALL
-            SELECT 'safety:view' UNION ALL
             SELECT 'ai:ask' UNION ALL
             SELECT 'teacher-certification:apply' UNION ALL
             SELECT 'resource-submission:create'
@@ -87,10 +86,6 @@ public interface AuthMapper {
             SELECT 'resource:create' UNION ALL
             SELECT 'resource:update' UNION ALL
             SELECT 'resource:delete' UNION ALL
-            SELECT 'safety:view' UNION ALL
-            SELECT 'safety:create' UNION ALL
-            SELECT 'safety:update' UNION ALL
-            SELECT 'safety:delete' UNION ALL
             SELECT 'question:view' UNION ALL
             SELECT 'question:create' UNION ALL
             SELECT 'question:update' UNION ALL

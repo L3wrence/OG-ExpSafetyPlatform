@@ -7,18 +7,12 @@ import com.cupk.interceptor.UserContext;
 import com.cupk.mapper.AiChatRecordMapper;
 import com.cupk.mapper.CourseStudentMapper;
 import com.cupk.mapper.ExperimentMapper;
-import com.cupk.mapper.HseWrongQuestionMapper;
 import com.cupk.mapper.LabCourseMapper;
-import com.cupk.mapper.QuestionMapper;
-import com.cupk.mapper.SafetyKnowledgeMapper;
 import com.cupk.mapper.TeachingResourceMapper;
 import com.cupk.pojo.AiChatRecord;
 import com.cupk.pojo.CourseStudent;
 import com.cupk.pojo.Experiment;
-import com.cupk.pojo.HseWrongQuestion;
 import com.cupk.pojo.LabCourse;
-import com.cupk.pojo.Question;
-import com.cupk.pojo.SafetyKnowledge;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.service.AiChatService;
 import org.springframework.stereotype.Service;
@@ -30,7 +24,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,30 +39,21 @@ public class AiChatServiceImpl implements AiChatService {
     );
 
     private final AiChatRecordMapper aiChatRecordMapper;
-    private final QuestionMapper questionMapper;
     private final CourseStudentMapper courseStudentMapper;
     private final ExperimentMapper experimentMapper;
     private final LabCourseMapper courseMapper;
-    private final SafetyKnowledgeMapper safetyKnowledgeMapper;
     private final TeachingResourceMapper resourceMapper;
-    private final HseWrongQuestionMapper wrongQuestionMapper;
 
     public AiChatServiceImpl(AiChatRecordMapper aiChatRecordMapper,
-                             QuestionMapper questionMapper,
                              CourseStudentMapper courseStudentMapper,
                              ExperimentMapper experimentMapper,
                              LabCourseMapper courseMapper,
-                             SafetyKnowledgeMapper safetyKnowledgeMapper,
-                             TeachingResourceMapper resourceMapper,
-                             HseWrongQuestionMapper wrongQuestionMapper) {
+                             TeachingResourceMapper resourceMapper) {
         this.aiChatRecordMapper = aiChatRecordMapper;
-        this.questionMapper = questionMapper;
         this.courseStudentMapper = courseStudentMapper;
         this.experimentMapper = experimentMapper;
         this.courseMapper = courseMapper;
-        this.safetyKnowledgeMapper = safetyKnowledgeMapper;
         this.resourceMapper = resourceMapper;
-        this.wrongQuestionMapper = wrongQuestionMapper;
     }
 
     @Override
@@ -79,19 +63,15 @@ public class AiChatServiceImpl implements AiChatService {
             throw new BusinessException(400, "问题不能为空");
         }
         AiScope scope = resolveScope(experimentId);
-        List<SafetyKnowledge> matchedKnowledge = searchSafetyKnowledge(question, scope);
         List<TeachingResource> matchedResources = searchResources(question, scope);
-        List<HseWrongQuestion> wrongQuestions = "ERROR_EXPLAIN".equals(normalizedScene)
-                ? searchOwnWrongQuestions(question, scope)
-                : List.of();
-        List<String> relatedKnowledge = matchedKnowledge.stream()
-                .map(SafetyKnowledge::getKnowledgePoint)
+        List<String> relatedKnowledge = matchedResources.stream()
+                .map(TeachingResource::getKnowledgePoint)
                 .filter(StringUtils::hasText)
                 .distinct()
                 .limit(5)
                 .toList();
 
-        String answer = buildAnswer(normalizedScene, question, matchedKnowledge, matchedResources, wrongQuestions);
+        String answer = buildAnswer(normalizedScene, question, matchedResources);
 
         AiChatRecord record = new AiChatRecord();
         record.setUserId(UserContext.userId());
@@ -107,7 +87,7 @@ public class AiChatServiceImpl implements AiChatService {
         result.put("id", record.getId());
         result.put("answer", answer);
         result.put("relatedKnowledge", relatedKnowledge);
-        result.put("knowledgeBaseMatchCount", matchedKnowledge.size() + matchedResources.size());
+        result.put("knowledgeBaseMatchCount", matchedResources.size());
         result.put("scene", normalizedScene);
         result.put("disclaimer", DISCLAIMER);
         return result;
@@ -138,24 +118,6 @@ public class AiChatServiceImpl implements AiChatService {
         aiChatRecordMapper.updateById(record);
     }
 
-    private List<SafetyKnowledge> searchSafetyKnowledge(String query, AiScope scope) {
-        if (!StringUtils.hasText(query) || scope.experimentIds().isEmpty()) {
-            return List.of();
-        }
-        Map<Long, SafetyKnowledge> result = new LinkedHashMap<>();
-        for (String keyword : keywords(query)) {
-            LambdaQueryWrapper<SafetyKnowledge> wrapper = new LambdaQueryWrapper<>();
-            wrapper.in(SafetyKnowledge::getExperimentId, scope.experimentIds())
-                    .eq(SafetyKnowledge::getStatus, 1)
-                    .and(w -> w.like(SafetyKnowledge::getContent, keyword)
-                            .or().like(SafetyKnowledge::getKnowledgePoint, keyword)
-                            .or().like(SafetyKnowledge::getRiskType, keyword))
-                    .last("LIMIT 10");
-            safetyKnowledgeMapper.selectList(wrapper).forEach(item -> result.putIfAbsent(item.getId(), item));
-        }
-        return new ArrayList<>(result.values());
-    }
-
     private List<TeachingResource> searchResources(String query, AiScope scope) {
         if (!StringUtils.hasText(query) || scope.courseIds().isEmpty()) {
             return List.of();
@@ -176,31 +138,6 @@ public class AiChatServiceImpl implements AiChatService {
         return new ArrayList<>(result.values());
     }
 
-    private List<HseWrongQuestion> searchOwnWrongQuestions(String query, AiScope scope) {
-        if (!UserContext.isLearner() || !StringUtils.hasText(query) || scope.experimentIds().isEmpty()) {
-            return List.of();
-        }
-        Map<Long, HseWrongQuestion> result = new LinkedHashMap<>();
-        for (String keyword : keywords(query)) {
-            List<Question> scopedQuestions = questionMapper.selectList(new LambdaQueryWrapper<Question>()
-                    .in(Question::getExperimentId, scope.experimentIds())
-                    .and(w -> w.like(Question::getContent, keyword)
-                            .or().like(Question::getKnowledgePoint, keyword)
-                            .or().like(Question::getAnalysis, keyword))
-                    .last("LIMIT 20"));
-            List<Long> questionIds = scopedQuestions.stream().map(Question::getId).toList();
-            if (questionIds.isEmpty()) {
-                continue;
-            }
-            wrongQuestionMapper.selectList(new LambdaQueryWrapper<HseWrongQuestion>()
-                            .eq(HseWrongQuestion::getStudentId, UserContext.userId())
-                            .in(HseWrongQuestion::getQuestionId, questionIds)
-                            .last("LIMIT 10"))
-                    .forEach(item -> result.putIfAbsent(item.getId(), item));
-        }
-        return new ArrayList<>(result.values());
-    }
-
     private Set<String> keywords(String query) {
         return List.of(query.split("[,，。；;、\\s]+")).stream()
                 .map(String::trim)
@@ -211,9 +148,7 @@ public class AiChatServiceImpl implements AiChatService {
 
     private String buildAnswer(String scene,
                                String question,
-                               List<SafetyKnowledge> matchedKnowledge,
-                               List<TeachingResource> matchedResources,
-                               List<HseWrongQuestion> wrongQuestions) {
+                               List<TeachingResource> matchedResources) {
         StringBuilder answer = new StringBuilder();
         answer.append(DISCLAIMER).append("\n");
         answer.append("场景：").append(SCENE_NAMES.getOrDefault(scene, "通用实验安全辅助")).append("\n\n");
@@ -221,9 +156,9 @@ public class AiChatServiceImpl implements AiChatService {
             answer.append("我不能替代教师进行正式评分、预约审核或实验准入判断。请在系统对应流程中提交材料，由教师或管理员按规程处理。").append("\n\n");
         }
         switch (scene) {
-            case "ERROR_EXPLAIN" -> appendErrorExplanation(answer, question, wrongQuestions, matchedKnowledge);
-            case "REPORT_SUGGEST" -> appendReportSuggestion(answer, question, matchedKnowledge, matchedResources);
-            default -> appendSafetyAnswer(answer, question, matchedKnowledge, matchedResources);
+            case "ERROR_EXPLAIN" -> appendErrorExplanation(answer, question, matchedResources);
+            case "REPORT_SUGGEST" -> appendReportSuggestion(answer, question, matchedResources);
+            default -> appendSafetyAnswer(answer, question, matchedResources);
         }
         answer.append("\n边界说明：本助手不提供正在使用的正式题库标准答案，不自动写完整实验报告，也不修改成绩、预约或准入状态。");
         return answer.toString();
@@ -231,63 +166,32 @@ public class AiChatServiceImpl implements AiChatService {
 
     private void appendSafetyAnswer(StringBuilder answer,
                                     String question,
-                                    List<SafetyKnowledge> matchedKnowledge,
                                     List<TeachingResource> matchedResources) {
         answer.append("针对问题：").append(question).append("\n");
-        if (matchedKnowledge.isEmpty() && matchedResources.isEmpty()) {
-            answer.append("建议先核对实验指导书、安全知识库和现场教师要求，再进行实验操作。");
+        if (matchedResources.isEmpty()) {
+            answer.append("建议先核对实验指导书、课堂资料和现场教师要求，再进行实验操作。");
             return;
         }
-        answer.append("可参考以下安全知识点：").append("\n");
-        for (int i = 0; i < Math.min(3, matchedKnowledge.size()); i++) {
-            SafetyKnowledge item = matchedKnowledge.get(i);
-            answer.append(i + 1).append(". ")
-                    .append(valueOrDefault(item.getKnowledgePoint(), item.getContent()))
-                    .append("\n");
-            if (StringUtils.hasText(item.getContent())) {
-                answer.append("   说明：").append(limitText(item.getContent(), 180)).append("\n");
-            }
-        }
+        answer.append("可先回看匹配到的课堂资源，再结合教师要求确认操作边界。").append("\n");
         appendResourceHints(answer, matchedResources);
     }
 
     private void appendErrorExplanation(StringBuilder answer,
                                         String question,
-                                        List<HseWrongQuestion> wrongQuestions,
-                                        List<SafetyKnowledge> matchedKnowledge) {
+                                        List<TeachingResource> matchedResources) {
         answer.append("错题/疑问：").append(question).append("\n");
-        HseWrongQuestion bestMatch = wrongQuestions.stream().filter(Objects::nonNull).findFirst().orElse(null);
-        if (bestMatch == null) {
-            answer.append("没有找到与你本人已提交错题直接匹配的记录。建议先在错题练习中定位题目，再回到对应知识点复习；我不会直接给出正式题库标准答案。");
-            return;
-        }
-        answer.append("关联知识点：").append(valueOrDefault(bestMatch.getKnowledgePoint(), "未标注")).append("\n");
-        answer.append("复习方向：先确认该知识点的适用条件、风险后果和实验规程要求，再对照自己的作答过程找出误判环节。").append("\n");
-        matchedKnowledge.stream()
-                .filter(item -> Objects.equals(item.getId(), bestMatch.getKnowledgeId())
-                        || Objects.equals(item.getKnowledgePoint(), bestMatch.getKnowledgePoint()))
-                .findFirst()
-                .ifPresent(item -> answer.append("知识提示：").append(limitText(item.getContent(), 220)).append("\n"));
+        answer.append("复习方向：先定位题目涉及的实验步骤、设备状态和风险后果，再对照课堂资料与教师讲解找出误判环节。").append("\n");
+        appendResourceHints(answer, matchedResources);
     }
 
     private void appendReportSuggestion(StringBuilder answer,
                                         String question,
-                                        List<SafetyKnowledge> matchedKnowledge,
                                         List<TeachingResource> matchedResources) {
         answer.append("报告改进方向：").append(question).append("\n");
         answer.append("1. 检查是否缺少实验目的、原理、关键风险和必要 PPE 说明。").append("\n");
         answer.append("2. 对照教师模板补齐数据记录、计算过程、误差来源和安全反思。").append("\n");
         answer.append("3. 对异常数据只给分析方向和证据要求，不编造实验结果。").append("\n");
         answer.append("4. 结论应回应实验目标，并说明结果可靠性和改进空间。");
-        if (!matchedKnowledge.isEmpty()) {
-            answer.append("\n可补充的安全知识点：")
-                    .append(matchedKnowledge.stream()
-                            .map(SafetyKnowledge::getKnowledgePoint)
-                            .filter(StringUtils::hasText)
-                            .distinct()
-                            .limit(3)
-                            .collect(Collectors.joining("、")));
-        }
         appendResourceHints(answer, matchedResources);
     }
 

@@ -63,13 +63,6 @@ public class LearningTaskController {
         return Result.success();
     }
 
-    @PostMapping("/safety-knowledge/{knowledgeId}/complete")
-    @RequirePermission("safety:view")
-    public Result<Void> completeSafetyKnowledge(@PathVariable Long knowledgeId) {
-        learningTaskService.completeSafetyKnowledge(knowledgeId);
-        return Result.success();
-    }
-
     @GetMapping("/experiments/{experimentId}/distribution")
     @RequirePermission("experiment:view")
     public Result<List<LearningTaskDistributionVO>> distribution(@PathVariable Long experimentId) {

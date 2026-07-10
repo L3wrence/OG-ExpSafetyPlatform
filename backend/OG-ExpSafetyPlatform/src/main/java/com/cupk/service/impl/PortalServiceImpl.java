@@ -129,7 +129,6 @@ public class PortalServiceImpl implements PortalService {
         portalMapper.searchCourses(keyword, teacherId, studentId, roleCode, eachLimit).forEach(row -> result.add(toSearch(row)));
         portalMapper.searchExperiments(keyword, teacherId, studentId, roleCode, eachLimit).forEach(row -> result.add(toSearch(row)));
         portalMapper.searchResources(keyword, teacherId, studentId, roleCode, eachLimit).forEach(row -> result.add(toSearch(row)));
-        portalMapper.searchKnowledge(keyword, teacherId, studentId, roleCode, eachLimit).forEach(row -> result.add(toSearch(row)));
         portalMapper.searchNotices(keyword, roleCode, eachLimit).forEach(row -> result.add(toSearch(row)));
         return result.stream().limit(limit(limit)).toList();
     }

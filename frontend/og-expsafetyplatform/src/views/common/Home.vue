@@ -16,13 +16,13 @@
     <section class="portal-toolbar">
       <div>
         <h1>知识检索</h1>
-        <p>搜索课程、实验、资源和安全知识，把学习任务直接接到当前路径。</p>
+        <p>搜索课程、实验和资源，把学习任务直接接到当前路径。</p>
       </div>
       <div class="search-box">
         <el-input
           v-model="keyword"
           clearable
-          placeholder="搜索课程、实验、资源、安全知识"
+          placeholder="搜索课程、实验、资源"
           :prefix-icon="Search"
           @keyup.enter="doSearch"
         />
@@ -393,7 +393,7 @@ function typeLabel(type) {
     report: '报告',
     admission: '准入',
     resource: '资源',
-    knowledge: '安全知识',
+    knowledge: '知识点',
     notice: '公告',
   }[type] || type || '结果'
 }

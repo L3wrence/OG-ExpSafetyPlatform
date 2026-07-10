@@ -59,7 +59,7 @@ public class ResourceServiceImpl implements ResourceService {
     ));
     private static final List<String> RESOURCE_TYPES = List.of(
             "GUIDE", "LECTURE", "PPT", "TEACHING_VIDEO", "MICRO_COURSE", "INSTRUMENT_VIDEO",
-            "HSE_VIDEO", "DEVICE_MANUAL", "EXPERIMENT_CASE", "ACCIDENT_CASE", "EMERGENCY_PROCESS",
+            "DEVICE_MANUAL", "EXPERIMENT_CASE", "ACCIDENT_CASE", "EMERGENCY_PROCESS",
             "REPORT_TEMPLATE", "REFERENCE", "EXTERNAL_COURSE", "VIRTUAL_SIMULATION",
             "DOCUMENT", "IMAGE", "VIDEO", "AUDIO", "LINK", "FILE"
     );

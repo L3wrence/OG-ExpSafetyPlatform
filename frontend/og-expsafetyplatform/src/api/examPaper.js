@@ -31,3 +31,11 @@ export function addPaperQuestions(id, data) {
 export function removePaperQuestion(id, questionId) {
   return request.delete(`/exams/papers/${id}/questions/${questionId}`)
 }
+
+export function reorderPaperQuestions(id, data) {
+  return request.put(`/exams/papers/${id}/questions/order`, data)
+}
+
+export function smartAssemblePaper(id, data) {
+  return request.post(`/exams/papers/${id}/smart-assemble`, data)
+}

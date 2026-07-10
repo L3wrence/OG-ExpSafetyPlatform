@@ -27,7 +27,7 @@ import java.util.*;
 @Service
 public class LearningTaskServiceImpl implements LearningTaskService {
     private static final Set<String> TASK_TYPES = Set.of(
-            "READ_RESOURCE", "WATCH_VIDEO", "SAFETY_KNOWLEDGE", "PRACTICE", "EXAM", "CHECKLIST"
+            "READ_RESOURCE", "WATCH_VIDEO", "PRACTICE", "EXAM", "CHECKLIST"
     );
 
     private final LearningTaskMapper taskMapper;
@@ -166,31 +166,13 @@ public class LearningTaskServiceImpl implements LearningTaskService {
 
     @Override
     @Transactional
-    public void completeSafetyKnowledge(Long knowledgeId) {
-        AccessUtil.requireStudent();
-        List<LearningTask> tasks = taskMapper.selectList(new LambdaQueryWrapper<LearningTask>()
-                .eq(LearningTask::getTargetKnowledgeId, knowledgeId)
-                .eq(LearningTask::getTaskType, "SAFETY_KNOWLEDGE")
-                .eq(LearningTask::getStatus, 1));
-        for (LearningTask task : tasks) {
-            assertStudentInCourse(task.getCourseId());
-            List<LearningTask> experimentTasks = listActiveTasks(task.getExperimentId());
-            LearningTaskVO vo = toStudentVO(task, UserContext.userId(), experimentTasks);
-            if (Boolean.TRUE.equals(vo.getOpened()) && !Boolean.TRUE.equals(vo.getLocked())) {
-                completeRecord(task.getId(), UserContext.userId(), "SAFETY_KNOWLEDGE");
-            }
-        }
-    }
-
-    @Override
-    @Transactional
     public void syncResourceCompleted(Long studentId, Long resourceId) {
         if (studentId == null || resourceId == null) {
             return;
         }
         List<LearningTask> tasks = taskMapper.selectList(new LambdaQueryWrapper<LearningTask>()
                 .eq(LearningTask::getTargetResourceId, resourceId)
-                .in(LearningTask::getTaskType, "READ_RESOURCE", "WATCH_VIDEO", "SAFETY_KNOWLEDGE")
+                .in(LearningTask::getTaskType, "READ_RESOURCE", "WATCH_VIDEO")
                 .eq(LearningTask::getStatus, 1));
         for (LearningTask task : tasks) {
             completeRecord(task.getId(), studentId, task.getTaskType());
@@ -302,11 +284,7 @@ public class LearningTaskServiceImpl implements LearningTaskService {
     }
 
     private boolean isCompleted(LearningTask task, Long studentId) {
-        if ("SAFETY_KNOWLEDGE".equals(task.getTaskType()) && task.getTargetKnowledgeId() != null) {
-            LearningTaskRecord record = findRecord(task.getId(), studentId);
-            return record != null && "COMPLETED".equals(record.getStatus());
-        }
-        if ("READ_RESOURCE".equals(task.getTaskType()) || "WATCH_VIDEO".equals(task.getTaskType()) || "SAFETY_KNOWLEDGE".equals(task.getTaskType())) {
+        if ("READ_RESOURCE".equals(task.getTaskType()) || "WATCH_VIDEO".equals(task.getTaskType())) {
             if (task.getTargetResourceId() == null) return false;
             return learningRecordMapper.selectCount(new LambdaQueryWrapper<LearningRecord>()
                     .eq(LearningRecord::getStudentId, studentId)
@@ -375,7 +353,6 @@ public class LearningTaskServiceImpl implements LearningTaskService {
 
     private String actionPath(LearningTask task) {
         if (task.getTargetResourceId() != null) return "/student/resources";
-        if ("SAFETY_KNOWLEDGE".equals(task.getTaskType())) return "/student/knowledge";
         if ("PRACTICE".equals(task.getTaskType()) || "EXAM".equals(task.getTaskType())) return "/student/exams";
         return null;
     }

@@ -17,7 +17,6 @@ public interface LearningTaskService {
     void disable(Long id);
     LearningPathVO path(Long experimentId);
     void confirmChecklist(Long id);
-    void completeSafetyKnowledge(Long knowledgeId);
     void syncResourceCompleted(Long studentId, Long resourceId);
     void syncExamCompleted(Long studentId, Long paperId, Long experimentId);
     List<LearningTaskDistributionVO> distribution(Long experimentId);
