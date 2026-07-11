@@ -1,6 +1,7 @@
 package com.cupk.dto.ai;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -13,7 +14,10 @@ public class AiAskDTO {
     private String scene;
 
     @NotBlank(message = "问题不能为空")
+    @Size(max = 2000, message = "问题长度不能超过2000字符")
     private String question;
 
+    private Long courseId;
     private Long experimentId;
+    private Long resourceId;
 }

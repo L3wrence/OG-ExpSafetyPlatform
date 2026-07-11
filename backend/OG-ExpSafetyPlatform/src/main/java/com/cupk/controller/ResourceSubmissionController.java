@@ -10,6 +10,8 @@ import com.cupk.vo.ResourcePreviewVO;
 import com.cupk.vo.ResourceSubmissionVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 @RestController
 public class ResourceSubmissionController {
@@ -19,10 +21,11 @@ public class ResourceSubmissionController {
         this.submissionService = submissionService;
     }
 
-    @PostMapping("/api/resource-submissions")
+    @PostMapping(value = "/api/resource-submissions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequirePermission("resource-submission:create")
-    public Result<Long> submit(@Valid @RequestBody ResourceSubmissionDTO dto) {
-        return Result.success(submissionService.submit(dto));
+    public Result<Long> submit(@Valid @RequestPart("metadata") ResourceSubmissionDTO dto,
+                               @RequestPart("file") MultipartFile file) {
+        return Result.success(submissionService.submit(dto, file));
     }
 
     @GetMapping("/api/resource-submissions/my")

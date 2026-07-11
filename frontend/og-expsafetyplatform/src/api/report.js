@@ -12,6 +12,16 @@ export function submitReport(id) {
   return request.put(`/reports/${id}/submit`)
 }
 
+export function uploadReportFile(experimentId, file) {
+  const formData = new FormData()
+  formData.append('experimentId', experimentId)
+  formData.append('file', file)
+  return request.post('/reports/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 30000,
+  })
+}
+
 export function getMyReports(params, config = {}) {
   return request.get('/reports/my', { ...config, params })
 }

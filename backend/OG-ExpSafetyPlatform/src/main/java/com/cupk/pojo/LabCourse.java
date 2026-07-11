@@ -21,7 +21,10 @@ public class LabCourse extends BasePojo {
     private String courseCode;  //课程码
     private String direction;   //专业方向
     private Long teacherId;     //负责教师ID
-    private String coverUrl;    //课程封面地址
+    private String coverFilePath;
+    private String coverOriginalFilename;
+    private String coverContentType;
+    private Long coverFileSize;
     private String tagline;     //课程短标语
     private String highlightTags; //课程亮点标签
     private String visualTheme;  //视觉主题

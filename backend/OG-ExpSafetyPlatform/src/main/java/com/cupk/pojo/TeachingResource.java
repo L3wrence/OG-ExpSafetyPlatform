@@ -21,12 +21,12 @@ public class TeachingResource extends BasePojo {
     private Long experimentId;      //实验项目ID
     private String title;           //资源标题
     private String resourceType;    //资源类型
+    private String businessCategory; //教学业务分类
     private String knowledgePoint;  //知识点
     private String riskType;        //风险类型
     private String tags;            //标签
     private String category;        //必学/拓展分类
     private String description;     //资源简介
-    private String url;             //外部链接
     private String filePath;        //文件路径
     private String originalFilename; //原始文件名
     private String contentType;     //文件MIME类型

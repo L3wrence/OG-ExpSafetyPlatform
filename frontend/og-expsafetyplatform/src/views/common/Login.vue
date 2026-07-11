@@ -1,5 +1,5 @@
  <template>
-   <div class="login-page" :style="{ backgroundImage: `linear-gradient(90deg, rgba(19, 35, 58, 0.76), rgba(19, 35, 58, 0.18)), url(${labHero})` }">
+   <div class="login-page" :style="{ backgroundImage: `linear-gradient(90deg, rgba(19, 35, 58, 0.76), rgba(19, 35, 58, 0.18)), url(${login})` }">
      <div class="login-card">
        <div class="login-header">
          <div class="platform-logo">
@@ -106,7 +106,7 @@
  import { useAuthStore } from '@/stores/authStore'
  import { getRoleHomePath } from '@/utils/role'
  import { register } from '@/api/auth'
- import labHero from '@/assets/amazing/lab-hero.png'
+ import login from '@/assets/amazing/login.jpg'
  
  const router = useRouter()
  const route = useRoute()

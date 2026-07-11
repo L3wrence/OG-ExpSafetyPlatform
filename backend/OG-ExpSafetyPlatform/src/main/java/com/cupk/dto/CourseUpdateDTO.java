@@ -15,7 +15,6 @@ public class CourseUpdateDTO {
     private String direction;
     @NotNull(message = "负责教师不能为空")
     private Long teacherId;
-    private String coverUrl;
     private String tagline;
     private String highlightTags;
     private String visualTheme;

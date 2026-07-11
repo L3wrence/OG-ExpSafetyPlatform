@@ -22,18 +22,26 @@ import com.cupk.interceptor.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * 瀹為獙鎶ュ憡鏈嶅姟瀹炵幇
  */
 @Service
 public class ReportServiceImpl implements ReportService {
+    private static final long MAX_REPORT_FILE_SIZE = 20L * 1024 * 1024;
+    private static final Set<String> REPORT_FILE_EXTENSIONS = Set.of("pdf", "doc", "docx", "xls", "xlsx");
 
     @Autowired
     private ReportMapper reportMapper;
@@ -98,6 +106,9 @@ public class ReportServiceImpl implements ReportService {
     public void submitReport(Long id) {
         Report report = requireReport(id);
         requireOwner(report, "不能提交他人的报告");
+        if ("SUBMITTED".equals(report.getStatus())) {
+            return;
+        }
         if (!"DRAFT".equals(report.getStatus()) && !"RETURNED".equals(report.getStatus())) {
             throw new BusinessException(400, "报告状态不允许提交");
         }
@@ -110,6 +121,44 @@ public class ReportServiceImpl implements ReportService {
         report.setSubmitTime(report.getSubmitTime() == null ? now : report.getSubmitTime());
         report.setLatestSubmitTime(now);
         reportMapper.updateById(report);
+    }
+
+    @Override
+    public Map<String, Object> uploadReportFile(Long experimentId, MultipartFile file) {
+        if (experimentId == null) {
+            throw new BusinessException(400, "请先选择实验");
+        }
+        assertExperimentWritableByStudent(UserContext.getUserId(), experimentId);
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(400, "上传文件不能为空");
+        }
+        if (file.getSize() > MAX_REPORT_FILE_SIZE) {
+            throw new BusinessException(400, "报告文件大小不能超过20MB");
+        }
+        String originalFilename = Path.of(file.getOriginalFilename() == null ? "report" : file.getOriginalFilename())
+                .getFileName().toString().replaceAll("[^a-zA-Z0-9._\\-\\u4e00-\\u9fa5]", "_");
+        int dot = originalFilename.lastIndexOf('.');
+        String extension = dot < 0 ? "" : originalFilename.substring(dot + 1).toLowerCase();
+        if (!REPORT_FILE_EXTENSIONS.contains(extension)) {
+            throw new BusinessException(400, "仅支持 PDF、Word 或 Excel 报告文件");
+        }
+        String storedName = UUID.randomUUID() + "-" + originalFilename;
+        Path uploadDir = Path.of(System.getProperty("user.dir"), "uploads", "reports", UserContext.getUserId().toString())
+                .toAbsolutePath().normalize();
+        Path target = uploadDir.resolve(storedName).normalize();
+        if (!target.startsWith(uploadDir)) {
+            throw new BusinessException(400, "非法文件路径");
+        }
+        try {
+            Files.createDirectories(uploadDir);
+            file.transferTo(target);
+        } catch (IOException e) {
+            throw new BusinessException(500, "报告文件保存失败");
+        }
+        return Map.of(
+                "fileUrl", "/uploads/reports/" + UserContext.getUserId() + "/" + storedName,
+                "originalFilename", originalFilename,
+                "fileSize", file.getSize());
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.cupk.controller;
 import com.cupk.common.RequirePermission;
 import com.cupk.common.Result;
 import com.cupk.dto.ai.AiAskDTO;
+import com.cupk.dto.ai.AiReportPrecheckDTO;
 import com.cupk.service.AiChatService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,19 @@ public class AiController {
     @RequirePermission("ai:ask")
     @PostMapping("/ask")
     public Result<?> ask(@Valid @RequestBody AiAskDTO dto) {
-        return Result.success(aiChatService.ask(dto.getScene(), dto.getQuestion(), dto.getExperimentId()));
+        return Result.success(aiChatService.ask(dto));
+    }
+
+    @RequirePermission("ai:ask")
+    @PostMapping("/exam-answers/{answerId}/explain")
+    public Result<?> explainWrongAnswer(@PathVariable Long answerId) {
+        return Result.success(aiChatService.explainWrongAnswer(answerId));
+    }
+
+    @RequirePermission("ai:ask")
+    @PostMapping("/reports/precheck")
+    public Result<?> precheckReport(@Valid @RequestBody AiReportPrecheckDTO dto) {
+        return Result.success(aiChatService.precheckReport(dto));
     }
 
     /** 我的AI问答历史 */

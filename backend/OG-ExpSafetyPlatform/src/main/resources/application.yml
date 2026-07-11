@@ -1,4 +1,6 @@
 spring:
+    config:
+        import: optional:file:.env[.properties],optional:file:backend/OG-ExpSafetyPlatform/.env[.properties]
     application:
         name: OG-ExpSafetyPlatform
 
@@ -10,6 +12,13 @@ spring:
     jackson:
         date-format: yyyy-MM-dd HH:mm:ss
         time-zone: Asia/Shanghai
+    servlet:
+        multipart:
+            max-file-size: 500MB
+            max-request-size: 510MB
+app:
+    storage:
+        root: ${UPLOAD_ROOT:./uploads}
 mybatis-plus:
     configuration:
         map-underscore-to-camel-case: true
@@ -20,3 +29,11 @@ mybatis-plus:
             logic-delete-value: 1
             logic-not-delete-value: 0
 
+ai:
+    enabled: ${AI_ENABLED:false}
+    base-url: ${AI_BASE_URL:https://api.deepseek.com}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:deepseek-v4-flash}
+    temperature: ${AI_TEMPERATURE:0.2}
+    max-tokens: ${AI_MAX_TOKENS:1200}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:20}

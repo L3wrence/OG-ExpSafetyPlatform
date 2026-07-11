@@ -12,6 +12,14 @@ export function submitResource(data) {
   return request.post('/resource-submissions', data)
 }
 
+export function uploadSubmissionResource(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/resource-submissions/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 export function getMyResourceSubmissions() {
   return request.get('/resource-submissions/my')
 }

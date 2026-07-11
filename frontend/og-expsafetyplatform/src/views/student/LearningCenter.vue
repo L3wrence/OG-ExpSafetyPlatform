@@ -34,21 +34,41 @@
       <section v-if="activeModule === 'ai'" class="module-panel ai-panel">
         <div class="panel-title">
           <h2>AI 辅助学习</h2>
-          <span>默认结合当前课堂、实验章节和油气工程实验安全规范回答。</span>
+          <span>与 AI 安全助教对话，回答会结合当前课堂、实验章节和结构化教学资料。</span>
         </div>
-        <el-select v-model="selectedExperimentId" placeholder="选择实验上下文" clearable>
-          <el-option v-for="item in experiments" :key="item.id" :label="item.expName" :value="item.id" />
-        </el-select>
-        <el-input
-          v-model="aiQuestion"
-          type="textarea"
-          :rows="5"
-          placeholder="例如：钻井液密度测定实验为什么要先校准仪器？"
-        />
-        <div class="actions">
-          <el-button type="primary" :icon="MagicStick" :loading="aiLoading" @click="askClassroomAi">提问</el-button>
+        <div class="chat-toolbar">
+          <el-select v-model="selectedExperimentId" placeholder="选择实验上下文" clearable>
+            <el-option v-for="item in experiments" :key="item.id" :label="item.expName" :value="item.id" />
+          </el-select>
+          <el-button text @click="clearAiConversation">清空对话</el-button>
         </div>
-        <div v-if="aiAnswer" class="answer-box">{{ aiAnswer }}</div>
+        <div class="chat-window">
+          <div v-if="aiMessages.length === 0" class="chat-welcome">
+            <el-icon><MagicStick /></el-icon><h3>你好，我是实验安全助教</h3>
+            <p>你可以询问实验原理、操作风险、防护要求和报告改进方向。</p>
+          </div>
+          <article v-for="message in aiMessages" :key="message.id" class="chat-message" :class="message.role">
+            <div class="chat-avatar">{{ message.role === 'user' ? '我' : 'AI' }}</div>
+            <div class="chat-bubble">
+              <p v-if="message.role === 'user'">{{ message.content }}</p>
+              <template v-else>
+                <el-alert v-if="message.result.fallback" title="本地知识库降级回答" type="warning" :closable="false" />
+                <div class="result-title"><el-tag :type="riskTagType(message.result.riskLevel)">风险等级：{{ message.result.riskLevel || 'UNKNOWN' }}</el-tag><span>{{ message.result.model }}</span></div>
+                <p>{{ message.result.answer }}</p>
+                <div v-if="message.result.keyPoints?.length"><b>关键要点</b><ul><li v-for="point in message.result.keyPoints" :key="point">{{ point }}</li></ul></div>
+                <div v-if="message.result.prohibitedActions?.length"><b>禁止行为</b><ul><li v-for="point in message.result.prohibitedActions" :key="point">{{ point }}</li></ul></div>
+                <div v-if="message.result.sources?.length"><b>参考资料</b><div class="source-list"><el-button v-for="source in message.result.sources" :key="source.resourceId" text type="primary" @click="previewResource(source.resourceId)">{{ source.title }}</el-button></div></div>
+                <div v-if="message.result.followUpQuestions?.length"><b>推荐追问</b><div class="follow-up-list"><el-button v-for="question in message.result.followUpQuestions" :key="question" plain @click="aiQuestion = question">{{ question }}</el-button></div></div>
+                <small>{{ message.result.disclaimer }}</small>
+              </template>
+            </div>
+          </article>
+          <article v-if="aiLoading" class="chat-message assistant"><div class="chat-avatar">AI</div><div class="chat-bubble typing">正在结合课程资料思考...</div></article>
+        </div>
+        <div class="chat-composer">
+          <el-input v-model="aiQuestion" type="textarea" :rows="3" maxlength="2000" show-word-limit placeholder="输入问题，Ctrl + Enter 发送" @keydown.ctrl.enter.prevent="askClassroomAi" />
+          <el-button type="primary" :icon="MagicStick" :loading="aiLoading" @click="askClassroomAi">发送</el-button>
+        </div>
       </section>
 
       <section v-else-if="activeModule === 'tasks'" class="module-panel">
@@ -144,7 +164,7 @@
       <section v-else-if="activeModule === 'report'" class="module-panel">
         <div class="panel-title">
           <h2>报告提交</h2>
-          <span>支持正文提交，也可以填写报告文件链接。</span>
+          <span>支持在线编辑正文，也可以直接上传本地 PDF、Word 或 Excel 报告文件。</span>
         </div>
         <el-select v-model="selectedExperimentId" placeholder="选择实验" @change="handleReportExperimentChange">
           <el-option v-for="item in experiments" :key="item.id" :label="item.expName" :value="item.id" />
@@ -159,15 +179,43 @@
           <p><b>教师反馈：</b>{{ currentReport?.feedback || currentReport?.reviewComment || '暂无反馈。' }}</p>
         </div>
         <el-form :model="reportForm" label-width="88px">
-          <el-form-item label="报告标题"><el-input v-model="reportForm.title" /></el-form-item>
-          <el-form-item label="文件链接"><el-input v-model="reportForm.fileUrl" placeholder="可选，填写报告文件URL" /></el-form-item>
+          <el-form-item label="报告标题"><el-input v-model="reportForm.title" :disabled="!reportEditable" /></el-form-item>
+          <el-form-item label="报告文件">
+            <div class="report-file-control">
+              <el-upload
+                :auto-upload="false"
+                :show-file-list="false"
+                :disabled="!reportEditable || reportFileUploading"
+                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                :on-change="handleReportFileChange"
+              >
+                <el-button :loading="reportFileUploading" :disabled="!reportEditable">选择并上传本地文件</el-button>
+              </el-upload>
+              <a v-if="reportForm.fileUrl" :href="reportForm.fileUrl" target="_blank" rel="noreferrer">{{ reportFileName || '查看已上传文件' }}</a>
+              <el-button v-if="reportForm.fileUrl && reportEditable" text type="danger" @click="clearReportFile">移除</el-button>
+              <small>支持 PDF、DOC、DOCX、XLS、XLSX，最大 20MB。</small>
+            </div>
+          </el-form-item>
           <el-form-item label="报告正文">
-            <el-input v-model="reportForm.content" type="textarea" :rows="10" placeholder="填写实验过程、数据记录、结果分析和安全反思" />
+            <el-input v-model="reportForm.content" :disabled="!reportEditable" type="textarea" :rows="10" placeholder="填写实验过程、数据记录、结果分析和安全反思" />
           </el-form-item>
         </el-form>
+        <el-alert v-if="reportForm.id && !reportEditable" :title="reportLockedMessage" type="info" :closable="false" />
         <div class="actions">
-          <el-button :loading="reportSaving" @click="saveReportDraft">保存草稿</el-button>
-          <el-button type="primary" :loading="reportSubmitting" @click="submitCurrentReport">提交报告</el-button>
+          <el-button :disabled="!reportEditable" :loading="reportSaving" @click="saveReportDraft">保存草稿</el-button>
+          <el-button type="warning" plain :disabled="!reportEditable" :loading="reportPrecheckLoading" @click="checkCurrentReport">AI 检查报告</el-button>
+          <el-button type="primary" :disabled="!reportEditable" :loading="reportSubmitting" @click="submitCurrentReport">提交报告</el-button>
+        </div>
+        <div v-if="reportPrecheckResult" class="report-precheck structured-result">
+          <el-alert v-if="reportPrecheckResult.fallback" title="本地知识库降级检查" type="warning" :closable="false" />
+          <el-tag :type="reportPrecheckResult.overallStatus === 'GOOD' ? 'success' : 'warning'">{{ reportPrecheckResult.overallStatus }}</el-tag>
+          <p>{{ reportPrecheckResult.summary }}</p>
+          <div v-if="reportPrecheckResult.missingItems?.length"><b>缺项提示</b><ul><li v-for="item in reportPrecheckResult.missingItems" :key="item">{{ item }}</li></ul></div>
+          <div v-if="reportPrecheckResult.evidenceNeeded?.length"><b>证据建议</b><ul><li v-for="item in reportPrecheckResult.evidenceNeeded" :key="item">{{ item }}</li></ul></div>
+          <div v-if="reportPrecheckResult.safetyQuestions?.length"><b>安全反思问题</b><ul><li v-for="item in reportPrecheckResult.safetyQuestions" :key="item">{{ item }}</li></ul></div>
+          <div v-if="reportPrecheckResult.rewriteHints?.length"><b>写作提示</b><ul><li v-for="item in reportPrecheckResult.rewriteHints" :key="`${item.section}-${item.suggestion}`">{{ item.section }}：{{ item.suggestion }}</li></ul></div>
+          <p class="warning-text">{{ reportPrecheckResult.fabricationWarning }}</p>
+          <small>{{ reportPrecheckResult.disclaimer }}</small>
         </div>
       </section>
 
@@ -245,10 +293,8 @@
             <el-option label="文档" value="DOCUMENT" />
             <el-option label="视频" value="VIDEO" />
             <el-option label="图片" value="IMAGE" />
-            <el-option label="外链" value="LINK" />
           </el-select>
-          <el-input v-model="resourceForm.url" placeholder="外链地址，可选" />
-          <el-upload :auto-upload="false" :limit="1" :on-change="onResourceFile" :on-remove="clearResourceFile">
+          <el-upload ref="resourceUploadRef" :auto-upload="false" :limit="1" :on-change="onResourceFile" :on-remove="clearResourceFile">
             <el-button>选择文件</el-button>
           </el-upload>
           <el-button type="primary" :loading="resourceSaving" @click="createClassroomResource">上传课堂资料</el-button>
@@ -387,14 +433,14 @@ import {
 } from '@element-plus/icons-vue'
 import ResourceViewer from '@/components/learning/ResourceViewer.vue'
 import { useAuthStore } from '@/stores/authStore'
-import { askAi } from '@/api/ai'
+import { askAi, precheckReport } from '@/api/ai'
 import { getCourseDetail } from '@/api/course'
 import { getExperimentDetail } from '@/api/experiment'
 import { createDiscussion, getDiscussionDetail, getDiscussions, replyDiscussion } from '@/api/discussion'
 import { getAvailableExams, getExamRecords } from '@/api/exam'
 import { getLearningPath } from '@/api/learningTask'
 import { getMyLearningRecords, getMyStepLearningRecords } from '@/api/learningRecord'
-import { createReport, getMyReports, submitReport, updateReport } from '@/api/report'
+import { createReport, getMyReports, submitReport, updateReport, uploadReportFile } from '@/api/report'
 import { createReservation, getAvailableSlots, getMyReservations } from '@/api/reservation'
 import { createResource, getResources, uploadResource } from '@/api/resource'
 import { getAdmissionStatus } from '@/api/exam'
@@ -419,7 +465,8 @@ const viewerVisible = ref(false)
 const chapterKeyword = ref('')
 const expandedChapters = ref([])
 const aiQuestion = ref('')
-const aiAnswer = ref('')
+const aiMessages = ref([])
+let aiMessageId = 0
 const aiLoading = ref(false)
 const discussionLoading = ref(false)
 const discussionSaving = ref(false)
@@ -430,6 +477,10 @@ const discussionCreateVisible = ref(false)
 const discussionForm = reactive({ experimentId: null, title: '', content: '', isAnonymous: false })
 const reportSaving = ref(false)
 const reportSubmitting = ref(false)
+const reportPrecheckLoading = ref(false)
+const reportPrecheckResult = ref(null)
+const reportFileUploading = ref(false)
+const reportFileName = ref('')
 const reportForm = reactive({ id: null, title: '', content: '', fileUrl: '', status: '' })
 const examTab = ref(normalizeExamTab(route.query.examTab))
 const examLoading = ref(false)
@@ -438,6 +489,7 @@ const inProgressExams = ref([])
 const examRecords = ref([])
 const resourceSaving = ref(false)
 const resourceFile = ref(null)
+const resourceUploadRef = ref(null)
 const resourceForm = reactive({ experimentId: null, title: '', resourceType: 'DOCUMENT', url: '' })
 const reservationExperimentId = ref(null)
 const reservationAdmission = ref(null)
@@ -464,6 +516,8 @@ const courseCover = computed(() => courseDetail.value?.course?.coverUrl || proce
 const canManageCourse = computed(() => authStore.hasPermission('course:update') || authStore.hasPermission('resource:update'))
 const activeExperimentDetail = computed(() => experimentDetails[selectedExperimentId.value] || null)
 const currentReport = computed(() => reports.value.find((item) => Number(item.experimentId) === Number(selectedExperimentId.value)))
+const reportEditable = computed(() => !reportForm.id || !reportForm.status || ['DRAFT', 'RETURNED'].includes(String(reportForm.status).toUpperCase()))
+const reportLockedMessage = computed(() => reportForm.status === 'GRADED' ? '报告已评分，不能再次修改或提交。' : '报告已提交，等待教师处理，不能重复修改。')
 const reportRequirementText = computed(() => {
   const experiment = activeExperimentDetail.value?.experiment
   return experiment?.dataRecordRequirement
@@ -669,22 +723,35 @@ async function openTask(item) {
 }
 
 async function askClassroomAi() {
-  if (!aiQuestion.value.trim()) {
+  const question = aiQuestion.value.trim()
+  if (!question) {
     ElMessage.warning('请输入问题')
     return
   }
+  aiMessages.value.push({ id: ++aiMessageId, role: 'user', content: question })
   aiLoading.value = true
   try {
     const result = await askAi({
       scene: 'SAFETY_QA',
       courseId: courseId.value,
       experimentId: selectedExperimentId.value || undefined,
-      question: aiQuestion.value.trim(),
+      question,
     })
-    aiAnswer.value = result?.answer || result?.content || String(result || '')
+    const normalized = typeof result === 'string'
+      ? { answer: result, riskLevel: 'UNKNOWN', keyPoints: [], prohibitedActions: [], sources: [], followUpQuestions: [] }
+      : result
+    aiMessages.value.push({ id: ++aiMessageId, role: 'assistant', result: normalized })
+    aiQuestion.value = ''
+  } catch (error) {
+    aiMessages.value.pop()
+    throw error
   } finally {
     aiLoading.value = false
   }
+}
+
+function clearAiConversation() {
+  aiMessages.value = []
 }
 
 async function loadDiscussions() {
@@ -755,11 +822,65 @@ function loadReportForm() {
     fileUrl: report?.fileUrl || '',
     status: report?.status || '',
   })
+  reportFileName.value = report?.fileUrl ? decodeURIComponent(String(report.fileUrl).split('/').pop().replace(/^[0-9a-f-]{36}-/i, '')) : ''
 }
 
 async function handleReportExperimentChange() {
+  reportPrecheckResult.value = null
   await ensureExperimentDetail(selectedExperimentId.value)
   loadReportForm()
+}
+
+async function handleReportFileChange(uploadFile) {
+  const file = uploadFile?.raw
+  if (!file || !reportEditable.value) return
+  if (file.size > 20 * 1024 * 1024) {
+    ElMessage.warning('报告文件大小不能超过20MB')
+    return
+  }
+  reportFileUploading.value = true
+  try {
+    const result = await uploadReportFile(selectedExperimentId.value, file)
+    reportForm.fileUrl = result.fileUrl
+    reportFileName.value = result.originalFilename || file.name
+    ElMessage.success('报告文件上传成功')
+  } finally {
+    reportFileUploading.value = false
+  }
+}
+
+function clearReportFile() {
+  reportForm.fileUrl = ''
+  reportFileName.value = ''
+}
+
+async function checkCurrentReport() {
+  if (!selectedExperimentId.value) {
+    ElMessage.warning('请先选择实验')
+    return
+  }
+  if (!reportForm.title.trim()) {
+    ElMessage.warning('请填写报告标题')
+    return
+  }
+  if (!reportForm.content.trim()) {
+    ElMessage.warning('请填写报告正文')
+    return
+  }
+  reportPrecheckLoading.value = true
+  try {
+    reportPrecheckResult.value = await precheckReport({
+      experimentId: selectedExperimentId.value,
+      title: reportForm.title.trim(),
+      content: reportForm.content.trim(),
+    })
+  } finally {
+    reportPrecheckLoading.value = false
+  }
+}
+
+function riskTagType(level) {
+  return { LOW: 'success', MEDIUM: 'warning', HIGH: 'danger', UNKNOWN: 'info' }[level] || 'info'
 }
 
 async function saveReportDraft() {
@@ -769,6 +890,10 @@ async function saveReportDraft() {
   }
   if (!reportForm.title.trim()) {
     ElMessage.warning('请填写报告标题')
+    return null
+  }
+  if (!reportEditable.value) {
+    ElMessage.warning(reportLockedMessage.value)
     return null
   }
   reportSaving.value = true
@@ -795,6 +920,10 @@ async function saveReportDraft() {
 }
 
 async function submitCurrentReport() {
+  if (!reportEditable.value) {
+    ElMessage.warning(reportLockedMessage.value)
+    return
+  }
   if (!reportForm.content.trim()) {
     ElMessage.warning('请填写报告正文')
     return
@@ -865,8 +994,8 @@ function clearResourceFile() {
 }
 
 async function createClassroomResource() {
-  if (!resourceForm.experimentId || !resourceForm.title.trim()) {
-    ElMessage.warning('请选择实验并填写资料标题')
+  if (!resourceForm.experimentId || !resourceForm.title.trim() || !resourceFile.value) {
+    ElMessage.warning('请选择实验、填写资料标题并选择本地文件')
     return
   }
   resourceSaving.value = true
@@ -877,7 +1006,6 @@ async function createClassroomResource() {
       experimentId: resourceForm.experimentId,
       title: resourceForm.title.trim(),
       resourceType: resourceForm.resourceType,
-      url: resourceForm.url || undefined,
       filePath: fileMeta.filePath,
       originalFilename: fileMeta.originalFilename,
       contentType: fileMeta.contentType,
@@ -888,6 +1016,7 @@ async function createClassroomResource() {
     ElMessage.success('课堂资料已上传')
     Object.assign(resourceForm, { experimentId: selectedExperimentId.value, title: '', resourceType: 'DOCUMENT', url: '' })
     resourceFile.value = null
+    resourceUploadRef.value?.clearFiles()
     await loadResources()
   } finally {
     resourceSaving.value = false
@@ -1022,9 +1151,37 @@ function examResult(row) {
 .module-panel { background: #fff; border: 1px solid #e7ebf0; border-radius: 8px; padding: 16px; min-height: 600px; }
 .panel-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
 .panel-title h2 { color: #13233a; font-size: 19px; }
-.ai-panel { display: grid; gap: 12px; align-content: start; }
+.ai-panel { display: grid; grid-template-rows: auto auto minmax(360px, 1fr) auto; gap: 12px; align-content: stretch; }
+.chat-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.chat-toolbar .el-select { width: min(420px, 100%); }
+.chat-window { min-height: 360px; max-height: 560px; overflow-y: auto; display: grid; align-content: start; gap: 16px; padding: 18px; border: 1px solid #e4eaf2; border-radius: 12px; background: #f7f9fc; }
+.chat-welcome { display: grid; justify-items: center; gap: 8px; padding: 72px 16px; color: #667085; text-align: center; }
+.chat-welcome .el-icon { color: #409eff; font-size: 42px; }
+.chat-welcome h3 { color: #13233a; }
+.chat-message { display: flex; align-items: flex-start; gap: 10px; max-width: 88%; }
+.chat-message.user { justify-self: end; flex-direction: row-reverse; }
+.chat-message.assistant { justify-self: start; }
+.chat-avatar { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 50%; background: #1f6feb; color: #fff; font-size: 12px; font-weight: 700; }
+.chat-message.user .chat-avatar { background: #344054; }
+.chat-bubble { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid #dce4ef; border-radius: 4px 14px 14px; background: #fff; color: #344054; line-height: 1.7; }
+.chat-message.user .chat-bubble { border: 0; border-radius: 14px 4px 14px 14px; background: #409eff; color: #fff; }
+.chat-bubble p, .chat-bubble ul { margin: 0; white-space: pre-wrap; }
+.chat-bubble ul { padding-left: 22px; }
+.chat-bubble small, .result-title span { color: #667085; }
+.result-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.typing { color: #667085; }
+.chat-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
 .answer-box, .report-guide, .inline-alert { margin-top: 12px; }
 .answer-box { white-space: pre-wrap; color: #344054; background: #f8fafc; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; line-height: 1.7; }
+.structured-result { display: grid; gap: 10px; white-space: normal; color: #344054; background: #f8fafc; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; line-height: 1.7; }
+.structured-result p, .structured-result ul { margin: 0; }
+.structured-result ul { padding-left: 22px; }
+.structured-result small { color: #667085; }
+.source-list, .follow-up-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.warning-text { color: #b54708; }
+.report-precheck { margin-top: 14px; }
+.report-file-control { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.report-file-control small { width: 100%; color: #98a2b3; }
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .task-list, .resource-list, .record-timeline { display: grid; gap: 12px; }
 .task-card, .resource-card, .record-timeline article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; }

@@ -14,12 +14,11 @@ import java.nio.file.Path;
 
 public interface ResourceService {
     PageResult<TeachingResource> page(ResourceQueryDTO dto);
-    Long create(ResourceCreateDTO dto);
-    void update(Long id, ResourceUpdateDTO dto);
+    Long createCourseResource(Long courseId, ResourceCreateDTO dto, MultipartFile file);
+    void updateCourseResource(Long courseId, Long id, ResourceUpdateDTO dto, MultipartFile file);
     void delete(Long id);
     void changeStatus(Long id, Integer status);
     TeachingResource detail(Long id);
-    TeachingResource upload(MultipartFile file);
     void markDownload(Long id);
     void interact(Long id, ResourceInteractionDTO dto);
     void markInvalid(Long id, Integer invalidFlag);

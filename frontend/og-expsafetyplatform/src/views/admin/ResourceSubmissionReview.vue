@@ -23,7 +23,7 @@
         <el-table-column prop="resourceType" label="类型" width="120" />
         <el-table-column prop="knowledgePoint" label="知识点" min-width="140" />
         <el-table-column prop="riskType" label="风险类型" min-width="120" />
-        <el-table-column prop="url" label="外链" min-width="200" show-overflow-tooltip />
+      <el-table-column prop="originalFilename" label="资源文件" min-width="200" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
@@ -79,7 +79,7 @@ async function approve(row) {
 
 async function reject(row) {
   const { value } = await ElMessageBox.prompt('请输入驳回原因', '驳回资源投稿', {
-    inputPlaceholder: '如：链接不可访问或与油气工程学习无关',
+    inputPlaceholder: '如：文件无法打开或与油气工程学习无关',
     confirmButtonText: '驳回',
     cancelButtonText: '取消',
   })

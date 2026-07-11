@@ -2,6 +2,7 @@ package com.cupk.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.pojo.Report;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -18,6 +19,8 @@ public interface ReportService {
 
     /** 正式提交报告 */
     void submitReport(Long id);
+
+    Map<String, Object> uploadReportFile(Long experimentId, MultipartFile file);
 
     /** 我的报告列表 */
     Page<Report> getMyReports(int pageNum, int pageSize, String status);

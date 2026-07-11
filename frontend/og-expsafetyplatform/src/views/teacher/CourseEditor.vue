@@ -594,8 +594,7 @@
           <el-form-item label="最短学习秒数"><el-input-number v-model="resourceForm.minStudySeconds" :min="0" /></el-form-item>
           <el-form-item label="排序"><el-input-number v-model="resourceForm.sort" :min="0" /></el-form-item>
         </div>
-        <el-form-item label="外部链接"><el-input v-model="resourceForm.url" placeholder="https://..." /></el-form-item>
-        <el-form-item label="上传文件">
+        <el-form-item label="本地文件" required>
           <div class="upload-row">
             <el-upload :auto-upload="false" :show-file-list="false" :on-change="handleResourceFilePicked">
               <el-button :icon="Upload">选择文件</el-button>
@@ -1485,8 +1484,8 @@ async function handleResourceFilePicked(uploadFile) {
 
 async function saveResourceInline() {
   await resourceFormRef.value?.validate()
-  if (!resourceForm.url && !resourceForm.filePath) {
-    ElMessage.warning('请上传文件或登记外部链接')
+  if (!resourceForm.filePath) {
+    ElMessage.warning('请选择并上传本地文件')
     return
   }
   const payload = {
@@ -1499,7 +1498,7 @@ async function saveResourceInline() {
     tags: resourceForm.tags || undefined,
     category: resourceForm.required ? 'REQUIRED' : 'EXTENSION',
     description: resourceForm.description || undefined,
-    url: resourceForm.url || undefined,
+    url: undefined,
     filePath: resourceForm.filePath || undefined,
     fileSize: Number(resourceForm.fileSize || 0),
     originalFilename: resourceForm.originalFilename || undefined,

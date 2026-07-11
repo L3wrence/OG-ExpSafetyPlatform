@@ -38,8 +38,8 @@ public class ResourceSubmissionServiceImpl implements ResourceSubmissionService 
     @Override
     @Transactional
     public Long submit(ResourceSubmissionDTO dto) {
-        if (!StringUtils.hasText(dto.getUrl()) && !StringUtils.hasText(dto.getFilePath())) {
-            throw new BusinessException(400, "请提供外链或文件地址");
+        if (!StringUtils.hasText(dto.getFilePath())) {
+            throw new BusinessException(400, "请上传本地资源文件");
         }
         ResourceSubmission entity = new ResourceSubmission();
         BeanUtils.copyProperties(dto, entity);

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.List;
 
@@ -100,6 +101,31 @@ class ReportServiceImplTest {
 
         assertEquals(400, ex.getCode());
         verify(reportMapper, never()).updateById(any(Report.class));
+    }
+
+    @Test
+    void submitReport_shouldBeIdempotent_whenAlreadySubmitted() {
+        Report report = newReport();
+        report.setId(100L);
+        report.setStudentId(10L);
+        report.setStatus("SUBMITTED");
+        when(reportMapper.selectById(100L)).thenReturn(report);
+
+        reportService.submitReport(100L);
+
+        verify(reportMapper, never()).updateById(any(Report.class));
+    }
+
+    @Test
+    void uploadReportFile_shouldRejectUnsupportedExtension() {
+        when(experimentMapper.selectById(2L)).thenReturn(experiment(false));
+        when(labCourseMapper.selectById(3L)).thenReturn(course());
+        when(courseStudentMapper.selectCount(any())).thenReturn(1L);
+        MockMultipartFile file = new MockMultipartFile("file", "script.exe", "application/octet-stream", new byte[]{1});
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> reportService.uploadReportFile(2L, file));
+
+        assertEquals(400, ex.getCode());
     }
 
     private Report newReport() {

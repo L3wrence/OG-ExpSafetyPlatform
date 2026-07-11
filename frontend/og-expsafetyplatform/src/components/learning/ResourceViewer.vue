@@ -97,7 +97,14 @@
                 <h3>AI 一句话解释</h3>
                 <el-button text type="primary" :icon="MagicStick" :loading="aiLoading" @click="askResourceAi">解释当前资源</el-button>
               </div>
-              <p class="ai-answer">{{ aiAnswer || '可让 AI 用一句话解释当前知识点或风险点，回答仅作学习参考。' }}</p>
+              <div class="ai-answer">
+                <p>{{ aiResult?.answer || aiAnswer || '可让 AI 用一句话解释当前知识点或风险点，回答仅作学习参考。' }}</p>
+                <ul v-if="aiResult?.keyPoints?.length"><li v-for="point in aiResult.keyPoints" :key="point">{{ point }}</li></ul>
+                <div v-if="aiResult?.prohibitedActions?.length" class="ai-warning">
+                  <b>安全警示</b>
+                  <ul><li v-for="point in aiResult.prohibitedActions" :key="point">{{ point }}</li></ul>
+                </div>
+              </div>
             </section>
           </aside>
         </div>
@@ -148,6 +155,7 @@ const videoRef = ref(null)
 const currentPosition = ref(0)
 const timelineNotes = ref([])
 const aiAnswer = ref('')
+const aiResult = ref(null)
 const timelineForm = reactive({ noteType: 'NOTE', visibility: 'PRIVATE', content: '' })
 let lastSavedAt = 0
 
@@ -255,9 +263,12 @@ async function askResourceAi() {
   try {
     const answer = await askAi({
       scene: 'SAFETY_QA',
+      courseId: preview.value?.courseId,
       experimentId: preview.value?.experimentId,
+      resourceId: props.resourceId,
       question: `请用一句话解释资源「${preview.value?.title}」中的${preview.value?.knowledgePoint || '关键知识点'}，并说明和${preview.value?.riskType || '实验风险'}的关系。`,
     })
+    aiResult.value = typeof answer === 'object' && answer ? answer : null
     aiAnswer.value = typeof answer === 'string' ? answer : (answer?.answer || answer?.content || '暂未生成解释')
   } finally {
     aiLoading.value = false
@@ -329,6 +340,7 @@ function cleanup() {
   note.value = ''
   timelineNotes.value = []
   aiAnswer.value = ''
+  aiResult.value = null
   currentPosition.value = 0
   timelineForm.noteType = 'NOTE'
   timelineForm.visibility = 'PRIVATE'
@@ -362,6 +374,9 @@ function cleanup() {
 .timeline-notes b { color: #13233a; margin-right: 8px; }
 .timeline-notes em { display: block; font-style: normal; margin-top: 4px; }
 .ai-answer { background: #f6f9ff; border-radius: 8px; padding: 10px; }
+.ai-answer p, .ai-answer ul { margin: 0; }
+.ai-answer ul { padding-left: 20px; }
+.ai-warning { color: #b54708; margin-top: 8px; }
 @media (max-width: 900px) {
   .viewer-grid { grid-template-columns: 1fr; }
   .preview-surface { min-height: 300px; }

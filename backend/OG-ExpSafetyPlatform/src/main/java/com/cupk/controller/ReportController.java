@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,12 @@ public class ReportController {
     @GetMapping("/{id}")
     public Result<?> detail(@PathVariable Long id) {
         return Result.success(reportService.getReportDetail(id));
+    }
+
+    @RequirePermission("report:submit")
+    @PostMapping("/upload")
+    public Result<?> upload(@RequestParam Long experimentId, @RequestParam("file") MultipartFile file) {
+        return Result.success(reportService.uploadReportFile(experimentId, file));
     }
 
     @RequirePermission("report:view")

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.common.PageResult;
+import com.cupk.common.FileUsage;
 import com.cupk.dto.ResourceCreateDTO;
 import com.cupk.dto.ResourceInteractionDTO;
 import com.cupk.dto.ResourceQueryDTO;
@@ -25,10 +26,13 @@ import com.cupk.pojo.ResourceInteraction;
 import com.cupk.pojo.TeachingClass;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.service.PortalMessageService;
+import com.cupk.service.FileStorageService;
+import com.cupk.service.ResourceAccessService;
 import com.cupk.service.ResourceService;
 import com.cupk.util.AccessUtil;
 import com.cupk.vo.ResourcePreviewVO;
 import com.cupk.vo.ResourceStatsVO;
+import com.cupk.vo.StoredFileVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,17 +56,7 @@ import java.util.UUID;
 
 @Service
 public class ResourceServiceImpl implements ResourceService {
-    private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
-    private static final Set<String> ALLOWED_EXTENSIONS = new HashSet<>(Arrays.asList(
-            "pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt",
-            "jpg", "jpeg", "png", "gif", "mp4", "webm", "mp3", "wav", "zip"
-    ));
-    private static final List<String> RESOURCE_TYPES = List.of(
-            "GUIDE", "LECTURE", "PPT", "TEACHING_VIDEO", "MICRO_COURSE", "INSTRUMENT_VIDEO",
-            "DEVICE_MANUAL", "EXPERIMENT_CASE", "ACCIDENT_CASE", "EMERGENCY_PROCESS",
-            "REPORT_TEMPLATE", "REFERENCE", "EXTERNAL_COURSE", "VIRTUAL_SIMULATION",
-            "DOCUMENT", "IMAGE", "VIDEO", "AUDIO", "LINK", "FILE"
-    );
+    private static final List<String> RESOURCE_TYPES = List.of("DOCUMENT", "IMAGE", "VIDEO", "AUDIO");
 
     private final TeachingResourceMapper resourceMapper;
     private final ExperimentMapper experimentMapper;
@@ -72,11 +66,14 @@ public class ResourceServiceImpl implements ResourceService {
     private final ResourceInteractionMapper interactionMapper;
     private final LearningRecordMapper learningRecordMapper;
     private final PortalMessageService messageService;
+    private final FileStorageService fileStorageService;
+    private final ResourceAccessService accessService;
 
     public ResourceServiceImpl(TeachingResourceMapper resourceMapper, ExperimentMapper experimentMapper,
                                LabCourseMapper courseMapper, TeachingClassMapper teachingClassMapper,
                                CourseStudentMapper courseStudentMapper, ResourceInteractionMapper interactionMapper,
-                               LearningRecordMapper learningRecordMapper, PortalMessageService messageService) {
+                               LearningRecordMapper learningRecordMapper, PortalMessageService messageService,
+                               FileStorageService fileStorageService, ResourceAccessService accessService) {
         this.resourceMapper = resourceMapper;
         this.experimentMapper = experimentMapper;
         this.courseMapper = courseMapper;
@@ -85,6 +82,8 @@ public class ResourceServiceImpl implements ResourceService {
         this.interactionMapper = interactionMapper;
         this.learningRecordMapper = learningRecordMapper;
         this.messageService = messageService;
+        this.fileStorageService = fileStorageService;
+        this.accessService = accessService;
     }
 
     @Override
@@ -96,62 +95,34 @@ public class ResourceServiceImpl implements ResourceService {
                 .or().like(TeachingResource::getKnowledgePoint, dto.getKeyword())
                 .or().like(TeachingResource::getTags, dto.getKeyword())
                 .or().like(TeachingResource::getDescription, dto.getKeyword()));
-        wrapper.eq(dto.getCourseId() != null, TeachingResource::getCourseId, dto.getCourseId());
+        if (dto.getCourseId() != null) {
+            accessService.assertCourseMemberOrManager(dto.getCourseId());
+            wrapper.eq(TeachingResource::getCourseId, dto.getCourseId()).eq(TeachingResource::getOpenScope, "COURSE");
+        } else {
+            wrapper.eq(TeachingResource::getOpenScope, "PUBLIC").isNull(TeachingResource::getCourseId);
+        }
         wrapper.eq(dto.getExperimentId() != null, TeachingResource::getExperimentId, dto.getExperimentId());
         wrapper.eq(StringUtils.hasText(dto.getKnowledgePoint()), TeachingResource::getKnowledgePoint, dto.getKnowledgePoint());
         wrapper.eq(StringUtils.hasText(dto.getRiskType()), TeachingResource::getRiskType, dto.getRiskType());
         wrapper.like(StringUtils.hasText(dto.getTags()), TeachingResource::getTags, dto.getTags());
         wrapper.eq(StringUtils.hasText(dto.getResourceType()), TeachingResource::getResourceType, dto.getResourceType());
-        wrapper.eq(StringUtils.hasText(dto.getOpenScope()), TeachingResource::getOpenScope, dto.getOpenScope());
         wrapper.eq(dto.getRequiredFlag() != null, TeachingResource::getRequiredFlag, dto.getRequiredFlag());
         wrapper.eq(dto.getInvalidFlag() != null, TeachingResource::getInvalidFlag, dto.getInvalidFlag());
         wrapper.eq(dto.getStatus() != null, TeachingResource::getStatus, dto.getStatus());
-        if (UserContext.isTeacher()) {
-            List<Long> experimentIds = currentTeacherExperimentIds();
-            List<Long> courseIds = currentStudentCourseIds();
-            wrapper.and(w -> {
-                w.eq(TeachingResource::getOpenScope, "PUBLIC").or().isNull(TeachingResource::getCourseId);
-                if (!courseIds.isEmpty()) {
-                    w.or().in(TeachingResource::getCourseId, courseIds);
-                }
-                if (!experimentIds.isEmpty()) {
-                    w.or().in(TeachingResource::getExperimentId, experimentIds);
-                }
-            });
-            if (dto.getFavoriteOnly() != null && dto.getFavoriteOnly() == 1) {
-                List<Long> favoriteIds = interactionMapper.selectList(new LambdaQueryWrapper<ResourceInteraction>()
-                                .select(ResourceInteraction::getResourceId)
-                                .eq(ResourceInteraction::getUserId, UserContext.userId())
-                                .eq(ResourceInteraction::getFavoriteFlag, 1))
-                        .stream().map(ResourceInteraction::getResourceId).toList();
-                if (favoriteIds.isEmpty()) {
-                    return new PageResult<>(Collections.emptyList(), 0L, dto.getPageNum(), dto.getPageSize());
-                }
-                wrapper.in(TeachingResource::getId, favoriteIds);
-            }
-        } else if (UserContext.isLearner()) {
+        boolean manager = dto.getCourseId() != null && (UserContext.isAdmin()
+                || accessService.isCourseManager(dto.getCourseId(), UserContext.userId()));
+        if (!manager) {
             wrapper.eq(TeachingResource::getStatus, 1);
             wrapper.eq(TeachingResource::getInvalidFlag, 0);
             wrapper.and(w -> w.isNull(TeachingResource::getOpenTime).or().le(TeachingResource::getOpenTime, LocalDateTime.now()));
             wrapper.and(w -> w.isNull(TeachingResource::getCloseTime).or().ge(TeachingResource::getCloseTime, LocalDateTime.now()));
-            List<Long> courseIds = currentStudentCourseIds();
-            wrapper.and(w -> {
-                w.eq(TeachingResource::getOpenScope, "PUBLIC").or().isNull(TeachingResource::getCourseId);
-                if (!courseIds.isEmpty()) {
-                    w.or().in(TeachingResource::getCourseId, courseIds);
-                }
-            });
-            if (dto.getFavoriteOnly() != null && dto.getFavoriteOnly() == 1) {
-                List<Long> favoriteIds = interactionMapper.selectList(new LambdaQueryWrapper<ResourceInteraction>()
-                                .select(ResourceInteraction::getResourceId)
-                                .eq(ResourceInteraction::getUserId, UserContext.userId())
-                                .eq(ResourceInteraction::getFavoriteFlag, 1))
-                        .stream().map(ResourceInteraction::getResourceId).toList();
-                if (favoriteIds.isEmpty()) {
-                    return new PageResult<>(Collections.emptyList(), 0L, dto.getPageNum(), dto.getPageSize());
-                }
-                wrapper.in(TeachingResource::getId, favoriteIds);
-            }
+        }
+        if (dto.getFavoriteOnly() != null && dto.getFavoriteOnly() == 1) {
+            List<Long> favoriteIds = interactionMapper.selectList(new LambdaQueryWrapper<ResourceInteraction>()
+                            .select(ResourceInteraction::getResourceId).eq(ResourceInteraction::getUserId, UserContext.userId())
+                            .eq(ResourceInteraction::getFavoriteFlag, 1)).stream().map(ResourceInteraction::getResourceId).toList();
+            if (favoriteIds.isEmpty()) return new PageResult<>(Collections.emptyList(), 0L, dto.getPageNum(), dto.getPageSize());
+            wrapper.in(TeachingResource::getId, favoriteIds);
         }
         wrapper.orderByAsc(TeachingResource::getSort).orderByDesc(TeachingResource::getCreateTime);
         Page<TeachingResource> page = resourceMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
@@ -160,15 +131,17 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional
-    public Long create(ResourceCreateDTO dto) {
-        Experiment experiment = requireExperiment(dto.getExperimentId());
-        AccessUtil.assertCourseWritable(requireCourse(experiment.getCourseId()));
+    public Long createCourseResource(Long courseId, ResourceCreateDTO dto, MultipartFile file) {
+        LabCourse course = requireCourse(courseId);
+        AccessUtil.assertCourseWritable(course);
         validateResourceType(dto.getResourceType());
-        validateUrl(dto.getUrl());
-        validateFilePath(dto.getFilePath());
+        validateExperimentCourse(dto.getExperimentId(), courseId);
+        StoredFileVO stored = fileStorageService.store(file, FileUsage.RESOURCE, dto.getResourceType());
         TeachingResource entity = new TeachingResource();
         BeanUtils.copyProperties(dto, entity);
-        entity.setCourseId(experiment.getCourseId());
+        entity.setCourseId(courseId);
+        entity.setOpenScope("COURSE");
+        applyStoredFile(entity, stored);
         applyDefaults(entity);
         entity.setUploadUserId(UserContext.userId());
         entity.setViewCount(0);
@@ -179,27 +152,27 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional
-    public void update(Long id, ResourceUpdateDTO dto) {
+    public void updateCourseResource(Long courseId, Long id, ResourceUpdateDTO dto, MultipartFile file) {
         TeachingResource current = requireResource(id);
-        Experiment oldExperiment = requireExperiment(current.getExperimentId());
-        AccessUtil.assertCourseWritable(requireCourse(oldExperiment.getCourseId()));
-        Experiment targetExperiment = requireExperiment(dto.getExperimentId());
-        AccessUtil.assertCourseWritable(requireCourse(targetExperiment.getCourseId()));
+        if (!courseId.equals(current.getCourseId())) throw new BusinessException(409, "资源不属于该课堂");
+        accessService.assertWritable(current);
         validateResourceType(dto.getResourceType());
-        validateUrl(dto.getUrl());
-        validateFilePath(dto.getFilePath());
+        validateExperimentCourse(dto.getExperimentId(), courseId);
+        String oldPath = current.getFilePath();
         BeanUtils.copyProperties(dto, current);
-        current.setCourseId(targetExperiment.getCourseId());
+        current.setCourseId(courseId);
+        current.setOpenScope("COURSE");
+        if (file != null && !file.isEmpty()) applyStoredFile(current, fileStorageService.store(file, FileUsage.RESOURCE, dto.getResourceType()));
         applyDefaults(current);
         resourceMapper.updateById(current);
+        if (file != null && !file.isEmpty()) fileStorageService.deleteIfExists(oldPath);
     }
 
     @Override
     @Transactional
     public void delete(Long id) {
         TeachingResource current = requireResource(id);
-        Experiment experiment = requireExperiment(current.getExperimentId());
-        AccessUtil.assertCourseWritable(requireCourse(experiment.getCourseId()));
+        accessService.assertWritable(current);
         resourceMapper.deleteById(id);
     }
 
@@ -210,8 +183,7 @@ public class ResourceServiceImpl implements ResourceService {
             throw new BusinessException(400, "状态只能为0或1");
         }
         TeachingResource current = requireResource(id);
-        Experiment experiment = requireExperiment(current.getExperimentId());
-        AccessUtil.assertCourseWritable(requireCourse(experiment.getCourseId()));
+        accessService.assertWritable(current);
         Integer oldStatus = current.getStatus();
         current.setStatus(status);
         resourceMapper.updateById(current);
@@ -223,49 +195,16 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public TeachingResource detail(Long id) {
         TeachingResource resource = requireResource(id);
-        assertReadable(resource);
+        accessService.assertReadable(resource);
         return resource;
     }
 
     @Override
-    public TeachingResource upload(MultipartFile file) {
-        AccessUtil.requireTeacherOrAdmin();
-        if (file == null || file.isEmpty()) {
-            throw new BusinessException(400, "上传文件不能为空");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BusinessException(400, "文件大小不能超过200MB");
-        }
-        String originalFilename = cleanFilename(file.getOriginalFilename());
-        String extension = extension(originalFilename);
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new BusinessException(400, "不支持的文件类型");
-        }
-        String safeName = UUID.randomUUID() + "." + extension;
-        Path uploadDir = Path.of(System.getProperty("user.dir"), "uploads", "resources").toAbsolutePath().normalize();
-        Path target = uploadDir.resolve(safeName).normalize();
-        if (!target.startsWith(uploadDir)) {
-            throw new BusinessException(400, "非法文件路径");
-        }
-        try {
-            Files.createDirectories(uploadDir);
-            file.transferTo(target);
-        } catch (IOException e) {
-            throw new BusinessException(500, "文件保存失败");
-        }
-        TeachingResource result = new TeachingResource();
-        result.setFilePath("/uploads/resources/" + safeName);
-        result.setOriginalFilename(originalFilename);
-        result.setFileSize(file.getSize());
-        result.setContentType(file.getContentType());
-        return result;
-    }
-
     @Override
     @Transactional
     public void markDownload(Long id) {
         TeachingResource resource = requireResource(id);
-        assertReadable(resource);
+        accessService.assertReadable(resource);
         resourceMapper.update(null, new LambdaUpdateWrapper<TeachingResource>()
                 .eq(TeachingResource::getId, id)
                 .setSql("download_count = COALESCE(download_count, 0) + 1"));
@@ -275,7 +214,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Transactional
     public void interact(Long id, ResourceInteractionDTO dto) {
         TeachingResource resource = requireResource(id);
-        assertReadable(resource);
+        accessService.assertReadable(resource);
         ResourceInteraction interaction = interactionMapper.selectOne(new LambdaQueryWrapper<ResourceInteraction>()
                 .eq(ResourceInteraction::getResourceId, id)
                 .eq(ResourceInteraction::getUserId, UserContext.userId()));
@@ -300,7 +239,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Transactional
     public void markInvalid(Long id, Integer invalidFlag) {
         TeachingResource resource = requireResource(id);
-        assertWritable(resource);
+        accessService.assertWritable(resource);
         resource.setInvalidFlag(flag(invalidFlag));
         resource.setInvalidCheckTime(LocalDateTime.now());
         resourceMapper.updateById(resource);
@@ -309,7 +248,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public ResourceStatsVO stats(Long id) {
         TeachingResource resource = requireResource(id);
-        assertReadable(resource);
+        accessService.assertReadable(resource);
         ResourceStatsVO vo = new ResourceStatsVO();
         vo.setResourceId(id);
         vo.setViewCount(value(resource.getViewCount()));
@@ -335,7 +274,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public ResourcePreviewVO preview(Long id) {
         TeachingResource resource = requireResource(id);
-        assertReadable(resource);
+        accessService.assertReadable(resource);
         LearningRecord record = UserContext.isLearner()
                 ? learningRecordMapper.selectOne(new LambdaQueryWrapper<LearningRecord>()
                     .eq(LearningRecord::getResourceId, id)
@@ -345,17 +284,21 @@ public class ResourceServiceImpl implements ResourceService {
         vo.setId(resource.getId());
         vo.setTitle(resource.getTitle());
         vo.setResourceType(resource.getResourceType());
+        vo.setBusinessCategory(resource.getBusinessCategory());
         vo.setKnowledgePoint(resource.getKnowledgePoint());
         vo.setRiskType(resource.getRiskType());
         vo.setTags(resource.getTags());
         vo.setContentType(resource.getContentType());
         vo.setOriginalFilename(resource.getOriginalFilename());
+        vo.setFileSize(resource.getFileSize());
+        vo.setOpenScope(resource.getOpenScope());
+        vo.setCourseId(resource.getCourseId());
         vo.setExperimentId(resource.getExperimentId());
         vo.setCompletionRule(resource.getCompletionRule());
         vo.setMinStudySeconds(resource.getMinStudySeconds());
         vo.setMinProgress(resource.getMinProgress());
         vo.setInvalidFlag(resource.getInvalidFlag());
-        vo.setPreviewUrl(StringUtils.hasText(resource.getUrl()) ? resource.getUrl() : "/api/files/resources/" + resource.getId());
+        vo.setPreviewUrl("/api/files/resources/" + resource.getId());
         Experiment experiment = experimentMapper.selectById(resource.getExperimentId());
         if (experiment != null) {
             vo.setExperimentName(experiment.getExpName());
@@ -373,17 +316,11 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public Path resourceFilePath(Long id) {
         TeachingResource resource = requireResource(id);
-        assertReadable(resource);
+        accessService.assertReadable(resource);
         if (!StringUtils.hasText(resource.getFilePath())) {
             throw new BusinessException(404, "资源文件不存在");
         }
-        String filename = Path.of(resource.getFilePath()).getFileName().toString();
-        Path uploadDir = Path.of(System.getProperty("user.dir"), "uploads", "resources").toAbsolutePath().normalize();
-        Path file = uploadDir.resolve(filename).normalize();
-        if (!file.startsWith(uploadDir) || !Files.exists(file) || !Files.isRegularFile(file)) {
-            throw new BusinessException(404, "资源文件不存在");
-        }
-        return file;
+        return fileStorageService.resolve(resource.getFilePath());
     }
 
     private List<Long> currentTeacherExperimentIds() {
@@ -463,7 +400,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private boolean isPublicResource(TeachingResource resource) {
-        return "PUBLIC".equalsIgnoreCase(resource.getOpenScope()) || resource.getCourseId() == null;
+        return "PUBLIC".equalsIgnoreCase(resource.getOpenScope());
     }
 
     private void assertWritable(TeachingResource resource) {
@@ -506,6 +443,19 @@ public class ResourceServiceImpl implements ResourceService {
         if (!RESOURCE_TYPES.contains(resourceType)) {
             throw new BusinessException(400, "不支持的资源类型");
         }
+    }
+
+    private void validateExperimentCourse(Long experimentId, Long courseId) {
+        if (experimentId == null) return;
+        Experiment experiment = requireExperiment(experimentId);
+        if (!courseId.equals(experiment.getCourseId())) throw new BusinessException(400, "关联实验不属于该课堂");
+    }
+
+    private void applyStoredFile(TeachingResource entity, StoredFileVO stored) {
+        entity.setFilePath(stored.getFilePath());
+        entity.setOriginalFilename(stored.getOriginalFilename());
+        entity.setContentType(stored.getContentType());
+        entity.setFileSize(stored.getFileSize());
     }
 
     private void validateUrl(String url) {

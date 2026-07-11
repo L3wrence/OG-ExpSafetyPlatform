@@ -18,7 +18,6 @@ import com.cupk.vo.ResourceTimelineNoteVO;
 import com.cupk.vo.ResourceTimelineStatsVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -46,25 +45,6 @@ public class ResourceController {
     @RequirePermission("resource:view")
     public Result<TeachingResource> detail(@PathVariable Long id) {
         return Result.success(resourceService.detail(id));
-    }
-
-    @PostMapping("/upload")
-    @RequirePermission("resource:create")
-    public Result<TeachingResource> upload(@RequestParam("file") MultipartFile file) {
-        return Result.success(resourceService.upload(file));
-    }
-
-    @PostMapping
-    @RequirePermission("resource:create")
-    public Result<Long> create(@Valid @RequestBody ResourceCreateDTO dto) {
-        return Result.success(resourceService.create(dto));
-    }
-
-    @PutMapping("/{id}")
-    @RequirePermission("resource:update")
-    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody ResourceUpdateDTO dto) {
-        resourceService.update(id, dto);
-        return Result.success();
     }
 
     @DeleteMapping("/{id}")

@@ -36,6 +36,33 @@
             <span>错题解析</span>
             <p>{{ item.analysis || '暂无解析' }}</p>
           </div>
+          <div v-if="item.answerId && item.correctAnswer !== null && item.correctAnswer !== undefined" class="ai-diagnosis">
+            <el-button
+              type="primary"
+              plain
+              :loading="aiExplainLoading[item.answerId]"
+              @click="explainWrong(item)"
+            >AI 分析错误原因</el-button>
+            <div v-if="aiExplainResults[item.answerId]" class="ai-result">
+              <el-alert v-if="aiExplainResults[item.answerId].fallback" title="本地知识库降级诊断" type="warning" :closable="false" />
+              <p><b>认知偏差：</b>{{ aiExplainResults[item.answerId].misconception }}</p>
+              <p><b>错误原因：</b>{{ aiExplainResults[item.answerId].whyWrong }}</p>
+              <p><b>风险后果：</b>{{ aiExplainResults[item.answerId].riskConsequence }}</p>
+              <div v-if="aiExplainResults[item.answerId].correctReasoning?.length">
+                <b>正确推理过程</b>
+                <ul><li v-for="point in aiExplainResults[item.answerId].correctReasoning" :key="point">{{ point }}</li></ul>
+              </div>
+              <div v-if="aiExplainResults[item.answerId].reviewPlan?.length">
+                <b>复习计划</b>
+                <ul><li v-for="point in aiExplainResults[item.answerId].reviewPlan" :key="point">{{ point }}</li></ul>
+              </div>
+              <div v-if="aiExplainResults[item.answerId].sources?.length">
+                <b>推荐资源</b>
+                <ul><li v-for="source in aiExplainResults[item.answerId].sources" :key="source.resourceId">{{ source.title }}</li></ul>
+              </div>
+              <small>{{ aiExplainResults[item.answerId].disclaimer }}</small>
+            </div>
+          </div>
         </template>
         <div v-if="item.gradingComment" class="analysis-box">
           <span>教师批注</span>
@@ -47,11 +74,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Back } from '@element-plus/icons-vue'
 import { getExamRecordDetail } from '@/api/exam'
+import { explainExamAnswer } from '@/api/ai'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,6 +88,8 @@ const recordId = computed(() => Number(route.params.recordId))
 
 const loading = ref(false)
 const detail = ref(null)
+const aiExplainLoading = reactive({})
+const aiExplainResults = reactive({})
 
 const record = computed(() => detail.value?.record || null)
 const answers = computed(() => detail.value?.answers || [])
@@ -85,6 +115,16 @@ async function loadDetail() {
 
 function goBack() {
   router.push(`/classrooms/${courseId.value}/learn?module=exam&examTab=records`)
+}
+
+async function explainWrong(item) {
+  if (!item?.answerId) return
+  aiExplainLoading[item.answerId] = true
+  try {
+    aiExplainResults[item.answerId] = await explainExamAnswer(item.answerId)
+  } finally {
+    aiExplainLoading[item.answerId] = false
+  }
 }
 
 function answerCorrect(item) {
@@ -152,6 +192,11 @@ function examStatus(status) {
 .answer-compare p, .analysis-box { background: #f8fafc; border-radius: 8px; padding: 12px; color: #344054; line-height: 1.7; }
 .answer-compare span, .analysis-box span { display: block; color: #667085; font-size: 12px; margin-bottom: 4px; }
 .analysis-box p { white-space: pre-wrap; }
+.ai-diagnosis { display: grid; justify-items: start; gap: 12px; }
+.ai-result { width: 100%; display: grid; gap: 10px; background: #f6f9ff; border: 1px solid #d9e6ff; border-radius: 8px; padding: 14px; color: #344054; line-height: 1.7; }
+.ai-result p, .ai-result ul { margin: 0; }
+.ai-result ul { padding-left: 22px; }
+.ai-result small { color: #667085; }
 @media (max-width: 760px) {
   .review-header, .question-title { flex-direction: column; }
   .answer-compare { grid-template-columns: 1fr; }

@@ -99,8 +99,10 @@
         <el-form-item label="标签">
           <el-input v-model="submissionForm.tags" maxlength="200" placeholder="多个标签用逗号分隔" />
         </el-form-item>
-        <el-form-item label="外链">
-          <el-input v-model="submissionForm.url" maxlength="500" placeholder="推荐填写可访问的视频、文档或网页链接" />
+        <el-form-item label="本地文件" required>
+          <el-upload ref="submissionUploadRef" :auto-upload="false" :limit="1" :on-change="onSubmissionFile" :on-remove="clearSubmissionFile">
+            <el-button>选择文件</el-button>
+          </el-upload>
         </el-form-item>
         <el-form-item label="简介">
           <el-input v-model="submissionForm.description" type="textarea" :rows="3" maxlength="500" show-word-limit />
@@ -135,7 +137,7 @@ import { Check, Download, Pointer, Search, Star, View } from '@element-plus/icon
 import ResourceViewer from '@/components/learning/ResourceViewer.vue'
 import { getMyLearningRecords, updateLearningProgress } from '@/api/learningRecord'
 import { getResources, interactResource, markResourceDownload } from '@/api/resource'
-import { getMyResourceSubmissions, getPublicResourcePreview, getPublicResources, submitResource } from '@/api/resourceSubmission'
+import { getMyResourceSubmissions, getPublicResourcePreview, getPublicResources, submitResource, uploadSubmissionResource } from '@/api/resourceSubmission'
 import resourceCore from '@/assets/amazing/resource-core.png'
 
 const resourceTypes = [
@@ -172,16 +174,17 @@ const viewerVisible = ref(false)
 const activeResourceId = ref(null)
 const submissionVisible = ref(false)
 const submissionSaving = ref(false)
+const submissionFile = ref(null)
+const submissionUploadRef = ref(null)
 const mySubmissions = ref([])
 const publicPreviewVisible = ref(false)
 const publicPreview = ref(null)
 const submissionForm = reactive({
   title: '',
-  resourceType: 'LINK',
+  resourceType: 'DOCUMENT',
   knowledgePoint: '',
   riskType: '',
   tags: '',
-  url: '',
   description: '',
 })
 
@@ -244,28 +247,41 @@ async function openSubmission() {
   mySubmissions.value = submissionRecords(await getMyResourceSubmissions().catch(() => []))
 }
 
+function onSubmissionFile(file) {
+  submissionFile.value = file.raw
+}
+
+function clearSubmissionFile() {
+  submissionFile.value = null
+}
+
 async function submitPublicResource() {
   if (!submissionForm.title.trim()) {
     ElMessage.warning('请输入资源标题')
     return
   }
-  if (!submissionForm.url.trim()) {
-    ElMessage.warning('请填写资源外链')
+  if (!submissionFile.value) {
+    ElMessage.warning('请选择本地资源文件')
     return
   }
   submissionSaving.value = true
   try {
+    const fileMeta = await uploadSubmissionResource(submissionFile.value)
     await submitResource({
       title: submissionForm.title.trim(),
       resourceType: submissionForm.resourceType,
       knowledgePoint: submissionForm.knowledgePoint || undefined,
       riskType: submissionForm.riskType || undefined,
       tags: submissionForm.tags || undefined,
-      url: submissionForm.url.trim(),
+      filePath: fileMeta.filePath,
+      originalFilename: fileMeta.originalFilename,
+      contentType: fileMeta.contentType,
       description: submissionForm.description || undefined,
     })
     ElMessage.success('投稿已提交，审核通过后将进入公共资源库')
-    Object.assign(submissionForm, { title: '', resourceType: 'LINK', knowledgePoint: '', riskType: '', tags: '', url: '', description: '' })
+    Object.assign(submissionForm, { title: '', resourceType: 'DOCUMENT', knowledgePoint: '', riskType: '', tags: '', description: '' })
+    submissionFile.value = null
+    submissionUploadRef.value?.clearFiles()
     mySubmissions.value = submissionRecords(await getMyResourceSubmissions().catch(() => []))
   } finally {
     submissionSaving.value = false

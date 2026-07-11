@@ -392,6 +392,8 @@ public class ExamServiceImpl implements ExamService {
         for (ExamAnswer ans : answers) {
             Map<String, Object> snapshot = snapshotMap.get(ans.getQuestionId());
             Map<String, Object> item = new HashMap<>();
+            item.put("answerId", ans.getId());
+            item.put("questionId", ans.getQuestionId());
             item.put("question", snapshot == null ? null : studentQuestionView(snapshot));
             item.put("studentAnswer", ans.getStudentAnswer());
             item.put("correctAnswer", showAnswers && snapshot != null ? snapshot.get("answer") : null);

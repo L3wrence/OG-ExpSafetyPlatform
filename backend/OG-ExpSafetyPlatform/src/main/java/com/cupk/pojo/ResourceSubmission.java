@@ -18,14 +18,15 @@ public class ResourceSubmission extends BasePojo {
     private Long submitterId;
     private String title;
     private String resourceType;
+    private String businessCategory;
     private String knowledgePoint;
     private String riskType;
     private String tags;
     private String description;
-    private String url;
     private String filePath;
     private String originalFilename;
     private String contentType;
+    private Long fileSize;
     private String status;
     private Long reviewerId;
     private String reviewComment;
