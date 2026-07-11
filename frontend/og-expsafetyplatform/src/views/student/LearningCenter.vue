@@ -258,7 +258,7 @@
               @row-click="openExamRecordReview"
             >
               <el-table-column label="试卷" min-width="160">
-                <template #default="{ row }">{{ row.paperTitle || examPaperTitle(row.paperId) }}</template>
+                <template #default="{ row }">{{ row.paperTitle || '未知试卷' }}</template>
               </el-table-column>
               <el-table-column prop="totalScore" label="得分" width="90" />
               <el-table-column label="状态" width="120">
@@ -349,6 +349,9 @@
               <el-table-column label="时段" min-width="140">
                 <template #default="{ row }">{{ slotOf(row).startTime || '-' }} - {{ slotOf(row).endTime || '-' }}</template>
               </el-table-column>
+              <el-table-column label="实验地点" min-width="160">
+                <template #default="{ row }">{{ row.location || row.labName || '-' }}</template>
+              </el-table-column>
               <el-table-column label="余量" width="90">
                 <template #default="{ row }">{{ row.remaining ?? '-' }}</template>
               </el-table-column>
@@ -360,6 +363,18 @@
             </el-table>
           </div>
         </div>
+        <div class="panel-title">
+          <h3>我的实验预约</h3>
+        </div>
+        <el-table :data="reservations" stripe empty-text="暂无预约记录">
+          <el-table-column prop="experimentName" label="实验" min-width="160" />
+          <el-table-column prop="location" label="实验地点" min-width="160" />
+          <el-table-column prop="date" label="日期" width="120" />
+          <el-table-column prop="timeRange" label="时段" min-width="140" />
+          <el-table-column label="状态" width="110">
+            <template #default="{ row }">{{ reservationStatusLabel(row.status) }}</template>
+          </el-table-column>
+        </el-table>
       </section>
 
       <section v-else class="module-panel">
@@ -442,7 +457,8 @@ import { getLearningPath } from '@/api/learningTask'
 import { getMyLearningRecords, getMyStepLearningRecords } from '@/api/learningRecord'
 import { createReport, getMyReports, submitReport, updateReport, uploadReportFile } from '@/api/report'
 import { createReservation, getAvailableSlots, getMyReservations } from '@/api/reservation'
-import { createResource, getResources, uploadResource } from '@/api/resource'
+import { createResource, getResources } from '@/api/resource'
+import { validateResourceFile } from '@/constants/resourceTypes'
 import { getAdmissionStatus } from '@/api/exam'
 import procedureSafety from '@/assets/amazing/procedure-safety.png'
 
@@ -980,9 +996,8 @@ function openExamRecordReview(row) {
   router.push(`/classrooms/${courseId.value}/exams/records/${row.id}`)
 }
 
-function examPaperTitle(paperId) {
-  const paper = availableExams.value.find((item) => Number(item.id) === Number(paperId))
-  return paper?.title || `试卷 ${paperId || '-'}`
+function reservationStatusLabel(status) {
+  return ({ PENDING: '待审核', APPROVED: '已通过', REJECTED: '已驳回', CANCELLED: '已取消' })[status] || status || '-'
 }
 
 function onResourceFile(file) {
@@ -1000,19 +1015,15 @@ async function createClassroomResource() {
   }
   resourceSaving.value = true
   try {
-    let fileMeta = {}
-    if (resourceFile.value) fileMeta = await uploadResource(resourceFile.value)
-    await createResource({
+    const fileError = validateResourceFile(resourceFile.value, resourceForm.resourceType)
+    if (fileError) { ElMessage.warning(fileError); return }
+    await createResource(courseId.value, {
       experimentId: resourceForm.experimentId,
       title: resourceForm.title.trim(),
       resourceType: resourceForm.resourceType,
-      filePath: fileMeta.filePath,
-      originalFilename: fileMeta.originalFilename,
-      contentType: fileMeta.contentType,
-      fileSize: fileMeta.fileSize,
-      openScope: 'COURSE',
+      businessCategory: 'OTHER',
       status: 1,
-    })
+    }, resourceFile.value)
     ElMessage.success('课堂资料已上传')
     Object.assign(resourceForm, { experimentId: selectedExperimentId.value, title: '', resourceType: 'DOCUMENT', url: '' })
     resourceFile.value = null

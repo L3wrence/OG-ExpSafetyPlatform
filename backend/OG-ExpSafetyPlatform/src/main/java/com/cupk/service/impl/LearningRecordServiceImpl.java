@@ -18,6 +18,7 @@ import com.cupk.mapper.LearningRecordMapper;
 import com.cupk.mapper.TeachingResourceMapper;
 import com.cupk.service.LearningRecordService;
 import com.cupk.service.LearningTaskService;
+import com.cupk.service.ResourceAccessService;
 import com.cupk.util.AccessUtil;
 import com.cupk.vo.LearningProgressVO;
 import org.springframework.stereotype.Service;
@@ -37,13 +38,14 @@ public class LearningRecordServiceImpl implements LearningRecordService {
     private final LabCourseMapper courseMapper;
     private final TeachingClassMapper teachingClassMapper;
     private final LearningTaskService learningTaskService;
+    private final ResourceAccessService resourceAccessService;
 
     public LearningRecordServiceImpl(LearningRecordMapper recordMapper, TeachingResourceMapper resourceMapper,
                                      CourseStudentMapper courseStudentMapper,
                                      ExperimentMapper experimentMapper,
                                      LabCourseMapper courseMapper,
                                      TeachingClassMapper teachingClassMapper,
-                                     LearningTaskService learningTaskService) {
+                                     LearningTaskService learningTaskService, ResourceAccessService resourceAccessService) {
         this.recordMapper = recordMapper;
         this.resourceMapper = resourceMapper;
         this.courseStudentMapper = courseStudentMapper;
@@ -51,6 +53,7 @@ public class LearningRecordServiceImpl implements LearningRecordService {
         this.courseMapper = courseMapper;
         this.teachingClassMapper = teachingClassMapper;
         this.learningTaskService = learningTaskService;
+        this.resourceAccessService = resourceAccessService;
     }
 
     @Override
@@ -150,24 +153,12 @@ public class LearningRecordServiceImpl implements LearningRecordService {
 
     private TeachingResource requireOpenResource(Long id) {
         TeachingResource resource = resourceMapper.selectById(id);
-        if (resource == null) throw new BusinessException(404, "教学资源不存在");
-        if (resource.getStatus() != 1) throw new BusinessException(403, "教学资源未开放");
-        if (resource.getInvalidFlag() != null && resource.getInvalidFlag() == 1) throw new BusinessException(403, "教学资源已失效");
-        LocalDateTime now = LocalDateTime.now();
-        if (resource.getOpenTime() != null && resource.getOpenTime().isAfter(now)) throw new BusinessException(403, "教学资源尚未开放");
-        if (resource.getCloseTime() != null && resource.getCloseTime().isBefore(now)) throw new BusinessException(403, "教学资源已过期");
-        if (resource.getCourseId() != null && !isPublicResource(resource) && !canManageResource(resource)) {
-            Long count = courseStudentMapper.selectCount(new LambdaQueryWrapper<CourseStudent>()
-                    .eq(CourseStudent::getCourseId, resource.getCourseId())
-                    .eq(CourseStudent::getStudentId, UserContext.userId())
-                    .eq(CourseStudent::getStatus, 1));
-            if (count == null || count == 0) throw new BusinessException(403, "无权学习该课程资源");
-        }
+        resourceAccessService.assertReadable(resource);
         return resource;
     }
 
     private boolean isPublicResource(TeachingResource resource) {
-        return "PUBLIC".equalsIgnoreCase(resource.getOpenScope()) || resource.getCourseId() == null;
+        return "PUBLIC".equalsIgnoreCase(resource.getOpenScope());
     }
 
     private boolean canManageResource(TeachingResource resource) {

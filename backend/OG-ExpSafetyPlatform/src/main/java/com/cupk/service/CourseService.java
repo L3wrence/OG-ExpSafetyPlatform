@@ -15,10 +15,13 @@ import com.cupk.vo.CourseStudentVO;
 import com.cupk.vo.TeachingClassVO;
 
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Path;
 
 public interface CourseService {
-    Long create(CourseCreateDTO dto);   //创建课程
-    void update(Long id, CourseUpdateDTO dto);  //修改课程
+    Long create(CourseCreateDTO dto, MultipartFile cover);
+    void update(Long id, CourseUpdateDTO dto, MultipartFile cover, Boolean removeCover);
+    Path coverFilePath(Long id);
     void delete(Long id);   //根据id删除课程
     void changeStatus(Long id, Integer status);     //修改课程状态
     void publish(Long id, Boolean allowEmpty);

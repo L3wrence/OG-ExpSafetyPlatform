@@ -36,7 +36,7 @@ public interface ReservationService {
     Map<String, Object> createReservation(Reservation reservation);
 
     /** 我的预约列表 */
-    Page<Reservation> getMyReservations(int pageNum, int pageSize, String status);
+    Page<ReservationVO> getMyReservations(int pageNum, int pageSize, String status);
 
     /** 取消预约 */
     void cancelReservation(Long id);

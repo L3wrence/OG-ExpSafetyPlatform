@@ -90,6 +90,7 @@
             <el-option v-for="item in resourceTypes" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
+        <el-form-item label="教学分类"><el-select v-model="submissionForm.businessCategory"><el-option v-for="item in businessCategories" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="知识点">
           <el-input v-model="submissionForm.knowledgePoint" maxlength="100" placeholder="如 钻井液密度、管输压降" />
         </el-form-item>
@@ -136,31 +137,13 @@ import { ElMessage } from 'element-plus'
 import { Check, Download, Pointer, Search, Star, View } from '@element-plus/icons-vue'
 import ResourceViewer from '@/components/learning/ResourceViewer.vue'
 import { getMyLearningRecords, updateLearningProgress } from '@/api/learningRecord'
-import { getResources, interactResource, markResourceDownload } from '@/api/resource'
-import { getMyResourceSubmissions, getPublicResourcePreview, getPublicResources, submitResource, uploadSubmissionResource } from '@/api/resourceSubmission'
+import { getResourceFileBlob, getResources, interactResource, markResourceDownload } from '@/api/resource'
+import { getMyResourceSubmissions, submitResource } from '@/api/resourceSubmission'
+import { BUSINESS_CATEGORIES, RESOURCE_TYPES, validateResourceFile } from '@/constants/resourceTypes'
 import resourceCore from '@/assets/amazing/resource-core.png'
 
-const resourceTypes = [
-  { label: '实验指导书', value: 'GUIDE' },
-  { label: '课程讲义', value: 'LECTURE' },
-  { label: 'PPT课件', value: 'PPT' },
-  { label: '教学视频', value: 'TEACHING_VIDEO' },
-  { label: '微课', value: 'MICRO_COURSE' },
-  { label: '仪器操作视频', value: 'INSTRUMENT_VIDEO' },
-  { label: '设备说明书', value: 'DEVICE_MANUAL' },
-  { label: '实验案例', value: 'EXPERIMENT_CASE' },
-  { label: '事故案例', value: 'ACCIDENT_CASE' },
-  { label: '应急处置流程', value: 'EMERGENCY_PROCESS' },
-  { label: '实验报告模板', value: 'REPORT_TEMPLATE' },
-  { label: '参考文献', value: 'REFERENCE' },
-  { label: '外部课程链接', value: 'EXTERNAL_COURSE' },
-  { label: '虚拟仿真实验', value: 'VIRTUAL_SIMULATION' },
-  { label: '文档', value: 'DOCUMENT' },
-  { label: '图片', value: 'IMAGE' },
-  { label: '视频', value: 'VIDEO' },
-  { label: '音频', value: 'AUDIO' },
-  { label: '网页链接', value: 'LINK' },
-]
+const resourceTypes = RESOURCE_TYPES
+const businessCategories = BUSINESS_CATEGORIES
 
 const filters = reactive({ keyword: '', experimentId: '', resourceType: '', favoriteOnly: 0 })
 const resources = ref([])
@@ -182,6 +165,7 @@ const publicPreview = ref(null)
 const submissionForm = reactive({
   title: '',
   resourceType: 'DOCUMENT',
+  businessCategory: 'OTHER',
   knowledgePoint: '',
   riskType: '',
   tags: '',
@@ -193,7 +177,7 @@ onMounted(loadResources)
 async function loadResources() {
   loading.value = true
   try {
-    const [resourceResult, publicResult, recordResult] = await Promise.all([
+    const [resourceResult, recordResult] = await Promise.all([
       getResources({
         pageNum: pageNum.value,
         pageSize: 8,
@@ -203,20 +187,10 @@ async function loadResources() {
         favoriteOnly: filters.favoriteOnly || undefined,
         openScope: 'PUBLIC',
       }),
-      getPublicResources({
-        pageNum: pageNum.value,
-        pageSize: 8,
-        keyword: filters.keyword || undefined,
-        resourceType: filters.resourceType || undefined,
-      }).catch(() => ({ records: [], total: 0 })),
       getMyLearningRecords(),
     ])
-    const platformResources = (resourceResult?.records || []).map((item) => ({ ...item, sourceType: 'PLATFORM' }))
-    const publicResources = filters.favoriteOnly
-      ? []
-      : (publicResult?.records || []).map((item) => ({ ...item, sourceType: 'SUBMISSION' }))
-    resources.value = [...platformResources, ...publicResources]
-    total.value = Number(resourceResult?.total || 0) + Number(publicResult?.total || 0)
+    resources.value = resourceResult?.records || []
+    total.value = Number(resourceResult?.total || 0)
     records.value = Array.isArray(recordResult) ? recordResult : (recordResult?.records || [])
     initDrafts()
   } finally {
@@ -233,11 +207,6 @@ function initDrafts() {
 }
 
 async function preview(resource) {
-  if (resource.sourceType === 'SUBMISSION') {
-    publicPreview.value = await getPublicResourcePreview(resource.id)
-    publicPreviewVisible.value = true
-    return
-  }
   activeResourceId.value = resource.id
   viewerVisible.value = true
 }
@@ -264,22 +233,21 @@ async function submitPublicResource() {
     ElMessage.warning('请选择本地资源文件')
     return
   }
+  const fileError = validateResourceFile(submissionFile.value, submissionForm.resourceType)
+  if (fileError) { ElMessage.warning(fileError); return }
   submissionSaving.value = true
   try {
-    const fileMeta = await uploadSubmissionResource(submissionFile.value)
     await submitResource({
       title: submissionForm.title.trim(),
       resourceType: submissionForm.resourceType,
+      businessCategory: submissionForm.businessCategory,
       knowledgePoint: submissionForm.knowledgePoint || undefined,
       riskType: submissionForm.riskType || undefined,
       tags: submissionForm.tags || undefined,
-      filePath: fileMeta.filePath,
-      originalFilename: fileMeta.originalFilename,
-      contentType: fileMeta.contentType,
       description: submissionForm.description || undefined,
-    })
+    }, submissionFile.value)
     ElMessage.success('投稿已提交，审核通过后将进入公共资源库')
-    Object.assign(submissionForm, { title: '', resourceType: 'DOCUMENT', knowledgePoint: '', riskType: '', tags: '', description: '' })
+    Object.assign(submissionForm, { title: '', resourceType: 'DOCUMENT', businessCategory: 'OTHER', knowledgePoint: '', riskType: '', tags: '', description: '' })
     submissionFile.value = null
     submissionUploadRef.value?.clearFiles()
     mySubmissions.value = submissionRecords(await getMyResourceSubmissions().catch(() => []))
@@ -293,12 +261,14 @@ function submissionRecords(result) {
 }
 
 async function download(resource) {
-  if (!resource.filePath && !resource.url) {
-    ElMessage.warning('资源暂未配置下载地址')
-    return
-  }
   await markResourceDownload(resource.id)
-  window.open(resource.filePath || resource.url, '_blank', 'noopener,noreferrer')
+  const blob = await getResourceFileBlob(resource.id)
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = resource.originalFilename || resource.title
+  anchor.click()
+  URL.revokeObjectURL(url)
   ElMessage.success('已记录下载')
   await loadResources()
 }

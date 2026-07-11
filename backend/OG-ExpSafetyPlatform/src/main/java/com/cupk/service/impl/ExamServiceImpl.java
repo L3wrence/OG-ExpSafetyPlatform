@@ -14,6 +14,7 @@ import com.cupk.exception.BusinessException;
 import com.cupk.interceptor.UserContext;
 import com.cupk.vo.ExamSessionQuestionVO;
 import com.cupk.vo.ExamSessionVO;
+import com.cupk.vo.ExamRecordVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -348,7 +349,7 @@ public class ExamServiceImpl implements ExamService {
     }
 
     @Override
-    public Page<ExamRecord> getMyRecords(int pageNum, int pageSize, String status, Long courseId) {
+    public Page<ExamRecordVO> getMyRecords(int pageNum, int pageSize, String status, Long courseId) {
         Page<ExamRecord> page = new Page<>(pageNum, pageSize);
         List<Long> paperIds = null;
         if (courseId != null) {
@@ -358,7 +359,9 @@ public class ExamServiceImpl implements ExamService {
             if (paperIds.isEmpty()) {
                 page.setRecords(Collections.emptyList());
                 page.setTotal(0);
-                return page;
+                Page<ExamRecordVO> empty = new Page<>(pageNum, pageSize, 0);
+                empty.setRecords(Collections.emptyList());
+                return empty;
             }
         }
         LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
@@ -367,7 +370,27 @@ public class ExamServiceImpl implements ExamService {
                .ne(status == null || status.isEmpty(), ExamRecord::getStatus, ExamRecordStatus.IN_PROGRESS.name())
                .in(paperIds != null, ExamRecord::getPaperId, paperIds)
                .orderByDesc(ExamRecord::getCreateTime);
-        return examRecordMapper.selectPage(page, wrapper);
+        Page<ExamRecord> recordPage = examRecordMapper.selectPage(page, wrapper);
+        Map<Long, String> paperTitles = examPaperMapper.selectBatchIds(recordPage.getRecords().stream()
+                        .map(ExamRecord::getPaperId).filter(Objects::nonNull).distinct().toList()).stream()
+                .collect(Collectors.toMap(ExamPaper::getId, ExamPaper::getTitle));
+        Page<ExamRecordVO> result = new Page<>(pageNum, pageSize, recordPage.getTotal());
+        result.setRecords(recordPage.getRecords().stream().map(record -> {
+            ExamRecordVO vo = new ExamRecordVO();
+            vo.setId(record.getId());
+            vo.setStudentId(record.getStudentId());
+            vo.setPaperId(record.getPaperId());
+            vo.setPaperTitle(paperTitles.getOrDefault(record.getPaperId(), "未知试卷"));
+            vo.setTotalScore(record.getTotalScore());
+            vo.setObjectiveScore(record.getObjectiveScore());
+            vo.setSubjectiveScore(record.getSubjectiveScore());
+            vo.setStatus(record.getStatus());
+            vo.setPassed(Integer.valueOf(1).equals(record.getPassed()));
+            vo.setStartTime(record.getStartTime());
+            vo.setSubmitTime(record.getSubmitTime());
+            return vo;
+        }).toList());
+        return result;
     }
 
     @Override

@@ -17,6 +17,7 @@ import com.cupk.pojo.ResourceTimelineNote;
 import com.cupk.pojo.TeachingResource;
 import com.cupk.pojo.User;
 import com.cupk.service.ResourceTimelineNoteService;
+import com.cupk.service.ResourceAccessService;
 import com.cupk.util.AccessUtil;
 import com.cupk.vo.ResourceTimelineNoteVO;
 import com.cupk.vo.ResourceTimelineStatsVO;
@@ -44,19 +45,21 @@ public class ResourceTimelineNoteServiceImpl implements ResourceTimelineNoteServ
     private final LabCourseMapper courseMapper;
     private final CourseStudentMapper courseStudentMapper;
     private final UserMapper userMapper;
+    private final ResourceAccessService resourceAccessService;
 
     public ResourceTimelineNoteServiceImpl(ResourceTimelineNoteMapper noteMapper,
                                            TeachingResourceMapper resourceMapper,
                                            ExperimentMapper experimentMapper,
                                            LabCourseMapper courseMapper,
                                            CourseStudentMapper courseStudentMapper,
-                                           UserMapper userMapper) {
+                                           UserMapper userMapper, ResourceAccessService resourceAccessService) {
         this.noteMapper = noteMapper;
         this.resourceMapper = resourceMapper;
         this.experimentMapper = experimentMapper;
         this.courseMapper = courseMapper;
         this.courseStudentMapper = courseStudentMapper;
         this.userMapper = userMapper;
+        this.resourceAccessService = resourceAccessService;
     }
 
     @Override
@@ -70,9 +73,11 @@ public class ResourceTimelineNoteServiceImpl implements ResourceTimelineNoteServ
                 .orderByDesc(ResourceTimelineNote::getCreateTime);
         if (Boolean.TRUE.equals(mineOnly)) {
             wrapper.eq(ResourceTimelineNote::getUserId, userId);
-        } else {
+        } else if ("COURSE".equalsIgnoreCase(resource.getOpenScope())) {
             wrapper.and(w -> w.eq(ResourceTimelineNote::getUserId, userId)
                     .or().eq(ResourceTimelineNote::getVisibility, "COURSE"));
+        } else {
+            wrapper.eq(ResourceTimelineNote::getUserId, userId);
         }
         return noteMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
@@ -88,6 +93,9 @@ public class ResourceTimelineNoteServiceImpl implements ResourceTimelineNoteServ
         }
         if (!VISIBILITIES.contains(visibility)) {
             throw new BusinessException(400, "不支持的可见范围");
+        }
+        if ("PUBLIC".equalsIgnoreCase(resource.getOpenScope()) && "COURSE".equals(visibility)) {
+            throw new BusinessException(400, "公共资源笔记只能设为私有");
         }
         ResourceTimelineNote note = new ResourceTimelineNote();
         note.setResourceId(resource.getId());
@@ -157,25 +165,7 @@ public class ResourceTimelineNoteServiceImpl implements ResourceTimelineNoteServ
 
     private TeachingResource requireReadableResource(Long resourceId) {
         TeachingResource resource = requireResource(resourceId);
-        if (UserContext.isTeacher() && canWrite(resource)) {
-            return resource;
-        }
-        if (UserContext.isLearner()) {
-            if (!Integer.valueOf(1).equals(resource.getStatus()) || Integer.valueOf(1).equals(resource.getInvalidFlag())) {
-                throw new BusinessException(403, "资源未开放或已失效");
-            }
-            Long courseId = resource.getCourseId();
-            if (courseId != null
-                    && !"PUBLIC".equalsIgnoreCase(resource.getOpenScope())
-                    && courseStudentMapper.selectCount(new LambdaQueryWrapper<CourseStudent>()
-                    .eq(CourseStudent::getCourseId, courseId)
-                    .eq(CourseStudent::getStudentId, UserContext.userId())
-                    .eq(CourseStudent::getStatus, 1)) == 0) {
-                throw new BusinessException(403, "无权访问该课程资源");
-            }
-        } else if (UserContext.isTeacher()) {
-            assertWritable(resource);
-        }
+        resourceAccessService.assertReadable(resource);
         return resource;
     }
 

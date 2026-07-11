@@ -130,7 +130,7 @@
           <el-input v-model="form.assessmentMethod" placeholder="如 必学资源 30% + 安全考试 30% + 报告 40%" />
         </el-form-item>
         <el-form-item label="封面地址">
-          <el-input v-model="form.coverUrl" placeholder="可选，课程封面图片 URL" />
+          <CourseCoverUploader :model-value="form.coverUrl" @file-change="handleCoverFile" @remove="handleCoverRemove" />
         </el-form-item>
         <el-form-item label="课程简介">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入课程简介和教学目标" />
@@ -366,6 +366,7 @@
 </template>
 
 <script setup>
+import CourseCoverUploader from '@/components/course/CourseCoverUploader.vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -454,6 +455,8 @@ const form = reactive({
   learningRequirement: '',
   allowEmptyPublish: false,
 })
+const coverFile = ref(null)
+const removeCover = ref(false)
 
 const classForm = reactive({
   className: '',
@@ -549,6 +552,8 @@ async function loadCourses() {
 }
 
 function openCreate() {
+  coverFile.value = null
+  removeCover.value = false
   editingCourse.value = null
   resetForm()
   formVisible.value = true
@@ -563,6 +568,8 @@ function openCreateFromQuery() {
 }
 
 async function openEdit(course) {
+  coverFile.value = null
+  removeCover.value = false
   const detail = await getCourseDetail(course.id)
   const fullCourse = detail?.course || course
   editingCourse.value = fullCourse
@@ -616,6 +623,17 @@ async function openDetail(course) {
   }
 }
 
+function handleCoverFile(file) {
+  coverFile.value = file
+  removeCover.value = false
+}
+
+function handleCoverRemove() {
+  coverFile.value = null
+  removeCover.value = true
+  form.coverUrl = ''
+}
+
 async function saveCourse() {
   await formRef.value?.validate()
   const payload = {
@@ -623,7 +641,6 @@ async function saveCourse() {
     courseCode: form.courseCode.trim(),
     direction: form.direction || undefined,
     teacherId: Number(form.teacherId),
-    coverUrl: form.coverUrl || undefined,
     description: form.description || undefined,
     semester: form.semester || undefined,
     status: form.status,
@@ -638,10 +655,10 @@ async function saveCourse() {
   saving.value = true
   try {
     if (editingCourse.value) {
-      await updateCourse(editingCourse.value.id, payload)
+      await updateCourse(editingCourse.value.id, payload, coverFile.value, removeCover.value)
       ElMessage.success('课程已更新')
     } else {
-      await createCourse(payload)
+      await createCourse(payload, coverFile.value)
       ElMessage.success('课程已创建')
     }
     formVisible.value = false

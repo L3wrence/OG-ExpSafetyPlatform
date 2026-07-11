@@ -3,6 +3,7 @@ package com.cupk.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.common.PageResult;
+import com.cupk.common.FileUsage;
 import com.cupk.dto.CourseCreateDTO;
 import com.cupk.dto.CourseQueryDTO;
 import com.cupk.dto.CourseStudentImportDTO;
@@ -40,6 +41,7 @@ import com.cupk.pojo.TeachingResource;
 import com.cupk.pojo.User;
 import com.cupk.pojo.UserRole;
 import com.cupk.service.CourseService;
+import com.cupk.service.FileStorageService;
 import com.cupk.util.AccessUtil;
 import com.cupk.vo.CourseDetailVO;
 import com.cupk.vo.CourseListVO;
@@ -48,6 +50,9 @@ import com.cupk.vo.CourseStudentImportResultVO;
 import com.cupk.vo.CourseStudentVO;
 import com.cupk.vo.ExperimentSimpleVO;
 import com.cupk.vo.TeachingClassVO;
+import com.cupk.vo.StoredFileVO;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Path;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,13 +88,15 @@ public class CourseServiceImpl implements CourseService {
     private final RoleMapper roleMapper;
     private final UserRoleMapper userRoleMapper;
     private final OperationLogMapper operationLogMapper;
+    private final FileStorageService fileStorageService;
 
     public CourseServiceImpl(LabCourseMapper courseMapper, ExperimentMapper experimentMapper,
                              TeachingResourceMapper resourceMapper, LearningRecordMapper learningRecordMapper,
                              UserMapper userMapper, AuthMapper authMapper, TeachingClassMapper teachingClassMapper,
                              CourseStudentMapper courseStudentMapper, ExamPaperMapper examPaperMapper,
                              ReservationMapper reservationMapper, ReportMapper reportMapper, RoleMapper roleMapper,
-                             UserRoleMapper userRoleMapper, OperationLogMapper operationLogMapper) {
+                             UserRoleMapper userRoleMapper, OperationLogMapper operationLogMapper,
+                             FileStorageService fileStorageService) {
         this.courseMapper = courseMapper;
         this.experimentMapper = experimentMapper;
         this.resourceMapper = resourceMapper;
@@ -104,11 +111,12 @@ public class CourseServiceImpl implements CourseService {
         this.roleMapper = roleMapper;
         this.userRoleMapper = userRoleMapper;
         this.operationLogMapper = operationLogMapper;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
     @Transactional
-    public Long create(CourseCreateDTO dto) {
+    public Long create(CourseCreateDTO dto, MultipartFile cover) {
         AccessUtil.requireTeacherOrAdmin();
         validateTeacher(dto.getTeacherId());
         checkCode(dto.getCourseCode(), null);
@@ -117,6 +125,7 @@ public class CourseServiceImpl implements CourseService {
         }
         LabCourse course = new LabCourse();
         BeanUtils.copyProperties(dto, course);
+        if (cover != null && !cover.isEmpty()) applyCover(course, fileStorageService.store(cover, FileUsage.COURSE_COVER, null));
         course.setAllowEmptyPublish(flag(dto.getAllowEmptyPublish()));
         if (dto.getStatus() != null && dto.getStatus() == STATUS_PUBLISHED) {
             if (course.getAllowEmptyPublish() != 1) {
@@ -133,7 +142,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public void update(Long id, CourseUpdateDTO dto) {
+    public void update(Long id, CourseUpdateDTO dto, MultipartFile cover, Boolean removeCover) {
         LabCourse current = requireCourse(id);
         assertCourseManageable(current);
         assertCourseMutable(current);
@@ -147,6 +156,9 @@ public class CourseServiceImpl implements CourseService {
         checkCode(dto.getCourseCode(), id);
         boolean publishRequested = dto.getStatus() != null && dto.getStatus() == STATUS_PUBLISHED && current.getStatus() != STATUS_PUBLISHED;
         BeanUtils.copyProperties(dto, current);
+        String oldCover = current.getCoverFilePath();
+        if (Boolean.TRUE.equals(removeCover)) clearCover(current);
+        if (cover != null && !cover.isEmpty()) applyCover(current, fileStorageService.store(cover, FileUsage.COURSE_COVER, null));
         current.setAllowEmptyPublish(flag(dto.getAllowEmptyPublish()));
         if (publishRequested) {
             long experimentCount = experimentMapper.selectCount(new LambdaQueryWrapper<Experiment>()
@@ -156,6 +168,7 @@ public class CourseServiceImpl implements CourseService {
             }
         }
         courseMapper.updateById(current);
+        if ((Boolean.TRUE.equals(removeCover) || (cover != null && !cover.isEmpty())) && oldCover != null) fileStorageService.deleteIfExists(oldCover);
         log("UPDATE", "修改课程：" + current.getCourseName(), "SUCCESS");
     }
 
@@ -316,6 +329,7 @@ public class CourseServiceImpl implements CourseService {
                 new LambdaQueryWrapper<TeachingResource>().in(TeachingResource::getExperimentId, experimentIds));
 
         CourseDetailVO vo = new CourseDetailVO();
+        course.setCoverUrl(course.getCoverFilePath() == null ? null : "/api/public/courses/" + course.getId() + "/cover");
         vo.setCourse(course);
         User teacher = userMapper.selectById(course.getTeacherId());
         vo.setTeacherName(teacher == null ? "未知教师" : teacher.getRealName());
@@ -491,6 +505,7 @@ public class CourseServiceImpl implements CourseService {
     private CourseListVO toListVO(LabCourse course, String relationType) {
         CourseListVO vo = new CourseListVO();
         BeanUtils.copyProperties(course, vo);
+        vo.setCoverUrl(course.getCoverFilePath() == null ? null : "/api/public/courses/" + course.getId() + "/cover");
         vo.setRelationType(relationType);
         User teacher = userMapper.selectById(course.getTeacherId());
         vo.setTeacherName(teacher == null ? "未知教师" : teacher.getRealName());
@@ -521,6 +536,25 @@ public class CourseServiceImpl implements CourseService {
                 .eq(CourseStudent::getTeachingClassId, entity.getId())
                 .eq(CourseStudent::getStatus, STATUS_PUBLISHED))));
         return vo;
+    }
+
+    @Override
+    public Path coverFilePath(Long id) {
+        LabCourse course = requireCourse(id);
+        if (!StringUtils.hasText(course.getCoverFilePath())) throw new BusinessException(404, "课程封面不存在");
+        return fileStorageService.resolve(course.getCoverFilePath());
+    }
+
+    private void applyCover(LabCourse course, StoredFileVO stored) {
+        course.setCoverFilePath(stored.getFilePath());
+        course.setCoverOriginalFilename(stored.getOriginalFilename());
+        course.setCoverContentType(stored.getContentType());
+        course.setCoverFileSize(stored.getFileSize());
+    }
+
+    private void clearCover(LabCourse course) {
+        course.setCoverFilePath(null); course.setCoverOriginalFilename(null);
+        course.setCoverContentType(null); course.setCoverFileSize(0L);
     }
 
     private CourseStudentVO toStudentVO(CourseStudent relation) {

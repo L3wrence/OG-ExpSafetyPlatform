@@ -44,6 +44,7 @@ import { Refresh } from '@element-plus/icons-vue'
 import {
   approveResourceSubmission,
   getResourceSubmissionReviews,
+  getSubmissionFileBlob,
   rejectResourceSubmission,
 } from '@/api/resourceSubmission'
 
@@ -63,12 +64,11 @@ async function loadList() {
   }
 }
 
-function open(row) {
-  if (!row.url && !row.filePath) {
-    ElMessage.warning('投稿未提供可打开地址')
-    return
-  }
-  window.open(row.url || row.filePath, '_blank', 'noopener,noreferrer')
+async function open(row) {
+  const blob = await getSubmissionFileBlob(row.id)
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
 async function approve(row) {

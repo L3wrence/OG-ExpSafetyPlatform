@@ -200,7 +200,6 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    @Override
     @Transactional
     public void markDownload(Long id) {
         TeachingResource resource = requireResource(id);
@@ -456,29 +455,6 @@ public class ResourceServiceImpl implements ResourceService {
         entity.setOriginalFilename(stored.getOriginalFilename());
         entity.setContentType(stored.getContentType());
         entity.setFileSize(stored.getFileSize());
-    }
-
-    private void validateUrl(String url) {
-        if (!StringUtils.hasText(url)) {
-            return;
-        }
-        try {
-            URI uri = new URI(url);
-            if (!List.of("http", "https").contains(uri.getScheme()) || !StringUtils.hasText(uri.getHost())) {
-                throw new BusinessException(400, "外部链接必须是合法的HTTP/HTTPS URL");
-            }
-        } catch (URISyntaxException e) {
-            throw new BusinessException(400, "外部链接格式不正确");
-        }
-    }
-
-    private void validateFilePath(String filePath) {
-        if (!StringUtils.hasText(filePath)) {
-            return;
-        }
-        if (filePath.contains("..") || filePath.contains("\\") || filePath.startsWith("/../")) {
-            throw new BusinessException(400, "文件路径不合法");
-        }
     }
 
     private void applyDefaults(TeachingResource entity) {

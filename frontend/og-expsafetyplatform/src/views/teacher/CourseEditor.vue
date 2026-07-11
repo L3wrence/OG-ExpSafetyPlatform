@@ -41,7 +41,7 @@
               <el-form-item label="学时"><el-input-number v-model="courseForm.hours" :min="0" :max="300" :disabled="isArchived" /></el-form-item>
             </div>
             <el-form-item label="考核方式"><el-input v-model="courseForm.assessmentMethod" :disabled="isArchived" /></el-form-item>
-            <el-form-item label="封面地址"><el-input v-model="courseForm.coverUrl" :disabled="isArchived" placeholder="可选，留空使用平台默认封面" /></el-form-item>
+          <el-form-item label="课程封面"><CourseCoverUploader :model-value="courseForm.coverUrl" @file-change="handleCourseCoverFile" @remove="handleCourseCoverRemove" /></el-form-item>
             <el-form-item label="课程短标语"><el-input v-model="courseForm.tagline" :disabled="isArchived" maxlength="160" /></el-form-item>
             <el-form-item label="亮点标签"><el-input v-model="courseForm.highlightTags" :disabled="isArchived" placeholder="用逗号分隔，如 实验可视化,安全准入" /></el-form-item>
             <el-form-item label="视觉主题"><el-input v-model="courseForm.visualTheme" :disabled="isArchived" placeholder="如 oilfield-lab" /></el-form-item>
@@ -339,7 +339,7 @@
               <el-table-column label="实验" min-width="150">
                 <template #default="{ row }">{{ experimentName(row.experimentId) }}</template>
               </el-table-column>
-              <el-table-column label="实验室" min-width="160">
+              <el-table-column label="实验地点" min-width="160">
                 <template #default="{ row }">{{ slotLabName(row) }}</template>
               </el-table-column>
               <el-table-column label="容量" width="130">
@@ -477,7 +477,6 @@
           <el-form-item label="开放状态"><el-switch v-model="experimentForm.enabled" active-text="开放" inactive-text="停用" /></el-form-item>
           <el-form-item label="排序"><el-input-number v-model="experimentForm.sort" :min="0" /></el-form-item>
         </div>
-        <el-form-item label="封面地址"><el-input v-model="experimentForm.coverUrl" placeholder="可选，留空使用实验路径默认图" /></el-form-item>
         <el-form-item label="情境导入"><el-input v-model="experimentForm.scenarioIntro" type="textarea" :rows="2" placeholder="用真实工程问题引出本实验" /></el-form-item>
         <el-form-item label="视觉主题"><el-input v-model="experimentForm.visualTheme" placeholder="如 procedure-map" /></el-form-item>
         <el-form-item label="实验目标"><el-input v-model="experimentForm.objective" type="textarea" :rows="2" /></el-form-item>
@@ -572,7 +571,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="标题" prop="title"><el-input v-model="resourceForm.title" /></el-form-item>
-          <el-form-item label="资源类型" prop="resourceType">
+        <el-form-item label="资源类型" prop="resourceType">
             <el-select v-model="resourceForm.resourceType" filterable>
               <el-option v-for="item in resourceTypes" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
@@ -648,6 +647,7 @@
         <el-form-item label="准入分数">
           <el-input-number v-model="reservationExperimentForm.safetyPassScore" :min="0" :max="100" />
         </el-form-item>
+        <el-form-item label="教学分类"><el-select v-model="resourceForm.businessCategory"><el-option v-for="item in businessCategories" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="准入考试" required>
           <el-select v-model="reservationExperimentForm.admissionPaperId" filterable placeholder="请选择当前课堂考试">
             <el-option v-for="item in examPapers" :key="item.id" :label="item.title" :value="item.id" />
@@ -688,15 +688,8 @@
         <el-form-item label="日期" required><el-date-picker v-model="slotForm.date" value-format="YYYY-MM-DD" /></el-form-item>
         <el-form-item label="开始时间" required><el-time-picker v-model="slotForm.startTime" value-format="HH:mm" format="HH:mm" /></el-form-item>
         <el-form-item label="结束时间" required><el-time-picker v-model="slotForm.endTime" value-format="HH:mm" format="HH:mm" /></el-form-item>
-        <el-form-item label="实验室" required>
-          <el-select v-model="slotForm.labId" filterable placeholder="请选择实验室">
-            <el-option
-              v-for="item in experiments"
-              :key="`lab-${item.id}`"
-              :label="experimentLocation(item.id) || '未设置实验地点'"
-              :value="item.id"
-            />
-          </el-select>
+        <el-form-item label="实验地点">
+          <el-input :model-value="experimentLocation(slotForm.experimentId) || '请先在预约要求中设置实验地点'" disabled />
         </el-form-item>
         <el-form-item label="容量"><el-input-number v-model="slotForm.capacity" :min="1" :max="200" /></el-form-item>
         <el-form-item label="状态">
@@ -721,7 +714,12 @@
       </template>
     </el-dialog>
 
-    <el-drawer v-model="stepDrawerVisible" :title="`${stepEditingExperiment?.expName || '实验'} - 实验步骤`" size="760px">
+    <el-dialog
+      v-model="stepDrawerVisible"
+      :title="`${stepEditingExperiment?.expName || '实验'} - 实验步骤`"
+      fullscreen
+      class="step-editor-dialog"
+    >
       <div class="step-editor">
         <div class="section-title compact">
           <h3>步骤内容、视频链接与相关要求</h3>
@@ -734,33 +732,44 @@
         <div v-else class="step-edit-list">
           <article v-for="(step, index) in stepRows" :key="index" class="step-edit-card">
             <div class="step-meta-grid">
-              <el-input-number v-model="step.stepNo" :min="1" />
-              <el-input v-model="step.title" placeholder="步骤标题" />
-              <el-select v-model="step.mediaType" placeholder="展示类型">
+              <label class="step-field"><span>步骤序号</span><el-input-number v-model="step.stepNo" :min="1" controls-position="right" /></label>
+              <label class="step-field"><span>步骤标题</span><el-input v-model="step.title" placeholder="请输入步骤标题" /></label>
+              <label class="step-field"><span>展示类型</span><el-select v-model="step.mediaType" placeholder="展示类型">
                 <el-option label="文本" value="TEXT" />
                 <el-option label="视频" value="VIDEO" />
                 <el-option label="图片" value="IMAGE" />
+                <el-option label="文档" value="DOCUMENT" />
+                <el-option label="音频" value="AUDIO" />
                 <el-option label="流程图" value="FLOWCHART" />
-              </el-select>
-              <el-input-number v-model="step.estimatedMinutes" :min="0" />
-              <el-button text type="danger" :icon="Delete" :disabled="isArchived" @click="stepRows.splice(index, 1)">删除</el-button>
+              </el-select></label>
+              <label class="step-field"><span>预计分钟</span><el-input-number v-model="step.estimatedMinutes" :min="0" controls-position="right" /></label>
+              <el-button class="step-delete" text type="danger" :icon="Delete" :disabled="isArchived" @click="stepRows.splice(index, 1)">删除</el-button>
             </div>
             <div class="step-columns">
               <el-input v-model="step.content" type="textarea" :rows="4" placeholder="步骤文字说明，学生章节详情左侧显示该内容" />
               <el-input v-model="step.safetyTip" type="textarea" :rows="4" placeholder="风险提示、操作要求或注意事项" />
             </div>
             <div class="step-media-grid">
-              <el-input v-model="step.mediaUrl" placeholder="步骤视频、图片或资料链接" />
-              <el-input v-model="step.flowchartData" placeholder="流程图数据或说明" />
+              <div class="step-upload-panel">
+                <div class="upload-row">
+                <el-upload :auto-upload="false" :show-file-list="false" :accept="stepFileAccept(step.mediaType)" :on-change="(file) => handleStepFile(step, file)">
+                  <el-button :icon="Upload">选择本地文件</el-button>
+                </el-upload>
+                <span>{{ step._file?.name || step.mediaOriginalFilename || '未选择文件' }}</span>
+                </div>
+                <small>支持视频、图片、PDF/TXT/MD 文档和音频；选择后自动识别展示类型。</small>
+              </div>
+              <el-input v-if="step.mediaType === 'FLOWCHART'" v-model="step.flowchartData" placeholder="流程图数据或说明" />
             </div>
           </article>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
+import CourseCoverUploader from '@/components/course/CourseCoverUploader.vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -809,8 +818,8 @@ import {
   markResourceInvalid,
   updateResource,
   updateResourceStatus,
-  uploadResource,
 } from '@/api/resource'
+import { BUSINESS_CATEGORIES, RESOURCE_TYPES, resourceTypeConfig, validateResourceFile } from '@/constants/resourceTypes'
 import {
   createTimeSlots,
   deleteTimeSlot,
@@ -877,6 +886,7 @@ const stepRows = ref([])
 const reportDetail = ref(null)
 const reportReturnComment = ref('')
 const resourceStats = ref(null)
+const selectedResourceFile = ref(null)
 const pendingReservations = ref([])
 const timeSlots = ref([])
 const qaTopics = ref([])
@@ -898,6 +908,8 @@ const experiments = computed(() => detail.value?.experiments || [])
 const isArchived = computed(() => course.value?.status === 2)
 
 const courseForm = reactive(defaultCourseForm())
+const courseCoverFile = ref(null)
+const removeCourseCover = ref(false)
 const classForm = reactive(defaultClassForm())
 const experimentForm = reactive(defaultExperimentForm())
 const examForm = reactive(defaultExamForm())
@@ -923,25 +935,8 @@ const reservationLabOptions = computed(() => experiments.value.map((item) => ({
   label: item.location ? `${item.location}（${item.expName}）` : `实验 ${item.id}（${item.expName}）`,
 })))
 
-const resourceTypes = [
-  { label: '实验指导书', value: 'GUIDE' },
-  { label: '课程讲义', value: 'LECTURE' },
-  { label: 'PPT课件', value: 'PPT' },
-  { label: '教学视频', value: 'TEACHING_VIDEO' },
-  { label: '微课', value: 'MICRO_COURSE' },
-  { label: '仪器操作视频', value: 'INSTRUMENT_VIDEO' },
-  { label: '设备说明书', value: 'DEVICE_MANUAL' },
-  { label: '实验案例', value: 'EXPERIMENT_CASE' },
-  { label: '事故案例', value: 'ACCIDENT_CASE' },
-  { label: '应急处置流程', value: 'EMERGENCY_PROCESS' },
-  { label: '参考文献', value: 'REFERENCE' },
-  { label: '虚拟仿真实验', value: 'VIRTUAL_SIMULATION' },
-  { label: '文档', value: 'DOCUMENT' },
-  { label: '图片', value: 'IMAGE' },
-  { label: '视频', value: 'VIDEO' },
-  { label: '网页链接', value: 'LINK' },
-  { label: '文件', value: 'FILE' },
-]
+const resourceTypes = RESOURCE_TYPES
+const businessCategories = BUSINESS_CATEGORIES
 
 const courseRules = {
   courseName: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
@@ -1105,6 +1100,17 @@ async function selectQaTopic(topic) {
   }
 }
 
+function handleCourseCoverFile(file) {
+  courseCoverFile.value = file
+  removeCourseCover.value = false
+}
+
+function handleCourseCoverRemove() {
+  courseCoverFile.value = null
+  removeCourseCover.value = true
+  courseForm.coverUrl = ''
+}
+
 async function saveCourseInline() {
   await courseFormRef.value?.validate()
   savingCourse.value = true
@@ -1114,7 +1120,6 @@ async function saveCourseInline() {
       courseCode: courseForm.courseCode.trim(),
       direction: courseForm.direction || undefined,
       teacherId: Number(courseForm.teacherId),
-      coverUrl: courseForm.coverUrl || undefined,
       tagline: courseForm.tagline || undefined,
       highlightTags: courseForm.highlightTags || undefined,
       visualTheme: courseForm.visualTheme || undefined,
@@ -1127,7 +1132,7 @@ async function saveCourseInline() {
       assessmentMethod: courseForm.assessmentMethod || undefined,
       learningRequirement: courseForm.learningRequirement || undefined,
       allowEmptyPublish: courseForm.allowEmptyPublish ? 1 : 0,
-    })
+    }, courseCoverFile.value, removeCourseCover.value)
     ElMessage.success('课程信息已保存')
     await loadDetail()
   } finally {
@@ -1245,11 +1250,31 @@ function addStepRow() {
     content: '',
     safetyTip: '',
     mediaType: 'TEXT',
-    mediaUrl: '',
+    _file: null,
     flowchartData: '',
     requiredFlag: 1,
     estimatedMinutes: 0,
   })
+}
+
+function stepFileAccept(type) {
+  return resourceTypeConfig(type)?.accept || RESOURCE_TYPES.map((item) => item.accept).join(',')
+}
+
+function handleStepFile(step, uploadFile) {
+  const file = uploadFile?.raw
+  if (!file) return
+  const inferredType = inferStepFileType(file.name)
+  if (!inferredType) { ElMessage.warning('仅支持视频、图片、PDF/TXT/MD 文档和音频文件'); return }
+  const error = validateResourceFile(file, inferredType)
+  if (error) { ElMessage.warning(error); return }
+  step.mediaType = inferredType
+  step._file = file
+}
+
+function inferStepFileType(filename) {
+  const extension = `.${String(filename || '').split('.').pop().toLowerCase()}`
+  return RESOURCE_TYPES.find((item) => item.accept.split(',').includes(extension))?.value || ''
 }
 
 async function saveStepRows() {
@@ -1266,7 +1291,7 @@ async function saveStepRows() {
       content: item.content.trim(),
       safetyTip: item.safetyTip || undefined,
       mediaType: item.mediaType || 'TEXT',
-      mediaUrl: item.mediaUrl || undefined,
+      _file: item._file,
       flowchartData: item.flowchartData || undefined,
       requiredFlag: item.requiredFlag ?? 1,
       estimatedMinutes: Number(item.estimatedMinutes || 0),
@@ -1435,16 +1460,19 @@ async function submitReportReturn() {
 
 function openResourceCreate() {
   editingResource.value = null
+  selectedResourceFile.value = null
   Object.assign(resourceForm, defaultResourceForm())
   resourceDialogVisible.value = true
 }
 
 function openResourceEdit(row) {
   editingResource.value = row
+  selectedResourceFile.value = null
   Object.assign(resourceForm, {
     experimentId: row.experimentId || '',
     title: row.title || '',
-    resourceType: row.resourceType || 'GUIDE',
+    resourceType: row.resourceType || 'DOCUMENT',
+    businessCategory: row.businessCategory || 'OTHER',
     knowledgePoint: row.knowledgePoint || '',
     riskType: row.riskType || '',
     tags: row.tags || '',
@@ -1467,24 +1495,15 @@ function openResourceEdit(row) {
 async function handleResourceFilePicked(uploadFile) {
   const rawFile = uploadFile?.raw
   if (!rawFile) return
-  resourceSaving.value = true
-  try {
-    const result = await uploadResource(rawFile)
-    Object.assign(resourceForm, {
-      filePath: result.filePath,
-      fileSize: result.fileSize || rawFile.size,
-      originalFilename: result.originalFilename || rawFile.name,
-      contentType: result.contentType || rawFile.type,
-    })
-    ElMessage.success('文件已上传')
-  } finally {
-    resourceSaving.value = false
-  }
+  const error = validateResourceFile(rawFile, resourceForm.resourceType)
+  if (error) { ElMessage.warning(error); return }
+  selectedResourceFile.value = rawFile
+  resourceForm.originalFilename = rawFile.name
 }
 
 async function saveResourceInline() {
   await resourceFormRef.value?.validate()
-  if (!resourceForm.filePath) {
+  if (!editingResource.value && !selectedResourceFile.value) {
     ElMessage.warning('请选择并上传本地文件')
     return
   }
@@ -1493,16 +1512,12 @@ async function saveResourceInline() {
     experimentId: Number(resourceForm.experimentId),
     title: resourceForm.title.trim(),
     resourceType: resourceForm.resourceType,
+    businessCategory: resourceForm.businessCategory,
     knowledgePoint: resourceForm.knowledgePoint || undefined,
     riskType: resourceForm.riskType || undefined,
     tags: resourceForm.tags || undefined,
     category: resourceForm.required ? 'REQUIRED' : 'EXTENSION',
     description: resourceForm.description || undefined,
-    url: undefined,
-    filePath: resourceForm.filePath || undefined,
-    fileSize: Number(resourceForm.fileSize || 0),
-    originalFilename: resourceForm.originalFilename || undefined,
-    contentType: resourceForm.contentType || undefined,
     requiredFlag: resourceForm.required ? 1 : 0,
     status: resourceForm.enabled ? 1 : 0,
     completionRule: resourceForm.completionRule,
@@ -1513,13 +1528,14 @@ async function saveResourceInline() {
   resourceSaving.value = true
   try {
     if (editingResource.value) {
-      await updateResource(editingResource.value.id, payload)
+      await updateResource(courseId.value, editingResource.value.id, payload, selectedResourceFile.value)
       ElMessage.success('资源已更新')
     } else {
-      await createResource(payload)
+      await createResource(courseId.value, payload, selectedResourceFile.value)
       ElMessage.success('资源已创建')
     }
     resourceDialogVisible.value = false
+    selectedResourceFile.value = null
     await loadResourcesInline()
   } finally {
     resourceSaving.value = false
@@ -1593,6 +1609,9 @@ async function saveReservationExperiment() {
     ElMessage.warning('请选择准入考试')
     return
   }
+  const missingFile = stepRows.value.find((item) => ['VIDEO', 'IMAGE', 'DOCUMENT', 'AUDIO'].includes(item.mediaType)
+    && !item._file && !item.mediaOriginalFilename)
+  if (missingFile) { ElMessage.warning(`步骤“${missingFile.title}”请选择本地文件`); return }
   const source = reservationEditingExperiment.value
   reservationSaving.value = true
   try {
@@ -1684,15 +1703,19 @@ function fillSlotLab() {
 }
 
 async function saveSlotInline() {
-  if (!slotForm.date || !slotForm.startTime || !slotForm.endTime || !slotForm.labId || !slotForm.experimentId) {
-    ElMessage.warning('请填写实验、日期、时间和实验室')
+  if (!slotForm.date || !slotForm.startTime || !slotForm.endTime || !slotForm.experimentId) {
+    ElMessage.warning('请填写实验、日期和时间')
+    return
+  }
+  if (!experimentLocation(slotForm.experimentId)) {
+    ElMessage.warning('请先在预约要求中设置实验地点')
     return
   }
   const payload = {
     date: slotForm.date,
     startTime: slotForm.startTime,
     endTime: slotForm.endTime,
-    labId: Number(slotForm.labId),
+    labId: Number(slotForm.experimentId),
     experimentId: Number(slotForm.experimentId),
     capacity: Number(slotForm.capacity || 20),
     status: slotForm.status,
@@ -1795,7 +1818,6 @@ function fillExperimentForm(source) {
     expName: source.expName || '',
     expCode: source.expCode || '',
     direction: source.direction || course.value?.direction || '',
-    coverUrl: source.coverUrl || '',
     scenarioIntro: source.scenarioIntro || '',
     visualTheme: source.visualTheme || '',
     description: source.description || '',
@@ -1831,7 +1853,6 @@ function experimentPayload() {
     expName: experimentForm.expName.trim(),
     expCode: experimentForm.expCode.trim(),
     direction: experimentForm.direction || undefined,
-    coverUrl: experimentForm.coverUrl || undefined,
     scenarioIntro: experimentForm.scenarioIntro || undefined,
     visualTheme: experimentForm.visualTheme || undefined,
     description: experimentForm.description || undefined,
@@ -1898,7 +1919,6 @@ function defaultExperimentForm() {
     expName: '',
     expCode: '',
     direction: course.value?.direction || '',
-    coverUrl: '',
     scenarioIntro: '',
     visualTheme: '',
     description: '',
@@ -1950,7 +1970,8 @@ function defaultResourceForm() {
   return {
     experimentId: '',
     title: '',
-    resourceType: 'GUIDE',
+    resourceType: 'DOCUMENT',
+    businessCategory: 'OTHER',
     knowledgePoint: '',
     riskType: '',
     tags: '',
@@ -2478,12 +2499,31 @@ function experimentProgress(item) {
   display: grid;
   gap: 14px;
 }
+:deep(.step-editor-dialog) {
+  width: 100vw;
+  height: 100vh;
+  max-height: none;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+}
+:deep(.step-editor-dialog .el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 12px;
+}
 .step-meta-grid {
   display: grid;
-  grid-template-columns: 110px minmax(180px, 1fr) 120px 110px auto;
-  gap: 10px;
-  margin-bottom: 10px;
+  grid-template-columns: 140px minmax(260px, 1fr) 160px 140px 72px;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
 }
+.step-field { min-width: 0; display: grid; gap: 6px; color: #667085; font-size: 12px; }
+.step-field :deep(.el-input-number), .step-field :deep(.el-select), .step-field :deep(.el-input) { width: 100%; min-width: 0; }
+.step-delete { align-self: end; height: 32px; }
 .step-columns,
 .step-media-grid {
   display: grid;
@@ -2491,6 +2531,9 @@ function experimentProgress(item) {
   gap: 10px;
   margin-top: 10px;
 }
+.step-media-grid { grid-template-columns: minmax(0, 1fr); }
+.step-upload-panel { display: grid; gap: 7px; padding: 12px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; }
+.step-upload-panel small { color: #98a2b3; line-height: 1.5; }
 @media (max-width: 900px) {
   .course-editor-page { height: auto; overflow: visible; }
   .builder-grid, .summary-band, .form-grid, .action-grid, .preview-steps, .analytics-grid, .step-meta-grid, .step-columns, .step-media-grid, .stats-grid, .qa-layout { grid-template-columns: 1fr; }

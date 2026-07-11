@@ -23,6 +23,8 @@ import com.cupk.vo.CourseStudentVO;
 import com.cupk.vo.TeachingClassVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -49,16 +51,19 @@ public class CourseController {
         return Result.success(courseService.detail(id));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequirePermission("course:create")
-    public Result<Long> create(@Valid @RequestBody CourseCreateDTO dto) {
-        return Result.success(courseService.create(dto));
+    public Result<Long> create(@Valid @RequestPart("metadata") CourseCreateDTO dto,
+                               @RequestPart(value = "cover", required = false) MultipartFile cover) {
+        return Result.success(courseService.create(dto, cover));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequirePermission("course:update")
-    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody CourseUpdateDTO dto) {
-        courseService.update(id, dto);
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestPart("metadata") CourseUpdateDTO dto,
+                               @RequestPart(value = "cover", required = false) MultipartFile cover,
+                               @RequestParam(defaultValue = "false") Boolean removeCover) {
+        courseService.update(id, dto, cover, removeCover);
         return Result.success();
     }
 

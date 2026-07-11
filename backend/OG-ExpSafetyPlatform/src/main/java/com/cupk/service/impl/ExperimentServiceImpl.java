@@ -3,6 +3,7 @@ package com.cupk.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cupk.common.PageResult;
+import com.cupk.common.FileUsage;
 import com.cupk.dto.ExperimentCreateDTO;
 import com.cupk.dto.ExperimentQueryDTO;
 import com.cupk.dto.ExperimentStepDTO;
@@ -22,6 +23,14 @@ import com.cupk.mapper.*;
 import com.cupk.service.AdmissionService;
 import com.cupk.service.ExperimentService;
 import com.cupk.service.LearningRecordService;
+import com.cupk.service.FileStorageService;
+import com.cupk.service.ResourceAccessService;
+import com.cupk.vo.StoredFileVO;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import com.cupk.util.AccessUtil;
 import com.cupk.vo.ExperimentDetailVO;
 import com.cupk.vo.PortalItemVO;
@@ -55,6 +64,8 @@ public class ExperimentServiceImpl implements ExperimentService {
     private final OperationLogMapper operationLogMapper;
     private final UserMapper userMapper;
     private final AdmissionService admissionService;
+    private final FileStorageService fileStorageService;
+    private final ResourceAccessService resourceAccessService;
 
     public ExperimentServiceImpl(ExperimentMapper experimentMapper, LabCourseMapper courseMapper,
                                  ExperimentStepMapper stepMapper, TeachingResourceMapper resourceMapper,
@@ -62,7 +73,8 @@ public class ExperimentServiceImpl implements ExperimentService {
                                  LearningRecordService learningRecordService, ExamRecordMapper examRecordMapper,
                                  ExamPaperMapper examPaperMapper, ReservationMapper reservationMapper,
                                  ReportMapper reportMapper, OperationLogMapper operationLogMapper, UserMapper userMapper,
-                                 AdmissionService admissionService) {
+                                 AdmissionService admissionService, FileStorageService fileStorageService,
+                                 ResourceAccessService resourceAccessService) {
         this.experimentMapper = experimentMapper;
         this.courseMapper = courseMapper;
         this.stepMapper = stepMapper;
@@ -76,6 +88,8 @@ public class ExperimentServiceImpl implements ExperimentService {
         this.operationLogMapper = operationLogMapper;
         this.userMapper = userMapper;
         this.admissionService = admissionService;
+        this.fileStorageService = fileStorageService;
+        this.resourceAccessService = resourceAccessService;
     }
 
     @Override
@@ -149,7 +163,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
     @Override
     @Transactional
-    public void saveSteps(Long id, List<ExperimentStepDTO> steps) {
+    public void saveSteps(Long id, List<ExperimentStepDTO> steps, Map<Integer, MultipartFile> files) {
         Experiment experiment = requireExperiment(id);
         AccessUtil.assertCourseWritable(requireCourse(experiment.getCourseId()));
         if (steps == null) {
@@ -162,17 +176,49 @@ public class ExperimentServiceImpl implements ExperimentService {
             }
             validateStepMedia(step);
         }
-        stepMapper.delete(new LambdaQueryWrapper<ExperimentStep>().eq(ExperimentStep::getExperimentId, id));
+        List<ExperimentStep> existing = stepMapper.selectList(new LambdaQueryWrapper<ExperimentStep>().eq(ExperimentStep::getExperimentId, id));
+        Map<Integer, ExperimentStep> existingByNo = existing.stream().collect(Collectors.toMap(ExperimentStep::getStepNo, Function.identity()));
         for (ExperimentStepDTO dto : steps) {
             ExperimentStep entity = new ExperimentStep();
             BeanUtils.copyProperties(dto, entity);
             entity.setExperimentId(id);
-            stepMapper.insert(entity);
+            ExperimentStep existingStep = existingByNo.get(dto.getStepNo());
+            MultipartFile file = files == null ? null : files.get(dto.getStepNo());
+            if (file != null && !file.isEmpty()) {
+                StoredFileVO stored = fileStorageService.store(file, FileUsage.STEP_RESOURCE, normalizeStepFileType(dto.getMediaType()));
+                applyStepFile(entity, stored);
+            } else {
+                copyExistingStepFile(entity, existingStep);
+            }
+            if (requiresStepFile(dto.getMediaType()) && !StringUtils.hasText(entity.getMediaFilePath())) {
+                throw new BusinessException(400, "步骤“" + dto.getTitle() + "”请选择本地媒体文件");
+            }
+            if (existingStep == null) {
+                stepMapper.insert(entity);
+            } else {
+                entity.setId(existingStep.getId());
+                stepMapper.updateById(entity);
+            }
+        }
+        for (ExperimentStep existingStep : existing) {
+            if (!stepNos.contains(existingStep.getStepNo())) {
+                stepMapper.physicalDeleteById(existingStep.getId());
+            }
         }
         if (experiment.getStatus() != null && experiment.getStatus() == STATUS_OPEN) {
             validateOpenReady(experiment, (long) steps.size());
         }
         log("STEP_SAVE", "保存实验步骤：" + experiment.getExpName() + "，共" + steps.size() + "步", "SUCCESS");
+    }
+
+    @Override
+    public Path stepFilePath(Long stepId) {
+        ExperimentStep step = stepMapper.selectById(stepId);
+        if (step == null) throw new BusinessException(404, "实验步骤不存在");
+        Experiment experiment = requireExperiment(step.getExperimentId());
+        resourceAccessService.assertCourseMemberOrManager(experiment.getCourseId());
+        if (!StringUtils.hasText(step.getMediaFilePath())) throw new BusinessException(404, "步骤文件不存在");
+        return fileStorageService.resolve(step.getMediaFilePath());
     }
 
     @Override
@@ -312,15 +358,36 @@ public class ExperimentServiceImpl implements ExperimentService {
         if (!StringUtils.hasText(step.getMediaType())) {
             return;
         }
-        if (!List.of("TEXT", "IMAGE", "VIDEO", "FLOWCHART").contains(step.getMediaType())) {
-            throw new BusinessException(400, "步骤媒体类型必须是TEXT、IMAGE、VIDEO或FLOWCHART");
-        }
-        if (List.of("IMAGE", "VIDEO").contains(step.getMediaType()) && !StringUtils.hasText(step.getMediaUrl())) {
-            throw new BusinessException(400, "图片或视频步骤必须提供媒体地址");
+        if (!List.of("TEXT", "IMAGE", "VIDEO", "DOCUMENT", "AUDIO", "FLOWCHART").contains(step.getMediaType())) {
+            throw new BusinessException(400, "步骤媒体类型必须是文本、图片、视频、文档、音频或流程图");
         }
         if ("FLOWCHART".equals(step.getMediaType()) && !StringUtils.hasText(step.getFlowchartData())) {
             throw new BusinessException(400, "流程图步骤必须提供流程图数据");
         }
+    }
+
+    private boolean requiresStepFile(String mediaType) {
+        return List.of("IMAGE", "VIDEO", "DOCUMENT", "AUDIO").contains(mediaType);
+    }
+
+    private String normalizeStepFileType(String mediaType) {
+        if (!requiresStepFile(mediaType)) throw new BusinessException(400, "该步骤类型不需要上传文件");
+        return mediaType;
+    }
+
+    private void applyStepFile(ExperimentStep step, StoredFileVO stored) {
+        step.setMediaFilePath(stored.getFilePath());
+        step.setMediaOriginalFilename(stored.getOriginalFilename());
+        step.setMediaContentType(stored.getContentType());
+        step.setMediaFileSize(stored.getFileSize());
+    }
+
+    private void copyExistingStepFile(ExperimentStep target, ExperimentStep source) {
+        if (source == null) return;
+        target.setMediaFilePath(source.getMediaFilePath());
+        target.setMediaOriginalFilename(source.getMediaOriginalFilename());
+        target.setMediaContentType(source.getMediaContentType());
+        target.setMediaFileSize(source.getMediaFileSize());
     }
 
     private Long countSteps(Long experimentId) {

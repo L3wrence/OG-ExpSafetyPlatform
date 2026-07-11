@@ -15,9 +15,11 @@ public class ReservationVO {
     private Long timeSlotId;
     private Long labId;
     private String labName;
+    private String location;
     private Date date;
     private String timeRange;
     private Long experimentId;
+    private String experimentName;
     private String purpose;
     private String status;
     private Long teacherId;

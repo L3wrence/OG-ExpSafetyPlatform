@@ -8,12 +8,19 @@ export function getCourseDetail(id, config = {}) {
   return request.get(`/courses/${id}`, config)
 }
 
-export function createCourse(data) {
-  return request.post('/courses', data)
+function courseFormData(data, cover) {
+  const formData = new FormData()
+  formData.append('metadata', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+  if (cover) formData.append('cover', cover)
+  return formData
 }
 
-export function updateCourse(id, data) {
-  return request.put(`/courses/${id}`, data)
+export function createCourse(data, cover) {
+  return request.post('/courses', courseFormData(data, cover))
+}
+
+export function updateCourse(id, data, cover, removeCover = false) {
+  return request.put(`/courses/${id}`, courseFormData(data, cover), { params: { removeCover } })
 }
 
 export function deleteCourse(id) {

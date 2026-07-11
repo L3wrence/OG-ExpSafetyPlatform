@@ -22,14 +22,12 @@
                 @timeupdate="saveVideoProgress"
                 @pause="saveVideoProgress(true)"
               />
+              <audio v-else-if="isAudio" class="media audio" controls :src="objectUrl" />
               <img v-else-if="isImage" class="media image" :src="objectUrl || preview.previewUrl" :alt="preview.title" />
               <iframe v-else-if="isPdf" class="media document" :src="objectUrl || preview.previewUrl" title="资源文档预览" />
-              <div v-else-if="isExternal" class="link-box">
-                <el-button type="primary" :icon="LinkIcon" @click="openExternal">打开外部资源</el-button>
-              </div>
+              <pre v-else-if="isText" class="media text-document">{{ textContent }}</pre>
               <div v-else class="link-box">
-                <p>当前文件类型暂不支持内嵌预览，可下载或在新窗口查看。</p>
-                <el-button type="primary" :icon="Download" @click="openExternal">查看资源</el-button>
+                <p>当前文件类型不受支持，请联系上传人转换为平台支持的格式。</p>
               </div>
             </div>
 
@@ -52,7 +50,7 @@
           </section>
 
           <aside class="insight-panel">
-            <section>
+            <section v-if="isVideo || isAudio">
               <h3>为什么学</h3>
               <p>{{ preview.aiSummary || `围绕${preview.experimentName || '当前实验'}理解资源中的工程操作、风险和报告依据。` }}</p>
               <div class="completion-box">
@@ -78,7 +76,7 @@
               <div class="note-actions">
                 <el-select v-model="timelineForm.visibility" size="small">
                   <el-option label="仅自己可见" value="PRIVATE" />
-                  <el-option label="课程内可见" value="COURSE" />
+                  <el-option v-if="preview.openScope === 'COURSE'" label="课程内可见" value="COURSE" />
                 </el-select>
                 <el-button type="primary" :loading="noteSaving" @click="saveTimelineNote">记录</el-button>
               </div>
@@ -123,7 +121,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Download, Link as LinkIcon, MagicStick } from '@element-plus/icons-vue'
+import { Download, MagicStick } from '@element-plus/icons-vue'
 import {
   createResourceTimelineNote,
   getResourceFileBlob,
@@ -151,6 +149,7 @@ const saving = ref(false)
 const noteSaving = ref(false)
 const aiLoading = ref(false)
 const objectUrl = ref('')
+const textContent = ref('')
 const videoRef = ref(null)
 const currentPosition = ref(0)
 const timelineNotes = ref([])
@@ -166,10 +165,11 @@ const timelineTypeOptions = [
 ]
 const contentType = computed(() => String(preview.value?.contentType || '').toLowerCase())
 const resourceType = computed(() => String(preview.value?.resourceType || '').toUpperCase())
-const isExternal = computed(() => /^https?:\/\//.test(preview.value?.previewUrl || ''))
 const isVideo = computed(() => contentType.value.startsWith('video/') || resourceType.value.includes('VIDEO'))
+const isAudio = computed(() => contentType.value.startsWith('audio/') || resourceType.value === 'AUDIO')
 const isImage = computed(() => contentType.value.startsWith('image/') || ['IMAGE', 'JPG', 'PNG'].includes(resourceType.value))
-const isPdf = computed(() => contentType.value.includes('pdf') || resourceType.value.includes('PDF') || resourceType.value.includes('DOCUMENT'))
+const isPdf = computed(() => contentType.value.includes('pdf'))
+const isText = computed(() => ['text/plain', 'text/markdown'].includes(contentType.value))
 const completionText = computed(() => {
   const rule = preview.value?.completionRule || 'CONFIRM'
   if (rule === 'PROGRESS') {
@@ -194,9 +194,10 @@ async function loadPreview() {
     note.value = preview.value?.note || ''
     currentPosition.value = Number(preview.value?.lastPositionSeconds || 0)
     await loadTimelineNotes()
-    if (preview.value?.previewUrl && !isExternal.value) {
+    if (preview.value?.previewUrl) {
       const blob = await getResourceFileBlob(props.resourceId)
-      objectUrl.value = URL.createObjectURL(blob)
+      if (isText.value) textContent.value = await blob.text()
+      else objectUrl.value = URL.createObjectURL(blob)
     }
   } finally {
     loading.value = false
@@ -339,6 +340,7 @@ function cleanup() {
   preview.value = null
   note.value = ''
   timelineNotes.value = []
+  textContent.value = ''
   aiAnswer.value = ''
   aiResult.value = null
   currentPosition.value = 0

@@ -81,6 +81,7 @@ public class ReservationServiceImpl implements ReservationService {
                 }
                 assertExperimentReservable(slot.getExperimentId());
                 assertExperimentWritable(slot.getExperimentId());
+                slot.setLabId(slot.getExperimentId());
                 slot.setBookedCount(0);
                 slot.setStatus("AVAILABLE");
                 slot.setCreateBy(UserContext.getUserId());
@@ -107,6 +108,7 @@ public class ReservationServiceImpl implements ReservationService {
         assertExperimentReservable(experimentId);
         assertExperimentWritable(experimentId);
         slot.setId(id);
+        slot.setLabId(experimentId);
         labTimeSlotMapper.updateById(slot);
     }
 
@@ -144,8 +146,10 @@ public class ReservationServiceImpl implements ReservationService {
         for (LabTimeSlot slot : slotPage.getRecords()) {
             Map<String, Object> item = new HashMap<>();
             item.put("timeSlot", slot);
-            LabCourse lab = labCourseMapper.selectById(slot.getLabId());
-            item.put("labName", lab != null ? lab.getCourseName() : "未知实验室");
+            Experiment experiment = experimentMapper.selectById(slot.getExperimentId());
+            String location = experiment == null ? null : experiment.getLocation();
+            item.put("labName", location == null || location.isBlank() ? "未设置实验地点" : location);
+            item.put("location", location);
             item.put("remaining", slot.getCapacity() - slot.getBookedCount());
             records.add(item);
         }
@@ -306,13 +310,16 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public Page<Reservation> getMyReservations(int pageNum, int pageSize, String status) {
+    public Page<ReservationVO> getMyReservations(int pageNum, int pageSize, String status) {
         Page<Reservation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Reservation::getStudentId, UserContext.getUserId())
                .eq(status != null && !status.isEmpty(), Reservation::getStatus, status)
                .orderByDesc(Reservation::getCreateTime);
-        return reservationMapper.selectPage(page, wrapper);
+        Page<Reservation> reservationPage = reservationMapper.selectPage(page, wrapper);
+        Page<ReservationVO> result = new Page<>(pageNum, pageSize, reservationPage.getTotal());
+        result.setRecords(reservationPage.getRecords().stream().map(this::toReservationVO).toList());
+        return result;
     }
 
     @Override
@@ -388,8 +395,15 @@ public class ReservationServiceImpl implements ReservationService {
                 vo.setExperimentId(slot.getExperimentId());
             }
         }
-        LabCourse lab = labCourseMapper.selectById(reservation.getLabId());
-        vo.setLabName(lab == null ? "实验室 " + reservation.getLabId() : lab.getCourseName());
+        Experiment experiment = experimentMapper.selectById(vo.getExperimentId());
+        if (experiment != null) {
+            vo.setExperimentName(experiment.getExpName());
+            vo.setLocation(experiment.getLocation());
+            vo.setLabName(experiment.getLocation() == null || experiment.getLocation().isBlank()
+                    ? "未设置实验地点" : experiment.getLocation());
+        } else {
+            vo.setLabName("未设置实验地点");
+        }
         return vo;
     }
 

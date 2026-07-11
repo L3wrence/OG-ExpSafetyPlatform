@@ -29,5 +29,13 @@ export function updateExperimentStatus(id, status) {
 }
 
 export function saveExperimentSteps(id, steps) {
-  return request.post(`/experiments/${id}/steps`, steps)
+  const formData = new FormData()
+  const metadata = steps.map(({ _file, ...step }) => step)
+  formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
+  steps.forEach((step) => { if (step._file) formData.append(`file_${step.stepNo}`, step._file) })
+  return request.post(`/experiments/${id}/steps`, formData, { timeout: 600000 })
+}
+
+export function getExperimentStepFileBlob(stepId) {
+  return request.get(`/files/experiment-steps/${stepId}`, { responseType: 'blob', silent: true })
 }

@@ -16,7 +16,6 @@ public class ExperimentStepDTO {
     private String content;
     private String safetyTip;
     private String mediaType;
-    private String mediaUrl;
     private String flowchartData;
     private Integer requiredFlag = 1;
     private Integer estimatedMinutes = 0;

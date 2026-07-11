@@ -16,12 +16,19 @@ export function getResourceFileBlob(id) {
   return request.get(`/files/resources/${id}`, { responseType: 'blob', silent: true })
 }
 
-export function createResource(data) {
-  return request.post('/resources', data)
+function resourceFormData(data, file) {
+  const formData = new FormData()
+  formData.append('metadata', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+  if (file) formData.append('file', file)
+  return formData
 }
 
-export function updateResource(id, data) {
-  return request.put(`/resources/${id}`, data)
+export function createResource(courseId, data, file, onUploadProgress) {
+  return request.post(`/courses/${courseId}/resources`, resourceFormData(data, file), { timeout: 600000, onUploadProgress })
+}
+
+export function updateResource(courseId, id, data, file, onUploadProgress) {
+  return request.put(`/courses/${courseId}/resources/${id}`, resourceFormData(data, file), { timeout: 600000, onUploadProgress })
 }
 
 export function deleteResource(id) {
@@ -34,14 +41,6 @@ export function updateResourceStatus(id, status) {
 
 export function viewResource(id) {
   return request.post(`/resources/${id}/view`)
-}
-
-export function uploadResource(file) {
-  const formData = new FormData()
-  formData.append('file', file)
-  return request.post('/resources/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
 }
 
 export function markResourceDownload(id) {

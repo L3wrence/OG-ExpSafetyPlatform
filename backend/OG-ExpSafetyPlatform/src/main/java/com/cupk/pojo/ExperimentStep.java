@@ -20,7 +20,10 @@ public class ExperimentStep extends BasePojo {
     private String content;         //操作内容
     private String safetyTip;       //安全提示
     private String mediaType;        //媒体类型
-    private String mediaUrl;         //媒体地址
+    private String mediaFilePath;
+    private String mediaOriginalFilename;
+    private String mediaContentType;
+    private Long mediaFileSize;
     private String flowchartData;    //流程图数据
     private Integer requiredFlag;   //是否必学
     private Integer estimatedMinutes; //预计时长

@@ -12,6 +12,11 @@ import com.cupk.service.ExperimentService;
 import com.cupk.vo.ExperimentDetailVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.http.MediaType;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.util.List;
 
@@ -69,10 +74,15 @@ public class ExperimentController {
         return Result.success();
     }
 
-    @PostMapping("/{id}/steps")
+    @PostMapping(value = "/{id}/steps", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequirePermission("experiment:update")
-    public Result<Void> saveSteps(@PathVariable Long id, @Valid @RequestBody List<ExperimentStepDTO> steps) {
-        experimentService.saveSteps(id, steps);
+    public Result<Void> saveSteps(@PathVariable Long id, @Valid @RequestPart("metadata") List<ExperimentStepDTO> steps,
+                                  MultipartHttpServletRequest request) {
+        Map<Integer, MultipartFile> files = new HashMap<>();
+        request.getFileMap().forEach((name, file) -> {
+            if (name.startsWith("file_")) files.put(Integer.parseInt(name.substring(5)), file);
+        });
+        experimentService.saveSteps(id, steps, files);
         return Result.success();
     }
 }

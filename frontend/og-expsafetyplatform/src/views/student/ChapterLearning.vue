@@ -26,20 +26,21 @@
 
             <div class="step-body">
               <p>{{ selectedStep.content || '教师暂未填写本步骤的文字说明。' }}</p>
-              <div v-if="selectedStep.mediaUrl" class="step-media-preview">
+              <div v-if="selectedStep.mediaOriginalFilename" class="step-media-preview">
                 <video
                   v-if="isVideoStep(selectedStep)"
                   controls
                   preload="metadata"
-                  :src="selectedStep.mediaUrl"
+                  :src="stepMediaUrl"
                   @ended="completeSelectedStep"
                 />
+                <audio v-else-if="selectedStep.mediaType === 'AUDIO'" controls :src="stepMediaUrl" @ended="completeSelectedStep" />
+                <img v-else-if="selectedStep.mediaType === 'IMAGE'" :src="stepMediaUrl" :alt="selectedStep.title" />
                 <iframe
-                  v-else-if="isEmbeddableMedia(selectedStep)"
-                  :src="selectedStep.mediaUrl"
+                  v-else-if="selectedStep.mediaType === 'DOCUMENT'"
+                  :src="stepMediaUrl"
                   title="步骤视频或资料"
                 />
-                <a v-else :href="selectedStep.mediaUrl" target="_blank" rel="noreferrer" @click="completeSelectedStep">打开步骤视频或资料链接</a>
               </div>
               <aside>
                 <b>风险提示</b>
@@ -84,7 +85,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Back, Check, Search } from '@element-plus/icons-vue'
 import { getCourseDetail } from '@/api/course'
-import { getExperimentDetail } from '@/api/experiment'
+import { getExperimentDetail, getExperimentStepFileBlob } from '@/api/experiment'
 import { completeStepLearning, getMyStepLearningRecords } from '@/api/learningRecord'
 
 const route = useRoute()
@@ -97,6 +98,7 @@ const activeTarget = ref('')
 const contentPane = ref(null)
 const completedStepIds = ref(new Set())
 const completingStepIds = new Set()
+const stepMediaUrl = ref('')
 const experimentDetails = reactive({})
 
 const courseId = computed(() => Number(route.params.courseId))
@@ -104,6 +106,7 @@ const experimentId = computed(() => Number(route.params.experimentId))
 const experiment = computed(() => detail.value?.experiment || null)
 const steps = computed(() => sortedSteps(detail.value?.steps || []))
 const selectedStep = computed(() => steps.value.find((step) => stepTarget(step) === activeTarget.value) || steps.value[0] || null)
+watch(() => selectedStep.value?.id, loadStepMedia)
 const courseTitle = computed(() => course.value?.course?.courseName || detail.value?.courseName || '课堂学习')
 const courseExperiments = computed(() => course.value?.experiments || [])
 const courseCatalog = computed(() => courseExperiments.value.map((experimentItem, index) => {
@@ -241,12 +244,15 @@ async function completeSelectedStep() {
 }
 
 function isVideoStep(step) {
-  const url = String(step?.mediaUrl || '').toLowerCase()
-  return String(step?.mediaType || '').toUpperCase() === 'VIDEO' || /\.(mp4|webm|ogg)(\?|#|$)/.test(url)
+  return String(step?.mediaType || '').toUpperCase() === 'VIDEO'
 }
 
-function isEmbeddableMedia(step) {
-  return /^https?:\/\//.test(String(step?.mediaUrl || ''))
+async function loadStepMedia() {
+  if (stepMediaUrl.value) URL.revokeObjectURL(stepMediaUrl.value)
+  stepMediaUrl.value = ''
+  if (!selectedStep.value?.id || !selectedStep.value?.mediaOriginalFilename) return
+  const blob = await getExperimentStepFileBlob(selectedStep.value.id)
+  stepMediaUrl.value = URL.createObjectURL(blob)
 }
 </script>
 

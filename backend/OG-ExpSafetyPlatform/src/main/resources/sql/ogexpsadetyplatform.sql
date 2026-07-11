@@ -1,0 +1,1607 @@
+CREATE DATABASE  IF NOT EXISTS `ogexpsafetyplatform` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `ogexpsafetyplatform`;
+-- MySQL dump 10.13  Distrib 8.0.46, for Win64 (x86_64)
+--
+-- Host: localhost    Database: ogexpsafetyplatform
+-- ------------------------------------------------------
+-- Server version	8.0.46
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `t_ai_chat_record`
+--
+
+DROP TABLE IF EXISTS `t_ai_chat_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_ai_chat_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `scene` varchar(50) NOT NULL,
+  `question` text NOT NULL,
+  `answer` text NOT NULL,
+  `tool_name` varchar(100) DEFAULT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `manual_revision` text,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ai_user_scene_time` (`user_id`,`scene`,`create_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_ai_chat_record`
+--
+
+LOCK TABLES `t_ai_chat_record` WRITE;
+/*!40000 ALTER TABLE `t_ai_chat_record` DISABLE KEYS */;
+INSERT INTO `t_ai_chat_record` VALUES (1,5,'RESOURCE_EXPLAIN','用一句话解释钻井液密度为什么影响井控？','钻井液密度决定井底压力窗口，过低会诱发溢流，过高可能压漏地层。','AI解释',1,NULL,'2026-07-08 12:04:06'),(2,5,'SAFETY_QA','钻井液密度与流变性实验为什么要先校验仪器','AI 辅助内容仅供学习参考，正式安全要求以实验规程和教师要求为准。\n场景：安全问题辅助解释\n\n针对问题：钻井液密度与流变性实验为什么要先校验仪器\n建议先核对实验指导书、课堂资料和现场教师要求，再进行实验操作。\n边界说明：本助手不提供正在使用的正式题库标准答案，不自动写完整实验报告，也不修改成绩、预约或准入状态。','LocalCourseKB+Template',1,NULL,'2026-07-11 12:59:04'),(3,5,'REPORT_SUGGEST','报告预检：钻井液密度与流变性能测试报告','报告仍有可完善项，请按缺项和证据提示自行修改后再提交。 缺项：缺少实验原理相关内容、缺少实验步骤或过程相关内容、缺少安全风险与防护反思相关内容、缺少实验结论相关内容、正文篇幅较短，内容可能不完整','LocalCourseKB+Template',1,NULL,'2026-07-11 15:01:55'),(4,5,'SAFETY_QA','钻井液密度与流变性能测试需要准备什么','进行钻井液密度与流变性能测试前，需准备以下内容：个人防护用品（实验服、护目镜、手套、防滑鞋）；实验设备（实验台、传感器、记录表）；实验材料（模拟样品与案例数据）；前置知识（基础实验安全、设备认知、风险识别）；并须完成准入学习与考试。此外，操作前应阅读风险提示，未经教师确认不得启动设备。','deepseek-v4-flash',1,NULL,'2026-07-11 15:12:38'),(5,5,'REPORT_SUGGEST','报告预检：井控风险识别与关井流程演示报告','报告仍有可完善项，请按缺项和证据提示自行修改后再提交。 缺项：缺少实验目的相关内容、缺少实验原理相关内容、缺少实验步骤或过程相关内容、缺少数据或结果相关内容、缺少误差或偏差分析相关内容、缺少安全风险与防护反思相关内容、缺少实验结论相关内容、正文篇幅较短，内容可能不完整','LocalCourseKB+Template',2,NULL,'2026-07-11 15:21:05'),(6,6,'REPORT_SUGGEST','报告预检：管输压降实验报告','报告仍有可完善项，请按缺项和证据提示自行修改后再提交。 缺项：正文篇幅较短，内容可能不完整','LocalCourseKB+Template',3,NULL,'2026-07-11 15:24:01'),(7,6,'REPORT_SUGGEST','报告预检：管输压降实验报告','报告仍有可完善项，请按缺项和证据提示自行修改后再提交。 缺项：正文篇幅较短，内容可能不完整','LocalCourseKB+Template',3,NULL,'2026-07-11 15:25:28'),(8,6,'REPORT_SUGGEST','报告预检：管输压降实验报告','报告仍有可完善项，请按缺项和证据提示自行修改后再提交。 缺项：正文篇幅较短，内容可能不完整','LocalCourseKB+Template',3,NULL,'2026-07-11 15:27:06'),(9,6,'REPORT_SUGGEST','报告预检：管输压降实验报告','报告结构基本完整，但缺少具体实验数据记录、异常现象描述和风险复盘中的改进措施，需补充数据表格、单位标注及安全反思的具体内容。 缺项：数据记录部分缺少原始实验数据（如流量、压降数值及单位）、数据记录部分缺少异常现象记录、风险复盘部分缺少具体的安全改进建议或措施','deepseek-v4-flash',3,NULL,'2026-07-11 15:28:28'),(10,5,'REPORT_SUGGEST','报告预检：井控风险识别与关井流程演示报告','报告正文仅包含无意义的数字“1111”，未包含任何实验数据、分析或安全复盘内容，严重缺失必要部分。 缺项：实验数据记录、异常现象描述、工程参数分析、安全复盘内容','deepseek-v4-flash',2,NULL,'2026-07-11 15:30:25');
+/*!40000 ALTER TABLE `t_ai_chat_record` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_class_invite`
+--
+
+DROP TABLE IF EXISTS `t_class_invite`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_class_invite` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint NOT NULL,
+  `teaching_class_id` bigint DEFAULT NULL,
+  `invite_code` varchar(32) NOT NULL,
+  `expire_time` datetime DEFAULT NULL,
+  `max_uses` int DEFAULT NULL,
+  `used_count` int NOT NULL DEFAULT '0',
+  `status` tinyint NOT NULL DEFAULT '1',
+  `created_by` bigint NOT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_class_invite_code` (`invite_code`,`deleted`),
+  KEY `idx_class_invite_course_status` (`course_id`,`status`,`deleted`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='课堂邀请码';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_class_invite`
+--
+
+LOCK TABLES `t_class_invite` WRITE;
+/*!40000 ALTER TABLE `t_class_invite` DISABLE KEYS */;
+INSERT INTO `t_class_invite` VALUES (1,1,1,'MUD2026','2026-09-06 12:04:06',100,2,1,3,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,2,2,'PIPE2026','2026-09-06 12:04:06',100,1,1,3,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,3,3,'HSE2026','2026-09-06 12:04:06',100,1,1,4,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_class_invite` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_course_student`
+--
+
+DROP TABLE IF EXISTS `t_course_student`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_course_student` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint NOT NULL,
+  `teaching_class_id` bigint DEFAULT NULL,
+  `student_id` bigint NOT NULL,
+  `semester` varchar(20) DEFAULT NULL,
+  `group_name` varchar(100) DEFAULT NULL,
+  `remark` varchar(255) DEFAULT NULL,
+  `status` tinyint DEFAULT '1',
+  `join_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_course_student_deleted` (`course_id`,`student_id`,`deleted`),
+  KEY `idx_course_student_semester` (`semester`),
+  KEY `idx_course_student_user_course` (`student_id`,`status`,`course_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_course_student`
+--
+
+LOCK TABLES `t_course_student` WRITE;
+/*!40000 ALTER TABLE `t_course_student` DISABLE KEYS */;
+INSERT INTO `t_course_student` VALUES (1,1,1,5,'2026秋','A组','演示数据',1,'2026-06-28 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,1,1,7,'2026秋','B组','演示数据',1,'2026-06-28 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,2,2,6,'2026秋','管输小组','演示数据',1,'2026-06-28 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(4,2,2,8,'2026秋','旁听项目组','演示数据',1,'2026-06-28 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(5,3,3,7,'2026秋','HSE复盘组','演示数据',1,'2026-06-28 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(6,3,3,9,'2026秋','公开加入组','演示数据',1,'2026-06-28 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_course_student` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_discussion_reply`
+--
+
+DROP TABLE IF EXISTS `t_discussion_reply`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_discussion_reply` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `topic_id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `content` text NOT NULL,
+  `is_teacher_reply` tinyint NOT NULL DEFAULT '0',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_discussion_reply_topic` (`topic_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_discussion_reply`
+--
+
+LOCK TABLES `t_discussion_reply` WRITE;
+/*!40000 ALTER TABLE `t_discussion_reply` DISABLE KEYS */;
+INSERT INTO `t_discussion_reply` VALUES (1,1,3,'优先检查样品气泡和密度计刀口是否清洁，再记录环境温度。',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,3,3,'hao',1,'2026-07-11 13:28:26','2026-07-11 13:28:26',0);
+/*!40000 ALTER TABLE `t_discussion_reply` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_discussion_topic`
+--
+
+DROP TABLE IF EXISTS `t_discussion_topic`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_discussion_topic` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint NOT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `user_id` bigint NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `content` text NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'OPEN',
+  `is_anonymous` tinyint NOT NULL DEFAULT '0',
+  `is_featured` tinyint NOT NULL DEFAULT '0',
+  `reply_count` int NOT NULL DEFAULT '0',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_discussion_course` (`course_id`),
+  KEY `idx_discussion_experiment` (`experiment_id`),
+  KEY `idx_discussion_status_time` (`status`,`update_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_discussion_topic`
+--
+
+LOCK TABLES `t_discussion_topic` WRITE;
+/*!40000 ALTER TABLE `t_discussion_topic` DISABLE KEYS */;
+INSERT INTO `t_discussion_topic` VALUES (1,1,1,5,'密度计读数为什么会波动？','同一杯样品重复读数有小幅变化，是气泡还是温度影响？','RESOLVED',0,1,1,'2026-07-07 12:04:06','2026-07-08 12:04:06',0),(2,2,3,8,'公共学习用户加入课堂后可以提交报告吗？','已通过邀请码加入，想确认是否能完整参与课堂任务。','OPEN',0,0,0,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,1,1,5,'hhhh','11111111','RESOLVED',0,0,1,'2026-07-11 13:27:52','2026-07-11 13:28:26',0);
+/*!40000 ALTER TABLE `t_discussion_topic` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_exam_answer`
+--
+
+DROP TABLE IF EXISTS `t_exam_answer`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_exam_answer` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `record_id` bigint NOT NULL,
+  `question_id` bigint NOT NULL,
+  `knowledge_id` bigint DEFAULT NULL,
+  `student_answer` varchar(500) DEFAULT NULL,
+  `is_correct` tinyint DEFAULT NULL,
+  `correct_flag` tinyint DEFAULT NULL,
+  `score` int DEFAULT '0',
+  `grading_comment` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_exam_answer_record` (`record_id`),
+  KEY `idx_exam_answer_question` (`question_id`),
+  KEY `idx_exam_answer_knowledge` (`knowledge_id`),
+  KEY `idx_exam_answer_record_question` (`record_id`,`question_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_exam_answer`
+--
+
+LOCK TABLES `t_exam_answer` WRITE;
+/*!40000 ALTER TABLE `t_exam_answer` DISABLE KEYS */;
+INSERT INTO `t_exam_answer` VALUES (1,1,1,NULL,'A',1,1,50,NULL),(2,1,2,NULL,'A,B,D',1,1,40,NULL),(3,2,1,NULL,NULL,0,0,0,NULL),(4,2,2,NULL,NULL,0,0,0,NULL),(5,4,1,NULL,'',NULL,NULL,0,NULL),(6,4,2,NULL,'',NULL,NULL,0,NULL),(7,4,3,NULL,'',NULL,NULL,0,NULL),(8,5,1,NULL,'A',NULL,NULL,0,NULL),(9,5,2,NULL,'A',NULL,NULL,0,NULL),(10,5,3,NULL,'TRUE',NULL,NULL,0,NULL),(11,6,1,NULL,'A',1,1,50,NULL),(12,6,2,NULL,'B',0,0,0,NULL),(13,6,3,NULL,'FALSE',1,1,20,NULL),(14,7,3,NULL,'TRUE',0,0,0,NULL),(15,7,2,NULL,'A,B,D',1,1,30,NULL),(16,7,1,NULL,'A',1,1,20,NULL),(17,8,1,NULL,'A',1,1,50,NULL),(18,8,2,NULL,'A',0,0,0,NULL),(19,8,3,NULL,'FALSE',1,1,20,NULL),(20,9,1,NULL,'A',1,1,50,NULL),(21,9,2,NULL,'A,B,D',1,1,50,NULL),(22,9,3,NULL,'FALSE',1,1,20,NULL),(23,10,1,NULL,'A',1,1,50,NULL),(24,10,2,NULL,'A,B,D',1,1,50,NULL),(25,10,3,NULL,'FALSE',1,1,20,NULL),(26,11,1,NULL,'A',1,1,50,NULL),(27,11,2,NULL,'A,B,D',1,1,50,NULL),(28,11,3,NULL,'FALSE',1,1,20,NULL),(29,12,1,NULL,'A',1,1,50,NULL),(30,12,2,NULL,'A,B,D',1,1,50,NULL),(31,12,3,NULL,'FALSE',1,1,20,NULL),(32,13,1,NULL,'A',1,1,50,NULL),(33,13,2,NULL,'A',0,0,0,NULL),(34,13,3,NULL,'FALSE',1,1,20,NULL),(35,14,5,NULL,'111111',NULL,NULL,0,NULL),(36,14,3,NULL,'FALSE',1,1,20,NULL),(37,14,1,NULL,'A',1,1,20,NULL),(38,14,2,NULL,'A,B,D',1,1,30,NULL),(39,14,6,NULL,'11111',NULL,NULL,0,NULL),(40,15,5,NULL,'1111',NULL,NULL,0,NULL),(41,15,3,NULL,'FALSE',1,1,20,NULL),(42,15,1,NULL,'A',1,1,20,NULL),(43,15,2,NULL,'A,B,D',1,1,30,NULL),(44,15,6,NULL,'111111',NULL,NULL,0,NULL),(45,16,5,NULL,'1111',1,1,10,'很好'),(46,16,3,NULL,'FALSE',1,1,20,NULL),(47,16,1,NULL,'A',1,1,20,NULL),(48,16,2,NULL,'A,B,D',1,1,30,NULL),(49,16,6,NULL,'11111',1,1,20,'很好'),(50,17,3,NULL,'FALSE',1,1,20,NULL),(51,17,1,NULL,'A',1,1,20,NULL),(52,17,2,NULL,'A,B,D',1,1,30,NULL),(53,17,7,NULL,'1111',1,1,30,'ky');
+/*!40000 ALTER TABLE `t_exam_answer` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_exam_paper`
+--
+
+DROP TABLE IF EXISTS `t_exam_paper`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_exam_paper` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) NOT NULL,
+  `description` varchar(500) DEFAULT NULL,
+  `course_id` bigint DEFAULT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `total_score` int DEFAULT '100',
+  `objective_score` int DEFAULT '100',
+  `subjective_score` int DEFAULT '0',
+  `pass_score` int DEFAULT '60',
+  `duration` int DEFAULT '30',
+  `attempt_limit` int NOT NULL DEFAULT '1',
+  `show_answer_after_submit` tinyint NOT NULL DEFAULT '1',
+  `admission_validity_days` int NOT NULL DEFAULT '180',
+  `multiple_score_policy` varchar(30) NOT NULL DEFAULT 'ALL_OR_NOTHING',
+  `random_enabled` tinyint NOT NULL DEFAULT '0',
+  `random_count` int NOT NULL DEFAULT '0',
+  `teacher_id` bigint NOT NULL,
+  `status` varchar(20) DEFAULT 'DRAFT',
+  `start_time` datetime DEFAULT NULL,
+  `end_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint DEFAULT '0',
+  `deleted` tinyint GENERATED ALWAYS AS (`is_deleted`) STORED,
+  PRIMARY KEY (`id`),
+  KEY `idx_exam_paper_course_status` (`course_id`,`status`),
+  KEY `idx_exam_paper_experiment` (`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_exam_paper`
+--
+
+LOCK TABLES `t_exam_paper` WRITE;
+/*!40000 ALTER TABLE `t_exam_paper` DISABLE KEYS */;
+INSERT INTO `t_exam_paper` (`id`, `title`, `description`, `course_id`, `experiment_id`, `total_score`, `objective_score`, `subjective_score`, `pass_score`, `duration`, `attempt_limit`, `show_answer_after_submit`, `admission_validity_days`, `multiple_score_policy`, `random_enabled`, `random_count`, `teacher_id`, `status`, `start_time`, `end_time`, `create_time`, `update_time`, `is_deleted`) VALUES (1,'钻井液实验安全准入考试','完成后可进入实验预约。',1,1,100,70,30,60,30,3,1,90,'ALL_OR_NOTHING',0,0,3,'PUBLISHED','2026-07-03 12:04:06','2026-10-06 12:04:06','2026-07-08 12:04:06','2026-07-11 09:44:47',0),(6,'井控风险实验安全准入考试',NULL,1,2,100,70,30,60,60,1,1,180,'ALL_OR_NOTHING',0,0,3,'PUBLISHED',NULL,NULL,'2026-07-11 15:32:28','2026-07-11 15:35:04',0);
+/*!40000 ALTER TABLE `t_exam_paper` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_exam_paper_question`
+--
+
+DROP TABLE IF EXISTS `t_exam_paper_question`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_exam_paper_question` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `paper_id` bigint NOT NULL,
+  `question_id` bigint NOT NULL,
+  `score` int NOT NULL,
+  `order_num` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_paper_question` (`paper_id`,`question_id`),
+  KEY `idx_paper_question_paper` (`paper_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_exam_paper_question`
+--
+
+LOCK TABLES `t_exam_paper_question` WRITE;
+/*!40000 ALTER TABLE `t_exam_paper_question` DISABLE KEYS */;
+INSERT INTO `t_exam_paper_question` VALUES (5,2,3,20,1),(6,2,2,30,2),(7,2,1,20,3),(18,1,5,10,4),(19,1,3,20,5),(20,1,1,20,6),(21,1,2,30,7),(22,1,6,20,8),(23,6,3,20,1),(24,6,1,20,2),(25,6,2,30,3),(26,6,7,30,4);
+/*!40000 ALTER TABLE `t_exam_paper_question` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_exam_record`
+--
+
+DROP TABLE IF EXISTS `t_exam_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_exam_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `paper_id` bigint NOT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `total_score` int DEFAULT NULL,
+  `objective_score` int DEFAULT NULL,
+  `subjective_score` int DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'IN_PROGRESS',
+  `question_snapshot_json` longtext,
+  `auto_submit_flag` tinyint NOT NULL DEFAULT '0',
+  `admission_id` bigint DEFAULT NULL,
+  `passed` tinyint DEFAULT NULL,
+  `start_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `submit_time` datetime DEFAULT NULL,
+  `end_time` datetime DEFAULT NULL,
+  `last_save_time` datetime DEFAULT NULL,
+  `final_grade_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_exam_record_student` (`student_id`),
+  KEY `idx_exam_record_paper` (`paper_id`),
+  KEY `idx_exam_record_experiment` (`experiment_id`),
+  KEY `idx_exam_record_student_exp_status` (`student_id`,`experiment_id`,`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_exam_record`
+--
+
+LOCK TABLES `t_exam_record` WRITE;
+/*!40000 ALTER TABLE `t_exam_record` DISABLE KEYS */;
+INSERT INTO `t_exam_record` VALUES (16,5,1,1,100,70,30,'GRADED','[{\"id\":5,\"type\":\"SHORT_ANSWER\",\"content\":\"你是谁\",\"options\":null,\"answer\":\"\",\"analysis\":null,\"knowledgePoint\":\"主观题\",\"knowledgeId\":null,\"riskType\":null,\"difficulty\":\"MEDIUM\",\"relatedResourceId\":null,\"score\":10,\"orderNum\":4},{\"id\":3,\"type\":\"JUDGE\",\"content\":\"未完成安全准入考试也可以直接预约高风险实验。\",\"options\":\"[{\\\"key\\\": \\\"TRUE\\\", \\\"label\\\": \\\"正确\\\"}, {\\\"key\\\": \\\"FALSE\\\", \\\"label\\\": \\\"错误\\\"}]\",\"answer\":\"FALSE\",\"analysis\":\"高风险实验必须先完成安全准入考试并达到及格线。\",\"knowledgePoint\":\"安全准入\",\"knowledgeId\":null,\"riskType\":\"准入\",\"difficulty\":\"EASY\",\"relatedResourceId\":1,\"score\":20,\"orderNum\":5},{\"id\":1,\"type\":\"SINGLE\",\"content\":\"钻井液密度测试时首先应确认什么？\",\"options\":\"[{\\\"key\\\": \\\"A\\\", \\\"label\\\": \\\"密度计已校准\\\"}, {\\\"key\\\": \\\"B\\\", \\\"label\\\": \\\"随意取样\\\"}]\",\"answer\":\"A\",\"analysis\":\"密度计校准是读数可靠的前提。\",\"knowledgePoint\":\"密度计校准\",\"knowledgeId\":null,\"riskType\":\"飞溅\",\"difficulty\":\"EASY\",\"relatedResourceId\":1,\"score\":20,\"orderNum\":6},{\"id\":2,\"type\":\"MULTIPLE\",\"content\":\"井控风险识别应关注哪些信号？\",\"options\":\"[{\\\"key\\\": \\\"A\\\", \\\"label\\\": \\\"立压变化\\\"}, {\\\"key\\\": \\\"B\\\", \\\"label\\\": \\\"返出流量异常\\\"}, {\\\"key\\\": \\\"D\\\", \\\"label\\\": \\\"泥浆池液面变化\\\"}]\",\"answer\":\"A,B,D\",\"analysis\":\"压力、流量和液面变化是关键判断依据。\",\"knowledgePoint\":\"井控异常信号\",\"knowledgeId\":null,\"riskType\":\"高压\",\"difficulty\":\"MEDIUM\",\"relatedResourceId\":2,\"score\":30,\"orderNum\":7},{\"id\":6,\"type\":\"SHORT_ANSWER\",\"content\":\"我是谁\",\"options\":null,\"answer\":\"\",\"analysis\":null,\"knowledgePoint\":\"主观题\",\"knowledgeId\":null,\"riskType\":null,\"difficulty\":\"MEDIUM\",\"relatedResourceId\":null,\"score\":20,\"orderNum\":8}]',0,9,1,'2026-07-11 10:02:30','2026-07-11 10:02:48','2026-07-11 10:32:30','2026-07-11 10:02:42','2026-07-11 10:11:28','2026-07-11 10:02:30','2026-07-11 10:02:30',0),(17,5,6,2,100,70,30,'GRADED','[{\"id\":3,\"type\":\"JUDGE\",\"content\":\"未完成安全准入考试也可以直接预约高风险实验。\",\"options\":\"[{\\\"key\\\": \\\"TRUE\\\", \\\"label\\\": \\\"正确\\\"}, {\\\"key\\\": \\\"FALSE\\\", \\\"label\\\": \\\"错误\\\"}]\",\"answer\":\"FALSE\",\"analysis\":\"高风险实验必须先完成安全准入考试并达到及格线。\",\"knowledgePoint\":\"安全准入\",\"knowledgeId\":null,\"riskType\":\"准入\",\"difficulty\":\"EASY\",\"relatedResourceId\":1,\"score\":20,\"orderNum\":1},{\"id\":1,\"type\":\"SINGLE\",\"content\":\"钻井液密度测试时首先应确认什么？\",\"options\":\"[{\\\"key\\\": \\\"A\\\", \\\"label\\\": \\\"密度计已校准\\\"}, {\\\"key\\\": \\\"B\\\", \\\"label\\\": \\\"随意取样\\\"}]\",\"answer\":\"A\",\"analysis\":\"密度计校准是读数可靠的前提。\",\"knowledgePoint\":\"密度计校准\",\"knowledgeId\":null,\"riskType\":\"飞溅\",\"difficulty\":\"EASY\",\"relatedResourceId\":1,\"score\":20,\"orderNum\":2},{\"id\":2,\"type\":\"MULTIPLE\",\"content\":\"井控风险识别应关注哪些信号？\",\"options\":\"[{\\\"key\\\": \\\"A\\\", \\\"label\\\": \\\"立压变化\\\"}, {\\\"key\\\": \\\"B\\\", \\\"label\\\": \\\"返出流量异常\\\"}, {\\\"key\\\": \\\"D\\\", \\\"label\\\": \\\"泥浆池液面变化\\\"}]\",\"answer\":\"A,B,D\",\"analysis\":\"压力、流量和液面变化是关键判断依据。\",\"knowledgePoint\":\"井控异常信号\",\"knowledgeId\":null,\"riskType\":\"高压\",\"difficulty\":\"MEDIUM\",\"relatedResourceId\":2,\"score\":30,\"orderNum\":3},{\"id\":7,\"type\":\"SHORT_ANSWER\",\"content\":\"你是谁\",\"options\":null,\"answer\":\"\",\"analysis\":null,\"knowledgePoint\":\"主观题\",\"knowledgeId\":null,\"riskType\":null,\"difficulty\":\"MEDIUM\",\"relatedResourceId\":null,\"score\":30,\"orderNum\":4}]',0,10,1,'2026-07-11 15:37:51','2026-07-11 15:38:05','2026-07-11 16:37:51','2026-07-11 15:38:00','2026-07-11 15:38:36','2026-07-11 15:37:51','2026-07-11 15:37:51',0);
+/*!40000 ALTER TABLE `t_exam_record` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_experiment`
+--
+
+DROP TABLE IF EXISTS `t_experiment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_experiment` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint NOT NULL,
+  `exp_code` varchar(50) NOT NULL,
+  `direction` varchar(100) DEFAULT NULL,
+  `cover_url` varchar(255) DEFAULT NULL,
+  `scenario_intro` text,
+  `visual_theme` varchar(60) DEFAULT NULL,
+  `description` text,
+  `exp_name` varchar(120) NOT NULL,
+  `objective` text,
+  `principle` text,
+  `equipment` text,
+  `materials` text,
+  `location` varchar(200) DEFAULT NULL,
+  `applicable_classes` varchar(300) DEFAULT NULL,
+  `risk_level` varchar(20) DEFAULT NULL,
+  `hazard_sources` text,
+  `risk_types` varchar(300) DEFAULT NULL,
+  `ppe_requirements` text,
+  `prerequisite_knowledge` text,
+  `safety_requirement` text,
+  `exam_required` tinyint NOT NULL DEFAULT '1',
+  `admission_paper_id` bigint DEFAULT NULL,
+  `duration_minutes` int DEFAULT '0',
+  `safety_pass_score` int DEFAULT '60',
+  `data_record_requirement` text,
+  `abnormal_handling` text,
+  `emergency_procedure` text,
+  `report_template_url` varchar(500) DEFAULT NULL,
+  `grading_criteria` text,
+  `reservation_enabled` tinyint DEFAULT '1',
+  `status` tinyint DEFAULT '1',
+  `sort` int DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_course_exp_code_deleted` (`course_id`,`exp_code`,`deleted`),
+  KEY `idx_experiment_course_status` (`course_id`,`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_experiment`
+--
+
+LOCK TABLES `t_experiment` WRITE;
+/*!40000 ALTER TABLE `t_experiment` DISABLE KEYS */;
+INSERT INTO `t_experiment` VALUES (1,1,'MUD-DENSITY','油气工程','/src/assets/amazing/procedure-safety.png','钻井液密度与流变性能测试工程情境导入。','mud_density','钻井液密度、黏度与滤失量测试。','钻井液密度与流变性能测试','理解工程参数、设备操作与安全风险之间的关系。','通过实验数据和流程节点建立工程判断。','实验台、传感器、记录表、个人防护用品','模拟样品与案例数据','油气工程实验楼 101','钻井液实验1班','MEDIUM','高压、旋转设备、样品飞溅或误操作','高压,机械,飞溅,HSE','实验服、护目镜、手套、防滑鞋','基础实验安全、设备认知、风险识别','完成准入学习与考试后操作。',1,1,90,60,'完整记录实验数据和异常现象。','设备异常立即停机并报告教师。','按应急预案撤离或处置。',NULL,'数据完整30，分析40，安全复盘30',1,1,1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,1,'WELL-CONTROL','油气工程','/src/assets/amazing/procedure-safety.png','井控风险识别与关井流程演示工程情境导入。','well_control','溢流信号识别与关井流程模拟。','井控风险识别与关井流程演示','理解工程参数、设备操作与安全风险之间的关系。','通过实验数据和流程节点建立工程判断。','实验台、传感器、记录表、个人防护用品','模拟样品与案例数据','油气工程实验楼 201','钻井液实验1班','HIGH','高压、旋转设备、样品飞溅或误操作','高压,机械,飞溅,HSE','实验服、护目镜、手套、防滑鞋','基础实验安全、设备认知、风险识别','完成准入学习与考试后操作。',1,6,90,60,'完整记录实验数据和异常现象。','设备异常立即停机并报告教师。','按应急预案撤离或处置。',NULL,'数据完整30，分析40，安全复盘30',1,1,2,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,2,'PIPE-DROP','油气工程','/src/assets/amazing/procedure-safety.png','管输流量与压降关系实验工程情境导入。','pipe_drop','测量不同流量下管路压降。','管输流量与压降关系实验','理解工程参数、设备操作与安全风险之间的关系。','通过实验数据和流程节点建立工程判断。','实验台、传感器、记录表、个人防护用品','模拟样品与案例数据','油气工程实验楼 301','2026秋课堂','MEDIUM','高压、旋转设备、样品飞溅或误操作','高压,机械,飞溅,HSE','实验服、护目镜、手套、防滑鞋','基础实验安全、设备认知、风险识别','完成准入学习与考试后操作。',1,NULL,90,70,'完整记录实验数据和异常现象。','设备异常立即停机并报告教师。','按应急预案撤离或处置。',NULL,'数据完整30，分析40，安全复盘30',1,1,3,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(4,3,'HSE-CASE','油气工程','/src/assets/amazing/procedure-safety.png','油气实验室事故案例复盘工程情境导入。','hse_case','事故链分析与应急卡片制作。','油气实验室事故案例复盘','理解工程参数、设备操作与安全风险之间的关系。','通过实验数据和流程节点建立工程判断。','实验台、传感器、记录表、个人防护用品','模拟样品与案例数据','油气工程实验楼 401','2026秋课堂','LOW','高压、旋转设备、样品飞溅或误操作','高压,机械,飞溅,HSE','实验服、护目镜、手套、防滑鞋','基础实验安全、设备认知、风险识别','完成准入学习与考试后操作。',0,NULL,90,70,'完整记录实验数据和异常现象。','设备异常立即停机并报告教师。','按应急预案撤离或处置。',NULL,'数据完整30，分析40，安全复盘30',0,1,4,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_experiment` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_experiment_admission`
+--
+
+DROP TABLE IF EXISTS `t_experiment_admission`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_experiment_admission` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `experiment_id` bigint NOT NULL,
+  `paper_id` bigint DEFAULT NULL,
+  `record_id` bigint DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'VALID',
+  `issued_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `valid_until` datetime DEFAULT NULL,
+  `revoke_time` datetime DEFAULT NULL,
+  `revoked_by` bigint DEFAULT NULL,
+  `revoke_reason` varchar(500) DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_admission_student_exp` (`student_id`,`experiment_id`,`status`,`deleted`),
+  KEY `idx_admission_record` (`record_id`),
+  KEY `idx_admission_valid_until` (`valid_until`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_experiment_admission`
+--
+
+LOCK TABLES `t_experiment_admission` WRITE;
+/*!40000 ALTER TABLE `t_experiment_admission` DISABLE KEYS */;
+INSERT INTO `t_experiment_admission` VALUES (1,5,1,1,1,'REPLACED','2026-07-06 12:04:06','2026-10-04 12:04:06',NULL,NULL,NULL,'2026-07-08 12:04:06','2026-07-10 16:13:14',0),(2,5,1,1,6,'REPLACED','2026-07-10 16:13:14','2026-10-08 16:13:14',NULL,NULL,NULL,'2026-07-10 16:13:14','2026-07-10 18:36:00',0),(3,5,1,1,8,'REPLACED','2026-07-10 18:36:01','2026-10-08 18:36:01',NULL,NULL,NULL,'2026-07-10 18:36:01','2026-07-10 18:49:26',0),(4,5,1,1,9,'REPLACED','2026-07-10 18:49:27','2026-10-08 18:49:27',NULL,NULL,NULL,'2026-07-10 18:49:27','2026-07-10 18:50:11',0),(5,5,1,1,10,'REPLACED','2026-07-10 18:50:11','2026-10-08 18:50:11',NULL,NULL,NULL,'2026-07-10 18:50:11','2026-07-10 18:52:33',0),(6,5,1,1,11,'REPLACED','2026-07-10 18:52:33','2026-10-08 18:52:33',NULL,NULL,NULL,'2026-07-10 18:52:33','2026-07-10 19:35:02',0),(7,5,1,1,12,'REPLACED','2026-07-10 19:35:03','2026-10-08 19:35:03',NULL,NULL,NULL,'2026-07-10 19:35:03','2026-07-10 19:38:58',0),(8,5,1,1,13,'REPLACED','2026-07-10 19:38:59','2026-10-08 19:38:59',NULL,NULL,NULL,'2026-07-10 19:38:59','2026-07-11 10:11:28',0),(9,5,1,1,16,'VALID','2026-07-11 10:11:28','2026-10-09 10:11:28',NULL,NULL,NULL,'2026-07-11 10:11:28','2026-07-11 10:11:28',0),(10,5,2,6,17,'VALID','2026-07-11 15:38:36','2027-01-07 15:38:36',NULL,NULL,NULL,'2026-07-11 15:38:36','2026-07-11 15:38:36',0);
+/*!40000 ALTER TABLE `t_experiment_admission` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_experiment_step`
+--
+
+DROP TABLE IF EXISTS `t_experiment_step`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_experiment_step` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `experiment_id` bigint NOT NULL,
+  `step_no` int NOT NULL,
+  `title` varchar(120) NOT NULL,
+  `content` text NOT NULL,
+  `safety_tip` text,
+  `media_type` varchar(20) NOT NULL DEFAULT 'TEXT',
+  `media_file_path` varchar(500) DEFAULT NULL,
+  `media_original_filename` varchar(255) DEFAULT NULL,
+  `media_content_type` varchar(100) DEFAULT NULL,
+  `media_file_size` bigint NOT NULL DEFAULT '0',
+  `flowchart_data` text,
+  `required_flag` tinyint DEFAULT '1',
+  `estimated_minutes` int DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_experiment_step_deleted` (`experiment_id`,`step_no`,`deleted`),
+  KEY `idx_step_experiment` (`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_experiment_step`
+--
+
+LOCK TABLES `t_experiment_step` WRITE;
+/*!40000 ALTER TABLE `t_experiment_step` DISABLE KEYS */;
+INSERT INTO `t_experiment_step` VALUES (1,1,1,'工程情境导入','进入钻井液密度与流变性能测试的现场问题。','先读风险提示，再进入操作。','TEXT',NULL,NULL,NULL,0,NULL,1,12,'2026-07-08 12:04:06','2026-07-11 16:30:34',1),(2,1,2,'设备与风险识别','识别关键设备、危险源和个人防护要求。','未经教师确认不得启动设备。','TEXT',NULL,NULL,NULL,0,NULL,1,15,'2026-07-08 12:04:06','2026-07-11 16:30:34',1),(3,2,1,'工程情境导入','进入井控风险识别与关井流程演示的现场问题。','先读风险提示，再进入操作。','TEXT',NULL,NULL,NULL,0,NULL,1,12,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(4,2,2,'设备与风险识别','识别关键设备、危险源和个人防护要求。','未经教师确认不得启动设备。','TEXT',NULL,NULL,NULL,0,NULL,1,15,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(5,3,1,'工程情境导入','进入管输流量与压降关系实验的现场问题。','先读风险提示，再进入操作。','TEXT',NULL,NULL,NULL,0,NULL,1,12,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(6,3,2,'设备与风险识别','识别关键设备、危险源和个人防护要求。','未经教师确认不得启动设备。','TEXT',NULL,NULL,NULL,0,NULL,1,15,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(7,4,1,'工程情境导入','进入油气实验室事故案例复盘的现场问题。','先读风险提示，再进入操作。','TEXT',NULL,NULL,NULL,0,NULL,1,12,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(8,4,2,'设备与风险识别','识别关键设备、危险源和个人防护要求。','未经教师确认不得启动设备。','TEXT',NULL,NULL,NULL,0,NULL,1,15,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(9,1,1,'工程情境导入','进入钻井液密度与流变性能测试的现场问题。','先读风险提示，再进入操作。','VIDEO','experiment-steps/2026/07/ff0ed9ae-5800-4e94-afb2-d381873dbb43.mp4','192707599-1-192.mp4','video/mp4',28950681,NULL,1,12,'2026-07-11 16:21:18','2026-07-11 16:52:17',0),(10,1,2,'设备与风险识别','识别关键设备、危险源和个人防护要求。','未经教师确认不得启动设备。','TEXT',NULL,NULL,NULL,0,NULL,1,15,'2026-07-11 16:21:18','2026-07-11 16:52:17',0);
+/*!40000 ALTER TABLE `t_experiment_step` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_lab_course`
+--
+
+DROP TABLE IF EXISTS `t_lab_course`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_lab_course` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_code` varchar(50) NOT NULL,
+  `course_name` varchar(100) NOT NULL,
+  `direction` varchar(50) DEFAULT NULL,
+  `teacher_id` bigint DEFAULT NULL,
+  `semester` varchar(20) DEFAULT NULL,
+  `description` text,
+  `cover_file_path` varchar(500) DEFAULT NULL,
+  `cover_original_filename` varchar(255) DEFAULT NULL,
+  `cover_content_type` varchar(100) DEFAULT NULL,
+  `cover_file_size` bigint NOT NULL DEFAULT '0',
+  `tagline` varchar(160) DEFAULT NULL,
+  `highlight_tags` varchar(300) DEFAULT NULL,
+  `visual_theme` varchar(60) DEFAULT NULL,
+  `status` tinyint DEFAULT '1',
+  `sort` int DEFAULT '0',
+  `credit` decimal(4,1) NOT NULL DEFAULT '0.0',
+  `hours` int NOT NULL DEFAULT '0',
+  `assessment_method` varchar(500) DEFAULT NULL,
+  `learning_requirement` text,
+  `allow_empty_publish` tinyint NOT NULL DEFAULT '0',
+  `archive_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_course_code` (`course_code`),
+  KEY `idx_teacher_status_semester` (`teacher_id`,`status`,`semester`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_lab_course`
+--
+
+LOCK TABLES `t_lab_course` WRITE;
+/*!40000 ALTER TABLE `t_lab_course` DISABLE KEYS */;
+INSERT INTO `t_lab_course` VALUES (1,'OG-LAB-101','钻井液性能测试实验课堂','石油工程',3,'2026秋','钻井液性能测试实验课堂演示课堂，覆盖资源预习、风险认知、准入考核、预约、报告和答疑。',NULL,NULL,NULL,0,'让油气实验知识看得懂、能操作、可考核。','钻井液,井控,安全准入','mud',1,1,1.5,24,'资源预习30% + 安全准入30% + 报告40%','完成预习资源、风险识别与准入任务后进入实验预约。',1,NULL,'2026-06-09 12:04:06','2026-07-08 12:04:06',0),(2,'OG-LAB-202','油气集输与管输压降实验课堂','油气储运',3,'2026秋','油气集输与管输压降实验课堂演示课堂，覆盖资源预习、风险认知、准入考核、预约、报告和答疑。',NULL,NULL,NULL,0,'让油气实验知识看得懂、能操作、可考核。','管输,压降,阀门','pipe',1,2,1.5,24,'资源预习30% + 安全准入30% + 报告40%','完成预习资源、风险识别与准入任务后进入实验预约。',1,NULL,'2026-06-10 12:04:06','2026-07-08 12:04:06',0),(3,'OG-LAB-303','HSE风险识别与应急处置课堂','安全工程',4,'2026秋','HSE风险识别与应急处置课堂演示课堂，覆盖资源预习、风险认知、准入考核、预约、报告和答疑。',NULL,NULL,NULL,0,'让油气实验知识看得懂、能操作、可考核。','HSE,应急,风险识别','hse',1,3,1.5,24,'资源预习30% + 安全准入30% + 报告40%','完成预习资源、风险识别与准入任务后进入实验预约。',1,NULL,'2026-06-11 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_lab_course` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_lab_time_slot`
+--
+
+DROP TABLE IF EXISTS `t_lab_time_slot`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_lab_time_slot` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `lab_id` bigint NOT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `date` date NOT NULL,
+  `slot_date` date GENERATED ALWAYS AS (`date`) STORED,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `capacity` int NOT NULL,
+  `booked_count` int DEFAULT '0',
+  `status` varchar(20) DEFAULT 'AVAILABLE',
+  `create_by` bigint NOT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_time_slot_lab_date` (`lab_id`,`date`,`status`),
+  KEY `idx_time_slot_experiment` (`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_lab_time_slot`
+--
+
+LOCK TABLES `t_lab_time_slot` WRITE;
+/*!40000 ALTER TABLE `t_lab_time_slot` DISABLE KEYS */;
+INSERT INTO `t_lab_time_slot` (`id`, `lab_id`, `experiment_id`, `date`, `start_time`, `end_time`, `capacity`, `booked_count`, `status`, `create_by`, `create_time`, `update_time`) VALUES (1,101,1,'2026-07-11','09:00:00','11:00:00',24,1,'AVAILABLE',2,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(2,102,3,'2026-07-12','14:00:00','16:00:00',20,1,'AVAILABLE',2,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(3,2,2,'2026-07-12','15:00:00','16:30:00',20,1,'AVAILABLE',3,'2026-07-11 15:37:18','2026-07-11 17:08:41');
+/*!40000 ALTER TABLE `t_lab_time_slot` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_learning_record`
+--
+
+DROP TABLE IF EXISTS `t_learning_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_learning_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `resource_id` bigint NOT NULL,
+  `experiment_id` bigint NOT NULL,
+  `progress` decimal(5,2) DEFAULT '0.00',
+  `duration_seconds` int DEFAULT '0',
+  `last_position_seconds` int NOT NULL DEFAULT '0',
+  `note` varchar(1000) DEFAULT NULL,
+  `finish_flag` tinyint DEFAULT '0',
+  `first_time` datetime DEFAULT NULL,
+  `last_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_student_resource_deleted` (`student_id`,`resource_id`,`deleted`),
+  KEY `idx_learning_experiment` (`experiment_id`),
+  KEY `idx_learning_finish` (`finish_flag`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_learning_record`
+--
+
+LOCK TABLES `t_learning_record` WRITE;
+/*!40000 ALTER TABLE `t_learning_record` DISABLE KEYS */;
+INSERT INTO `t_learning_record` VALUES (1,5,1,1,96.00,620,600,'密度计读数前要排气泡。',1,'2026-07-05 12:04:06','2026-07-11 09:42:04','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,6,3,3,55.00,260,120,'压降曲线还需复习。',0,'2026-07-06 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,7,1,1,0.00,0,0,NULL,0,'2026-07-08 16:13:46','2026-07-08 16:13:46','2026-07-08 16:13:46','2026-07-08 16:13:46',0),(4,5,2,2,100.00,60,0,'',0,'2026-07-08 17:15:40','2026-07-09 11:22:00','2026-07-08 17:15:40','2026-07-08 17:15:40',0),(5,3,1,1,0.00,0,0,NULL,0,'2026-07-08 17:50:11','2026-07-09 00:47:40','2026-07-08 17:50:11','2026-07-08 17:50:11',0),(6,5,5,1,0.00,0,0,NULL,0,'2026-07-09 09:38:20','2026-07-09 11:22:02','2026-07-09 09:38:20','2026-07-09 09:38:20',0),(7,3,4,4,0.00,0,0,NULL,0,'2026-07-09 18:28:48','2026-07-11 13:25:21','2026-07-09 18:28:48','2026-07-09 18:28:48',0),(8,3,5,1,0.00,0,0,NULL,0,'2026-07-09 18:28:50','2026-07-09 18:28:50','2026-07-09 18:28:50','2026-07-09 18:28:50',0);
+/*!40000 ALTER TABLE `t_learning_record` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_learning_task`
+--
+
+DROP TABLE IF EXISTS `t_learning_task`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_learning_task` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint NOT NULL,
+  `experiment_id` bigint NOT NULL,
+  `task_name` varchar(120) NOT NULL,
+  `task_type` varchar(40) NOT NULL,
+  `target_resource_id` bigint DEFAULT NULL,
+  `target_paper_id` bigint DEFAULT NULL,
+  `prerequisite_task_id` bigint DEFAULT NULL,
+  `required_flag` tinyint NOT NULL DEFAULT '1',
+  `sort` int NOT NULL DEFAULT '0',
+  `open_time` datetime DEFAULT NULL,
+  `deadline` datetime DEFAULT NULL,
+  `completion_rule` varchar(30) NOT NULL DEFAULT 'AUTO',
+  `status` tinyint NOT NULL DEFAULT '1',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_learning_task_experiment` (`experiment_id`,`status`,`sort`),
+  KEY `idx_learning_task_course` (`course_id`),
+  KEY `idx_learning_task_prerequisite` (`prerequisite_task_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_learning_task`
+--
+
+LOCK TABLES `t_learning_task` WRITE;
+/*!40000 ALTER TABLE `t_learning_task` DISABLE KEYS */;
+INSERT INTO `t_learning_task` VALUES (1,1,1,'观看钻井液预习视频','RESOURCE',1,NULL,NULL,1,1,'2026-07-03 12:04:06','2026-07-28 12:04:06','AUTO',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,1,1,'提交钻井液实验报告','REPORT',NULL,NULL,NULL,1,2,'2026-07-03 12:04:06','2026-07-28 12:04:06','AUTO',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,2,3,'阅读管输压降指导书','RESOURCE',3,NULL,NULL,1,1,'2026-07-03 12:04:06','2026-07-28 12:04:06','AUTO',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(4,3,4,'学习HSE事故案例','RESOURCE',4,NULL,NULL,1,1,'2026-07-03 12:04:06','2026-07-28 12:04:06','AUTO',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_learning_task` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_learning_task_record`
+--
+
+DROP TABLE IF EXISTS `t_learning_task_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_learning_task_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `task_id` bigint NOT NULL,
+  `student_id` bigint NOT NULL,
+  `status` varchar(30) NOT NULL DEFAULT 'COMPLETED',
+  `start_time` datetime DEFAULT NULL,
+  `complete_time` datetime DEFAULT NULL,
+  `source_type` varchar(40) DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_learning_task_student_deleted` (`task_id`,`student_id`,`deleted`),
+  KEY `idx_learning_task_record_student` (`student_id`,`status`),
+  KEY `idx_task_record_student_task` (`student_id`,`task_id`,`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_learning_task_record`
+--
+
+LOCK TABLES `t_learning_task_record` WRITE;
+/*!40000 ALTER TABLE `t_learning_task_record` DISABLE KEYS */;
+INSERT INTO `t_learning_task_record` VALUES (1,1,5,'COMPLETED','2026-07-05 12:04:06','2026-07-11 17:21:14','RESOURCE','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,3,6,'IN_PROGRESS','2026-07-05 12:04:06',NULL,'DEMO','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,4,7,'COMPLETED','2026-07-05 12:04:06','2026-07-07 12:04:06','DEMO','2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_learning_task_record` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_operation_log`
+--
+
+DROP TABLE IF EXISTS `t_operation_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_operation_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint DEFAULT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `module` varchar(80) NOT NULL,
+  `action` varchar(80) NOT NULL,
+  `content` varchar(500) DEFAULT NULL,
+  `result` varchar(20) DEFAULT 'SUCCESS',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_operation_user_time` (`user_id`,`create_time`),
+  KEY `idx_operation_module_time` (`module`,`create_time`),
+  KEY `idx_operation_log_query` (`create_time`,`module`,`action`,`result`,`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=300 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_operation_log`
+--
+
+LOCK TABLES `t_operation_log` WRITE;
+/*!40000 ALTER TABLE `t_operation_log` DISABLE KEYS */;
+INSERT INTO `t_operation_log` VALUES (1,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 12:10:08'),(2,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 12:10:44'),(3,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-08 12:11:04'),(4,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 12:12:07'),(5,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-08 12:12:30'),(6,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 12:13:03'),(7,6,'student_li','用户中心','登录','登录成功','SUCCESS','2026-07-08 12:13:17'),(8,6,'student_li','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:12:50'),(9,7,'student_chen','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:13:41'),(10,7,'student_chen','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:14:39'),(11,7,'student_chen','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:15:11'),(12,7,'student_chen','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:30:23'),(13,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:31:20'),(14,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:31:33'),(15,2,'lab_admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:32:02'),(16,2,'lab_admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:32:14'),(17,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:32:30'),(18,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:32:55'),(19,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:33:15'),(20,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 16:34:09'),(21,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-08 16:34:42'),(22,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:08:00'),(23,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:08:11'),(24,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:08:20'),(25,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:08:32'),(26,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:11:22'),(27,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:11:30'),(28,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:15:21'),(29,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:15:32'),(30,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:16:12'),(31,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:16:24'),(32,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:16:31'),(33,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:16:38'),(34,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:23:51'),(35,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:23:59'),(36,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:24:33'),(37,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:24:45'),(38,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:49:26'),(39,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:49:36'),(40,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-08 17:49:59'),(41,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-08 17:50:08'),(42,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-09 00:47:13'),(43,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 00:47:27'),(44,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 00:47:34'),(45,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 00:48:04'),(46,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 00:48:31'),(47,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-09 09:36:14'),(48,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 09:36:32'),(49,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 09:36:37'),(50,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 09:37:11'),(51,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 09:37:25'),(52,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 10:31:48'),(53,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 10:56:20'),(54,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 10:56:33'),(55,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 11:04:56'),(56,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 11:05:09'),(57,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 11:07:17'),(58,4,'teacher_li','用户中心','登录','登录成功','SUCCESS','2026-07-09 11:07:38'),(59,4,'teacher_li','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 11:10:48'),(60,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 11:11:05'),(61,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 11:18:27'),(62,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 11:18:38'),(63,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 11:43:12'),(64,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 11:43:30'),(65,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:05:27'),(66,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:05:37'),(67,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:09:07'),(68,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:09:22'),(69,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:13:30'),(70,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:13:42'),(71,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:14:07'),(72,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:14:17'),(73,3,'teacher_wang','COURSE_ORGANIZATION','CREATE','创建课程：111111111','SUCCESS','2026-07-09 12:22:32'),(74,3,'teacher_wang','COURSE_ORGANIZATION','DELETE','删除课程：111111111','SUCCESS','2026-07-09 12:23:04'),(75,3,'teacher_wang','EXPERIMENT_PROCEDURE','STATUS','实验状态更新：钻井液密度与流变性能测试 -> 2','SUCCESS','2026-07-09 12:29:54'),(76,3,'teacher_wang','EXPERIMENT_PROCEDURE','STATUS','实验状态更新：钻井液密度与流变性能测试 -> 1','SUCCESS','2026-07-09 12:29:57'),(77,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:38:21'),(78,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:38:33'),(79,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:39:17'),(80,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:39:27'),(81,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:40:56'),(82,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:41:10'),(83,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:41:28'),(84,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:41:41'),(85,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:45:56'),(86,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:46:08'),(87,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:47:39'),(88,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:47:50'),(89,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 12:48:02'),(90,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 12:48:48'),(91,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 16:12:44'),(92,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 16:13:05'),(93,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 16:14:06'),(94,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 16:14:29'),(95,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 16:21:49'),(96,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 16:24:17'),(97,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 16:24:31'),(98,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：钻井液密度与流变性能测试','SUCCESS','2026-07-09 17:35:41'),(99,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：钻井液密度与流变性能测试','SUCCESS','2026-07-09 17:54:10'),(100,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：井控风险识别与关井流程演示','SUCCESS','2026-07-09 17:54:21'),(101,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 18:11:14'),(102,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 18:11:27'),(103,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 18:12:18'),(104,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 18:12:30'),(105,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 18:29:20'),(106,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-09 18:29:35'),(107,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 18:36:07'),(108,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-09 18:36:17'),(109,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 18:37:15'),(110,4,'teacher_li','用户中心','登录','登录成功','SUCCESS','2026-07-09 18:37:26'),(111,4,'teacher_li','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 18:51:39'),(112,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-09 19:00:23'),(113,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 19:01:15'),(114,8,'user_oilfan','用户中心','登录','登录成功','SUCCESS','2026-07-09 19:01:22'),(115,8,'user_oilfan','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 19:01:46'),(116,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-09 19:01:57'),(117,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 19:20:21'),(118,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-09 19:20:30'),(119,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 19:20:41'),(120,9,'user_guest','用户中心','登录','登录成功','SUCCESS','2026-07-09 19:20:47'),(121,9,'user_guest','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-09 19:24:23'),(122,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-09 19:24:32'),(123,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 09:41:33'),(124,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 09:41:50'),(125,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 11:49:20'),(126,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 11:49:41'),(127,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 11:51:25'),(128,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 11:51:38'),(129,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 11:52:36'),(130,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 11:52:51'),(131,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 11:57:00'),(132,6,'student_li','用户中心','登录','登录成功','SUCCESS','2026-07-10 11:57:16'),(133,6,'student_li','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 11:57:33'),(134,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 11:57:45'),(135,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 12:08:04'),(136,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 12:08:24'),(137,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 12:20:14'),(138,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 12:20:48'),(139,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 12:27:31'),(140,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 12:27:51'),(141,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 16:13:39'),(142,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 16:13:51'),(143,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 16:19:48'),(144,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 16:20:03'),(145,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 16:22:08'),(146,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 16:22:20'),(147,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 16:36:37'),(148,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 18:15:22'),(149,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 18:28:36'),(150,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 18:31:34'),(151,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 18:32:36'),(152,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 18:32:45'),(153,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 18:55:07'),(154,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 18:55:21'),(155,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：钻井液密度与流变性能测试','SUCCESS','2026-07-10 19:33:30'),(156,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 19:33:41'),(157,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 19:33:52'),(158,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 19:35:23'),(159,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 19:35:36'),(160,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 19:36:21'),(161,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 19:36:35'),(162,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:22:28'),(163,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:22:38'),(164,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:25:49'),(165,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:26:05'),(166,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:32:54'),(167,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:32:54'),(168,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:33:30'),(169,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:34:29'),(170,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:34:29'),(171,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:35:54'),(172,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:49:02'),(173,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:49:03'),(174,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:49:18'),(175,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:49:18'),(176,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:50:19'),(177,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:58:05'),(178,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-10 21:58:05'),(179,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-10 21:58:53'),(180,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 09:40:20'),(181,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 09:40:45'),(182,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 09:42:31'),(183,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 09:44:25'),(184,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：钻井液密度与流变性能测试','SUCCESS','2026-07-11 09:45:11'),(185,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 09:45:26'),(186,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 09:45:41'),(187,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 09:46:53'),(188,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 09:47:13'),(189,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 09:49:54'),(190,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 09:50:11'),(191,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 09:59:22'),(192,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 09:59:22'),(193,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:03:18'),(194,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:03:36'),(195,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:08:38'),(196,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:08:38'),(197,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:09:15'),(198,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:09:16'),(199,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:10:04'),(200,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:10:06'),(201,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:10:16'),(202,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:10:18'),(203,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:10:52'),(204,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:14:10'),(205,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:14:22'),(206,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:23:09'),(207,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 10:23:09'),(208,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 10:23:35'),(209,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 11:23:25'),(210,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 11:43:57'),(211,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 11:44:10'),(212,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:10:35'),(213,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:10:48'),(214,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:11:23'),(215,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:11:32'),(216,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:15:51'),(217,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:24:11'),(218,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:27:11'),(219,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:27:20'),(220,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:28:00'),(221,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:28:14'),(222,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:28:44'),(223,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:28:59'),(224,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 13:29:11'),(225,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 13:29:32'),(226,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:01:02'),(227,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:01:17'),(228,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:05:23'),(229,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:11:28'),(230,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:18:04'),(231,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:18:21'),(232,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:20:30'),(233,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:20:45'),(234,6,'student_li','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:23:57'),(235,6,'student_li','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:25:25'),(236,6,'student_li','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:27:01'),(237,6,'student_li','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:28:23'),(238,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:31:14'),(239,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:31:30'),(240,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:35:07'),(241,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:35:24'),(242,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:35:32'),(243,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:35:41'),(244,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：井控风险识别与关井流程演示','SUCCESS','2026-07-11 15:36:03'),(245,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：井控风险识别与关井流程演示','SUCCESS','2026-07-11 15:36:28'),(246,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:37:21'),(247,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:37:46'),(248,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:38:09'),(249,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:38:18'),(250,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:38:39'),(251,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:38:52'),(252,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:39:33'),(253,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:39:45'),(254,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：井控风险识别与关井流程演示','SUCCESS','2026-07-11 15:40:00'),(255,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:40:19'),(256,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:40:31'),(257,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 15:40:57'),(258,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 15:41:10'),(259,3,'teacher_wang','EXPERIMENT_PROCEDURE','STEP_SAVE','保存实验步骤：钻井液密度与流变性能测试，共2步','SUCCESS','2026-07-11 16:21:18'),(260,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 16:31:24'),(261,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:31:36'),(262,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:33:46'),(263,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:45:15'),(264,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:45:53'),(265,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:45:58'),(266,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:46:04'),(267,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:46:25'),(268,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:47:34'),(269,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:49:57'),(270,3,'teacher_wang','EXPERIMENT_PROCEDURE','STEP_SAVE','保存实验步骤：钻井液密度与流变性能测试，共2步','SUCCESS','2026-07-11 16:49:56'),(271,3,'teacher_wang','EXPERIMENT_PROCEDURE','STEP_SAVE','保存实验步骤：钻井液密度与流变性能测试，共2步','SUCCESS','2026-07-11 16:49:56'),(272,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:51:04'),(273,3,'teacher_wang','EXPERIMENT_PROCEDURE','STEP_SAVE','保存实验步骤：钻井液密度与流变性能测试，共2步','SUCCESS','2026-07-11 16:51:04'),(274,3,'teacher_wang','EXPERIMENT_PROCEDURE','STEP_SAVE','保存实验步骤：钻井液密度与流变性能测试，共2步','SUCCESS','2026-07-11 16:51:04'),(275,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:52:00'),(276,3,'teacher_wang','EXPERIMENT_PROCEDURE','STEP_SAVE','保存实验步骤：钻井液密度与流变性能测试，共2步','SUCCESS','2026-07-11 16:52:16'),(277,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 16:52:48'),(278,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:53:01'),(279,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 16:53:49'),(280,1,'admin','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:54:04'),(281,1,'admin','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 16:54:21'),(282,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 16:54:38'),(283,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:06:32'),(284,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:06:50'),(285,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:07:30'),(286,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:07:44'),(287,3,'teacher_wang','EXPERIMENT_PROCEDURE','UPDATE','修改实验项目：井控风险识别与关井流程演示','SUCCESS','2026-07-11 17:08:08'),(288,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:08:19'),(289,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:08:29'),(290,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:08:52'),(291,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:09:04'),(292,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:09:16'),(293,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:09:26'),(294,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:11:39'),(295,3,'teacher_wang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:11:51'),(296,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:19:58'),(297,3,'teacher_wang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:20:52'),(298,5,'student_zhang','用户中心','登录','登录成功','SUCCESS','2026-07-11 17:21:05'),(299,5,'student_zhang','用户中心','退出登录','用户主动退出','SUCCESS','2026-07-11 17:21:52');
+/*!40000 ALTER TABLE `t_operation_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_permission`
+--
+
+DROP TABLE IF EXISTS `t_permission`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_permission` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `code` varchar(100) NOT NULL,
+  `type` tinyint NOT NULL,
+  `parent_id` bigint DEFAULT '0',
+  `path` varchar(255) DEFAULT NULL,
+  `icon` varchar(100) DEFAULT NULL,
+  `sort` int DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_permission_code` (`code`)
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_permission`
+--
+
+LOCK TABLES `t_permission` WRITE;
+/*!40000 ALTER TABLE `t_permission` DISABLE KEYS */;
+INSERT INTO `t_permission` VALUES (1,'门户访问','portal:view',2,0,NULL,NULL,10,'2026-07-08 12:04:06'),(2,'门户搜索','portal:search',2,0,NULL,NULL,20,'2026-07-08 12:04:06'),(3,'消息日程','portal:message',2,0,NULL,NULL,30,'2026-07-08 12:04:06'),(4,'公告管理','portal:notice:manage',2,0,NULL,NULL,40,'2026-07-08 12:04:06'),(5,'个人资料','profile:update',2,0,NULL,NULL,50,'2026-07-08 12:04:06'),(6,'修改密码','profile:password',2,0,NULL,NULL,60,'2026-07-08 12:04:06'),(7,'仪表盘','dashboard:view',2,0,NULL,NULL,70,'2026-07-08 12:04:06'),(8,'AI问答','ai:ask',2,0,NULL,NULL,80,'2026-07-08 12:04:06'),(9,'课程查看','course:view',2,0,NULL,NULL,90,'2026-07-08 12:04:06'),(10,'课程创建','course:create',2,0,NULL,NULL,100,'2026-07-08 12:04:06'),(11,'课程更新','course:update',2,0,NULL,NULL,110,'2026-07-08 12:04:06'),(12,'课程删除','course:delete',2,0,NULL,NULL,120,'2026-07-08 12:04:06'),(13,'课程发布','course:publish',2,0,NULL,NULL,130,'2026-07-08 12:04:06'),(14,'课程归档','course:archive',2,0,NULL,NULL,140,'2026-07-08 12:04:06'),(15,'课程复制','course:copy',2,0,NULL,NULL,150,'2026-07-08 12:04:06'),(16,'教学班管理','course:class:manage',2,0,NULL,NULL,160,'2026-07-08 12:04:06'),(17,'课堂成员管理','course:student:manage',2,0,NULL,NULL,170,'2026-07-08 12:04:06'),(18,'课堂加入','course:join',2,0,NULL,NULL,180,'2026-07-08 12:04:06'),(19,'课堂邀请码管理','course:invite:manage',2,0,NULL,NULL,190,'2026-07-08 12:04:06'),(20,'实验查看','experiment:view',2,0,NULL,NULL,200,'2026-07-08 12:04:06'),(21,'实验创建','experiment:create',2,0,NULL,NULL,210,'2026-07-08 12:04:06'),(22,'实验更新','experiment:update',2,0,NULL,NULL,220,'2026-07-08 12:04:06'),(23,'实验删除','experiment:delete',2,0,NULL,NULL,230,'2026-07-08 12:04:06'),(24,'资源查看','resource:view',2,0,NULL,NULL,240,'2026-07-08 12:04:06'),(25,'资源创建','resource:create',2,0,NULL,NULL,250,'2026-07-08 12:04:06'),(26,'资源更新','resource:update',2,0,NULL,NULL,260,'2026-07-08 12:04:06'),(27,'资源删除','resource:delete',2,0,NULL,NULL,270,'2026-07-08 12:04:06'),(28,'资源投稿','resource-submission:create',2,0,NULL,NULL,280,'2026-07-08 12:04:06'),(29,'资源投稿审核','resource-submission:review',2,0,NULL,NULL,290,'2026-07-08 12:04:06'),(30,'学习记录','learning:update:self',2,0,NULL,NULL,300,'2026-07-08 12:04:06'),(31,'考试参加','exam:take',2,0,NULL,NULL,310,'2026-07-08 12:04:06'),(32,'试卷查看','exam-paper:view',2,0,NULL,NULL,320,'2026-07-08 12:04:06'),(33,'试卷创建','exam-paper:create',2,0,NULL,NULL,330,'2026-07-08 12:04:06'),(34,'试卷更新','exam-paper:update',2,0,NULL,NULL,340,'2026-07-08 12:04:06'),(35,'试卷删除','exam-paper:delete',2,0,NULL,NULL,350,'2026-07-08 12:04:06'),(36,'主观题评分','exam:grade',2,0,NULL,NULL,360,'2026-07-08 12:04:06'),(37,'预约查看','reservation:view',2,0,NULL,NULL,370,'2026-07-08 12:04:06'),(38,'预约管理','reservation:manage',2,0,NULL,NULL,380,'2026-07-08 12:04:06'),(39,'预约审核','reservation:review',2,0,NULL,NULL,390,'2026-07-08 12:04:06'),(40,'报告查看','report:view',2,0,NULL,NULL,400,'2026-07-08 12:04:06'),(41,'报告批改','report:review',2,0,NULL,NULL,410,'2026-07-08 12:04:06'),(42,'报告评分','report:grade',2,0,NULL,NULL,420,'2026-07-08 12:04:06'),(43,'用户查看','user:view',2,0,NULL,NULL,430,'2026-07-08 12:04:06'),(44,'用户创建','user:create',2,0,NULL,NULL,440,'2026-07-08 12:04:06'),(45,'用户更新','user:update',2,0,NULL,NULL,450,'2026-07-08 12:04:06'),(46,'用户删除','user:delete',2,0,NULL,NULL,460,'2026-07-08 12:04:06'),(47,'角色查看','role:view',2,0,NULL,NULL,470,'2026-07-08 12:04:06'),(48,'角色权限','role:permission:update',2,0,NULL,NULL,480,'2026-07-08 12:04:06'),(49,'权限查看','permission:view',2,0,NULL,NULL,490,'2026-07-08 12:04:06'),(50,'操作日志','operation-log:view',2,0,NULL,NULL,500,'2026-07-08 12:04:06'),(55,'教师认证申请','teacher-certification:apply',2,0,NULL,NULL,550,'2026-07-08 12:04:06'),(56,'教师认证审核','teacher-certification:review',2,0,NULL,NULL,560,'2026-07-08 12:04:06'),(57,'报告提交','report:submit',2,0,NULL,NULL,140,'2026-07-08 17:45:55'),(58,'题库查看','question:view',2,0,NULL,NULL,401,'2026-07-10 10:25:57'),(59,'题库创建','question:create',2,0,NULL,NULL,403,'2026-07-10 10:25:57'),(60,'题库更新','question:update',2,0,NULL,NULL,404,'2026-07-10 10:25:57'),(61,'题库删除','question:delete',2,0,NULL,NULL,405,'2026-07-10 10:25:57'),(62,'考试创建','exam:create',2,0,NULL,NULL,413,'2026-07-10 10:25:57'),(63,'考试更新','exam:update',2,0,NULL,NULL,414,'2026-07-10 10:25:57'),(64,'考试删除','exam:delete',2,0,NULL,NULL,415,'2026-07-10 10:25:57'),(65,'考试统计','exam:statistics',2,0,NULL,NULL,422,'2026-07-10 10:25:57');
+/*!40000 ALTER TABLE `t_permission` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_portal_message`
+--
+
+DROP TABLE IF EXISTS `t_portal_message`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_portal_message` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `content` text NOT NULL,
+  `biz_type` varchar(50) DEFAULT NULL,
+  `biz_id` bigint DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `read_flag` tinyint DEFAULT '0',
+  `read_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_message_user_read_time` (`user_id`,`read_flag`,`create_time`),
+  KEY `idx_message_biz` (`biz_type`,`biz_id`),
+  KEY `idx_message_user_biz` (`user_id`,`biz_type`,`biz_id`,`deleted`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_portal_message`
+--
+
+LOCK TABLES `t_portal_message` WRITE;
+/*!40000 ALTER TABLE `t_portal_message` DISABLE KEYS */;
+INSERT INTO `t_portal_message` VALUES (1,5,'钻井液实验预约已通过','请按预约时间到 A203 实验室。','DEMO',NULL,'/student/reserve',1,'2026-07-09 09:46:57','2026-07-08 12:04:06',0),(2,3,'有新的课堂问题','学生提出密度计读数波动问题。','DEMO',NULL,'/discussions',1,'2026-07-11 13:26:35','2026-07-08 12:04:06',0),(3,1,'有待审核教师认证','请审核普通用户提交的教师认证。','DEMO',NULL,'/admin/teacher-certifications',0,NULL,'2026-07-08 12:04:06',0),(4,9,'教师认证申请已提交','管理员审核后将获得创建课堂权限。','DEMO',NULL,'/profile',0,NULL,'2026-07-08 12:04:06',0),(5,5,'预约即将开始：钻井液密度与流变性能测试','你的实验预约将于 2026-07-11 09:00 开始，请按要求到场。','RESERVATION_START_REMINDER',1,'/classrooms/1/learn?module=reservation',1,'2026-07-11 15:18:02','2026-07-10 10:00:00',0),(6,3,'有新的课程提问','hhhh','DISCUSSION',3,'/discussions?topicId=3',0,NULL,'2026-07-11 13:27:52',0),(7,5,'教师回复了你的提问','hhhh','DISCUSSION',3,'/discussions?topicId=3',1,'2026-07-11 15:18:01','2026-07-11 13:28:26',0),(8,5,'课程发布了新资源','钻井液性能测试沉浸视频','RESOURCE_PUBLISHED',1,'/student/learning/1?experimentId=1',1,'2026-07-11 16:53:45','2026-07-11 16:52:29',0),(9,7,'课程发布了新资源','钻井液性能测试沉浸视频','RESOURCE_PUBLISHED',1,'/student/learning/1?experimentId=1',0,NULL,'2026-07-11 16:52:29',0),(10,5,'课程发布了新资源','井控关井流程动画','RESOURCE_PUBLISHED',2,'/student/learning/1?experimentId=2',1,'2026-07-11 16:53:44','2026-07-11 16:52:30',0),(11,7,'课程发布了新资源','井控关井流程动画','RESOURCE_PUBLISHED',2,'/student/learning/1?experimentId=2',0,NULL,'2026-07-11 16:52:30',0),(12,5,'预约审核通过','同意预约','RESERVATION_REVIEW',3,'/student/reserve',0,NULL,'2026-07-11 17:09:12',0);
+/*!40000 ALTER TABLE `t_portal_message` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_portal_notice`
+--
+
+DROP TABLE IF EXISTS `t_portal_notice`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_portal_notice` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) NOT NULL,
+  `content` text NOT NULL,
+  `target_role` varchar(50) DEFAULT 'ALL',
+  `priority` varchar(20) DEFAULT 'MEDIUM',
+  `status` tinyint DEFAULT '1',
+  `publish_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `expire_time` datetime DEFAULT NULL,
+  `create_by` bigint DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_notice_role_status_time` (`target_role`,`status`,`publish_time`),
+  KEY `idx_notice_deleted` (`deleted`),
+  KEY `idx_notice_admin_query` (`deleted`,`status`,`target_role`,`priority`,`publish_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_portal_notice`
+--
+
+LOCK TABLES `t_portal_notice` WRITE;
+/*!40000 ALTER TABLE `t_portal_notice` DISABLE KEYS */;
+INSERT INTO `t_portal_notice` VALUES (1,'平台演示数据已重置','所有演示账号密码均为 123456。','ALL','HIGH',1,'2026-07-08 12:04:06','2026-08-07 12:04:06',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_portal_notice` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_question`
+--
+
+DROP TABLE IF EXISTS `t_question`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_question` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `type` varchar(20) NOT NULL,
+  `content` text NOT NULL,
+  `options` json DEFAULT NULL,
+  `answer` varchar(500) NOT NULL,
+  `score` int DEFAULT '0',
+  `analysis` varchar(500) DEFAULT NULL,
+  `knowledge_point` varchar(200) DEFAULT NULL,
+  `knowledge_id` bigint DEFAULT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `risk_type` varchar(100) DEFAULT NULL,
+  `related_resource_id` bigint DEFAULT NULL,
+  `difficulty` varchar(20) DEFAULT 'MEDIUM',
+  `course_id` bigint DEFAULT NULL,
+  `create_by` bigint NOT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_question_course` (`course_id`),
+  KEY `idx_question_knowledge` (`knowledge_point`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_question`
+--
+
+LOCK TABLES `t_question` WRITE;
+/*!40000 ALTER TABLE `t_question` DISABLE KEYS */;
+INSERT INTO `t_question` VALUES (1,'SINGLE','钻井液密度测试时首先应确认什么？','[{\"key\": \"A\", \"label\": \"密度计已校准\"}, {\"key\": \"B\", \"label\": \"随意取样\"}]','A',20,'密度计校准是读数可靠的前提。','密度计校准',NULL,1,'飞溅',1,'EASY',1,3,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,'MULTIPLE','井控风险识别应关注哪些信号？','[{\"key\": \"A\", \"label\": \"立压变化\"}, {\"key\": \"B\", \"label\": \"返出流量异常\"}, {\"key\": \"D\", \"label\": \"泥浆池液面变化\"}]','A,B,D',30,'压力、流量和液面变化是关键判断依据。','井控异常信号',NULL,2,'高压',2,'MEDIUM',1,3,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,'JUDGE','未完成安全准入考试也可以直接预约高风险实验。','[{\"key\": \"TRUE\", \"label\": \"正确\"}, {\"key\": \"FALSE\", \"label\": \"错误\"}]','FALSE',20,'高风险实验必须先完成安全准入考试并达到及格线。','安全准入',NULL,1,'准入',1,'EASY',1,3,'2026-07-10 10:28:23','2026-07-10 10:28:23',0),(5,'SHORT_ANSWER','你是谁',NULL,'',10,NULL,'主观题',NULL,1,NULL,NULL,'MEDIUM',1,3,'2026-07-10 22:00:07','2026-07-10 22:00:07',0),(6,'SHORT_ANSWER','我是谁',NULL,'',20,NULL,'主观题',NULL,1,NULL,NULL,'MEDIUM',1,3,'2026-07-10 22:00:31','2026-07-10 22:00:31',0),(7,'SHORT_ANSWER','你是谁',NULL,'',30,NULL,'主观题',NULL,2,NULL,NULL,'MEDIUM',1,3,'2026-07-11 15:35:00','2026-07-11 15:35:00',0);
+/*!40000 ALTER TABLE `t_question` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_recent_visit`
+--
+
+DROP TABLE IF EXISTS `t_recent_visit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_recent_visit` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `title` varchar(120) NOT NULL,
+  `path` varchar(255) NOT NULL,
+  `module` varchar(50) DEFAULT NULL,
+  `visit_count` int DEFAULT '1',
+  `last_visit_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_recent_user_path` (`user_id`,`path`),
+  KEY `idx_recent_user_time` (`user_id`,`last_visit_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=131 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_recent_visit`
+--
+
+LOCK TABLES `t_recent_visit` WRITE;
+/*!40000 ALTER TABLE `t_recent_visit` DISABLE KEYS */;
+INSERT INTO `t_recent_visit` VALUES (1,5,'我的课堂','/classrooms','UnifiedClassroomList',122,'2026-07-11 17:21:34','2026-07-08 12:04:06','2026-07-11 17:21:34'),(2,8,'资源学习','/resources','UnifiedResourceCenter',2,'2026-07-09 19:01:23','2026-07-08 12:04:06','2026-07-09 19:01:23'),(3,3,'课堂管理','/teacher/courses','TeacherCourseManagement',49,'2026-07-09 16:16:48','2026-07-08 12:04:06','2026-07-09 16:16:48'),(4,1,'教师认证审核','/admin/teacher-certifications','AdminTeacherCertificationReview',11,'2026-07-11 16:54:10','2026-07-08 12:04:06','2026-07-11 16:54:10'),(5,1,'管理员首页','/admin/home','AdminHome',29,'2026-07-11 16:54:16','2026-07-08 12:10:09','2026-07-11 16:54:16'),(6,1,'用户管理','/admin/users','AdminUserManagement',23,'2026-07-11 16:54:16','2026-07-08 12:10:16','2026-07-11 16:54:16'),(7,1,'角色管理','/admin/roles','AdminRoleManagement',16,'2026-07-11 16:54:16','2026-07-08 12:10:30','2026-07-11 16:54:16'),(8,1,'权限管理','/admin/permissions','AdminPermissionManagement',16,'2026-07-11 16:54:14','2026-07-08 12:10:32','2026-07-11 16:54:14'),(9,1,'公告管理','/admin/notices','AdminNoticeManagement',15,'2026-07-11 16:54:15','2026-07-08 12:10:34','2026-07-11 16:54:15'),(10,1,'操作日志','/admin/logs','AdminOperationLog',12,'2026-07-11 16:54:10','2026-07-08 12:10:37','2026-07-11 16:54:10'),(11,1,'资源投稿审核','/admin/resource-submissions','AdminResourceSubmissionReview',7,'2026-07-11 16:54:08','2026-07-08 12:10:39','2026-07-11 16:54:08'),(12,3,'教师课程建设台','/teacher/home','TeacherHome',7,'2026-07-08 16:32:48','2026-07-08 12:11:04','2026-07-08 16:32:48'),(13,3,'资源学习','/resources','UnifiedResourceCenter',98,'2026-07-11 16:54:39','2026-07-08 12:11:14','2026-07-11 16:54:39'),(14,3,'我的课堂','/classrooms','UnifiedClassroomList',200,'2026-07-11 17:11:52','2026-07-08 12:11:17','2026-07-11 17:11:52'),(15,3,'课堂学习路径','/classrooms/1/learn','UnifiedClassroomLearning',9,'2026-07-08 17:50:16','2026-07-08 12:11:24','2026-07-08 17:50:16'),(16,3,'课堂详细','/teacher/courses/1/edit','TeacherCourseEditor',210,'2026-07-11 17:20:45','2026-07-08 12:11:38','2026-07-11 17:20:45'),(17,3,'学习交流','/discussions','DiscussionCenter',16,'2026-07-11 15:47:44','2026-07-08 12:11:46','2026-07-11 15:47:44'),(18,5,'公共资源学习首页','/user/home','UserHome',99,'2026-07-11 17:21:50','2026-07-08 12:12:30','2026-07-11 17:21:50'),(19,5,'资源学习','/resources','UnifiedResourceCenter',67,'2026-07-11 16:53:38','2026-07-08 12:12:34','2026-07-11 16:53:38'),(20,5,'课堂学习路径','/classrooms/1/learn','UnifiedClassroomLearning',86,'2026-07-11 17:21:09','2026-07-08 12:12:52','2026-07-11 17:21:09'),(21,5,'消息与日程','/messages','MessageCenter',10,'2026-07-11 16:53:41','2026-07-08 12:12:57','2026-07-11 16:53:41'),(22,6,'公共资源学习首页','/user/home','UserHome',4,'2026-07-10 11:57:16','2026-07-08 12:13:17','2026-07-10 11:57:16'),(23,6,'资源学习','/resources','UnifiedResourceCenter',3,'2026-07-08 16:12:48','2026-07-08 12:13:19','2026-07-08 16:12:48'),(24,6,'我的课堂','/classrooms','UnifiedClassroomList',4,'2026-07-10 11:57:30','2026-07-08 12:13:22','2026-07-10 11:57:30'),(25,6,'课堂学习路径','/classrooms/2/learn','UnifiedClassroomLearning',2,'2026-07-10 11:57:19','2026-07-08 12:13:24','2026-07-10 11:57:19'),(26,6,'课程讨论','/discussions','DiscussionCenter',2,'2026-07-08 12:13:33','2026-07-08 12:13:27','2026-07-08 12:13:33'),(27,6,'消息与日程','/messages','MessageCenter',2,'2026-07-08 12:13:34','2026-07-08 12:13:28','2026-07-08 12:13:34'),(28,7,'公共资源学习首页','/user/home','UserHome',9,'2026-07-08 16:30:21','2026-07-08 16:13:41','2026-07-08 16:30:21'),(29,7,'资源学习','/resources','UnifiedResourceCenter',8,'2026-07-08 16:15:30','2026-07-08 16:13:43','2026-07-08 16:15:30'),(30,7,'我的课堂','/classrooms','UnifiedClassroomList',6,'2026-07-08 16:15:29','2026-07-08 16:13:56','2026-07-08 16:15:29'),(31,7,'课程讨论','/discussions','DiscussionCenter',2,'2026-07-08 16:14:10','2026-07-08 16:13:58','2026-07-08 16:14:10'),(32,7,'消息与日程','/messages','MessageCenter',1,'2026-07-08 16:14:02','2026-07-08 16:14:02','2026-07-08 16:14:02'),(33,7,'个人中心','/profile','ProfileCenter',1,'2026-07-08 16:14:12','2026-07-08 16:14:12','2026-07-08 16:14:12'),(34,7,'课堂学习路径','/classrooms/1/learn','UnifiedClassroomLearning',1,'2026-07-08 16:15:27','2026-07-08 16:15:27','2026-07-08 16:15:27'),(35,2,'实验室首页','/lab/home','LabAdminHome',3,'2026-07-08 16:32:12','2026-07-08 16:32:02','2026-07-08 16:32:12'),(36,2,'预约审核','/teacher/reservations','TeacherReservationReview',2,'2026-07-08 16:32:10','2026-07-08 16:32:06','2026-07-08 16:32:10'),(37,3,'消息与日程','/messages','MessageCenter',7,'2026-07-11 13:26:33','2026-07-08 16:32:42','2026-07-11 13:26:33'),(38,3,'公共资源学习首页','/user/home','UserHome',106,'2026-07-11 17:11:51','2026-07-08 17:08:32','2026-07-11 17:11:51'),(39,3,'课堂学习路径','/classrooms/2/learn','UnifiedClassroomLearning',2,'2026-07-08 17:20:24','2026-07-08 17:09:09','2026-07-08 17:20:24'),(40,5,'课程讨论','/discussions','DiscussionCenter',15,'2026-07-09 18:12:15','2026-07-08 17:16:00','2026-07-09 18:12:15'),(41,5,'安全考试','/student/exams','StudentExamCenter',11,'2026-07-09 10:07:23','2026-07-09 00:49:04','2026-07-09 10:07:23'),(42,5,'个人中心','/profile?panel=teacher-certification','ProfileCenter',1,'2026-07-09 09:38:56','2026-07-09 09:38:56','2026-07-09 09:38:56'),(43,5,'实验预约','/student/reserve','StudentReservationCenter',1,'2026-07-09 09:46:59','2026-07-09 09:46:59','2026-07-09 09:46:59'),(44,5,'课堂学习路径','/classrooms/1/learn?experimentId=1','UnifiedClassroomLearning',1,'2026-07-09 09:55:35','2026-07-09 09:55:35','2026-07-09 09:55:35'),(45,5,'课程讨论','/discussions?courseId=1&experimentId=1','DiscussionCenter',1,'2026-07-09 09:55:45','2026-07-09 09:55:45','2026-07-09 09:55:45'),(46,5,'课堂学习路径','/classrooms/1/learn?module=tasks','UnifiedClassroomLearning',69,'2026-07-11 17:21:30','2026-07-09 10:31:57','2026-07-11 17:21:30'),(47,5,'课堂学习路径','/classrooms/1/learn?module=ai','UnifiedClassroomLearning',44,'2026-07-11 16:53:36','2026-07-09 10:31:58','2026-07-11 16:53:36'),(48,5,'课堂学习路径','/classrooms/1/learn?module=chapters','UnifiedClassroomLearning',106,'2026-07-11 17:21:32','2026-07-09 10:32:01','2026-07-11 17:21:32'),(49,5,'章节详情','/classrooms/1/chapters/2','UnifiedClassroomChapterLearning',13,'2026-07-11 10:23:42','2026-07-09 10:32:04','2026-07-11 10:23:42'),(50,5,'章节详情','/classrooms/1/chapters/1','UnifiedClassroomChapterLearning',32,'2026-07-11 10:25:04','2026-07-09 10:32:07','2026-07-11 10:25:04'),(51,5,'课堂学习路径','/classrooms/1/learn?module=discussion','UnifiedClassroomLearning',64,'2026-07-11 17:21:11','2026-07-09 10:32:45','2026-07-11 17:21:11'),(52,5,'课堂学习路径','/classrooms/1/learn?module=report','UnifiedClassroomLearning',86,'2026-07-11 17:21:31','2026-07-09 10:32:46','2026-07-11 17:21:31'),(53,5,'课堂学习路径','/classrooms/1/learn?module=exam','UnifiedClassroomLearning',105,'2026-07-11 17:21:11','2026-07-09 10:32:48','2026-07-11 17:21:11'),(54,5,'课堂学习路径','/classrooms/1/learn?module=resources','UnifiedClassroomLearning',41,'2026-07-11 17:21:13','2026-07-09 10:32:53','2026-07-11 17:21:13'),(55,5,'课堂学习路径','/classrooms/1/learn?module=reservation','UnifiedClassroomLearning',46,'2026-07-11 17:21:15','2026-07-09 10:32:55','2026-07-11 17:21:15'),(56,5,'课堂学习路径','/classrooms/1/learn?module=records','UnifiedClassroomLearning',21,'2026-07-11 17:21:14','2026-07-09 10:32:56','2026-07-11 17:21:14'),(57,3,'资源管理','/teacher/resources?courseId=1','TeacherResourceManagement',11,'2026-07-09 17:02:45','2026-07-09 10:57:20','2026-07-09 17:02:45'),(58,3,'课堂详细','/teacher/courses/2/edit','TeacherCourseEditor',5,'2026-07-09 19:20:12','2026-07-09 11:04:15','2026-07-09 19:20:12'),(59,3,'资源管理','/teacher/resources?courseId=2','TeacherResourceManagement',1,'2026-07-09 11:04:18','2026-07-09 11:04:18','2026-07-09 11:04:18'),(60,4,'公共资源学习首页','/user/home','UserHome',4,'2026-07-09 18:51:37','2026-07-09 11:07:38','2026-07-09 18:51:37'),(61,4,'资源学习','/resources','UnifiedResourceCenter',4,'2026-07-09 18:51:37','2026-07-09 11:07:40','2026-07-09 18:51:37'),(62,4,'我的课堂','/classrooms','UnifiedClassroomList',5,'2026-07-09 18:51:36','2026-07-09 11:07:42','2026-07-09 18:51:36'),(63,4,'课堂建设','/teacher/courses/1/edit','TeacherCourseEditor',1,'2026-07-09 11:07:44','2026-07-09 11:07:44','2026-07-09 11:07:44'),(64,5,'章节详情','/classrooms/1/chapters/2?step=step-1','UnifiedClassroomChapterLearning',14,'2026-07-11 16:53:26','2026-07-09 11:30:12','2026-07-11 16:53:26'),(65,5,'章节详情','/classrooms/1/chapters/1?step=step-1','UnifiedClassroomChapterLearning',21,'2026-07-11 16:53:04','2026-07-09 11:30:15','2026-07-11 16:53:04'),(66,5,'章节详情','/classrooms/1/chapters/1?step=step-2','UnifiedClassroomChapterLearning',16,'2026-07-11 16:53:27','2026-07-09 11:33:42','2026-07-11 16:53:27'),(67,5,'章节详情','/classrooms/1/chapters/2?step=step-2','UnifiedClassroomChapterLearning',10,'2026-07-11 16:53:26','2026-07-09 11:34:25','2026-07-11 16:53:26'),(68,3,'报告批改','/teacher/reports','TeacherReportReview',6,'2026-07-09 16:34:01','2026-07-09 11:45:10','2026-07-09 16:34:01'),(69,3,'课堂学习路径','/classrooms/1/learn?experimentId=1','UnifiedClassroomLearning',1,'2026-07-09 11:51:43','2026-07-09 11:51:43','2026-07-09 11:51:43'),(70,3,'课堂管理','/teacher/courses?create=1','TeacherCourseManagement',3,'2026-07-09 12:22:14','2026-07-09 12:11:08','2026-07-09 12:22:14'),(71,3,'课堂建设','/teacher/courses/4/edit','TeacherCourseEditor',2,'2026-07-09 12:22:55','2026-07-09 12:22:48','2026-07-09 12:22:55'),(72,3,'实验路径','/teacher/experiments?courseId=1','TeacherExperimentManagement',17,'2026-07-09 16:29:34','2026-07-09 12:28:49','2026-07-09 16:29:34'),(73,3,'试卷管理','/teacher/exam-papers?courseId=1','TeacherExamPaperManagement',5,'2026-07-09 16:58:59','2026-07-09 16:15:18','2026-07-09 16:58:59'),(74,3,'资源管理','/teacher/resources?experimentId=1','TeacherResourceManagement',1,'2026-07-09 16:24:56','2026-07-09 16:24:56','2026-07-09 16:24:56'),(75,3,'课堂学习路径','/classrooms/1/learn?module=report','UnifiedClassroomLearning',2,'2026-07-09 18:13:17','2026-07-09 16:47:50','2026-07-09 18:13:17'),(76,3,'报告批改','/teacher/reports?courseId=1','TeacherReportReview',1,'2026-07-09 17:02:40','2026-07-09 17:02:40','2026-07-09 17:02:40'),(77,3,'个人中心','/profile','ProfileCenter',1,'2026-07-09 18:12:33','2026-07-09 18:12:33','2026-07-09 18:12:33'),(78,4,'课堂详细','/teacher/courses/3/edit','TeacherCourseEditor',1,'2026-07-09 18:37:33','2026-07-09 18:37:33','2026-07-09 18:37:33'),(79,4,'学习交流','/discussions','DiscussionCenter',2,'2026-07-09 18:51:36','2026-07-09 18:51:36','2026-07-09 18:51:36'),(80,4,'消息与日程','/messages','MessageCenter',1,'2026-07-09 18:51:36','2026-07-09 18:51:36','2026-07-09 18:51:36'),(81,8,'公共资源学习首页','/user/home','UserHome',2,'2026-07-09 19:01:44','2026-07-09 19:01:22','2026-07-09 19:01:44'),(82,8,'我的课堂','/classrooms','UnifiedClassroomList',2,'2026-07-09 19:01:32','2026-07-09 19:01:24','2026-07-09 19:01:32'),(83,8,'课堂学习路径','/classrooms/2/learn','UnifiedClassroomLearning',1,'2026-07-09 19:01:29','2026-07-09 19:01:29','2026-07-09 19:01:29'),(84,8,'课堂学习路径','/classrooms/2/learn?module=tasks','UnifiedClassroomLearning',1,'2026-07-09 19:01:30','2026-07-09 19:01:30','2026-07-09 19:01:30'),(85,8,'课堂学习路径','/classrooms/2/learn?module=ai','UnifiedClassroomLearning',1,'2026-07-09 19:01:31','2026-07-09 19:01:31','2026-07-09 19:01:31'),(86,9,'公共资源学习首页','/user/home','UserHome',1,'2026-07-09 19:20:47','2026-07-09 19:20:47','2026-07-09 19:20:47'),(87,9,'资源学习','/resources','UnifiedResourceCenter',1,'2026-07-09 19:20:48','2026-07-09 19:20:48','2026-07-09 19:20:48'),(88,9,'我的课堂','/classrooms','UnifiedClassroomList',3,'2026-07-09 19:21:05','2026-07-09 19:20:48','2026-07-09 19:21:05'),(89,9,'课堂学习路径','/classrooms/3/learn','UnifiedClassroomLearning',2,'2026-07-09 19:21:00','2026-07-09 19:20:52','2026-07-09 19:21:00'),(90,9,'课堂学习路径','/classrooms/3/learn?module=records','UnifiedClassroomLearning',1,'2026-07-09 19:21:02','2026-07-09 19:21:02','2026-07-09 19:21:02'),(91,9,'课堂学习路径','/classrooms/3/learn?module=reservation','UnifiedClassroomLearning',1,'2026-07-09 19:21:02','2026-07-09 19:21:02','2026-07-09 19:21:02'),(92,9,'课堂学习路径','/classrooms/3/learn?module=chapters','UnifiedClassroomLearning',1,'2026-07-09 19:21:03','2026-07-09 19:21:03','2026-07-09 19:21:03'),(93,1,'消息与日程','/messages','MessageCenter',1,'2026-07-10 09:39:09','2026-07-10 09:39:09','2026-07-10 09:39:09'),(94,3,'安全题库与组卷','/teacher/safety-exams','TeacherSafetyExamManager',10,'2026-07-10 10:40:07','2026-07-10 10:29:39','2026-07-10 10:40:07'),(95,3,'安全知识考核','/safety-exams','StudentSafetyExamCenter',1,'2026-07-10 10:37:00','2026-07-10 10:37:00','2026-07-10 10:37:00'),(96,3,'考试管理','/teacher/courses/1/safety-exams','TeacherCourseSafetyExamManager',31,'2026-07-11 10:05:25','2026-07-10 11:45:53','2026-07-11 10:05:25'),(97,3,'课堂详细','/teacher/courses/1/edit?step=exam','TeacherCourseEditor',37,'2026-07-11 15:35:03','2026-07-10 11:46:29','2026-07-11 15:35:03'),(98,5,'安全知识考核','/classrooms/1/safety-exams?paperId=1','ClassroomSafetyExamCenter',3,'2026-07-10 11:50:27','2026-07-10 11:49:57','2026-07-10 11:50:27'),(99,5,'安全知识考核','/classrooms/1/safety-exams','ClassroomSafetyExamCenter',11,'2026-07-10 11:56:22','2026-07-10 11:50:47','2026-07-10 11:56:22'),(100,6,'课堂学习路径','/classrooms/2/learn?module=exam','UnifiedClassroomLearning',2,'2026-07-10 11:57:29','2026-07-10 11:57:21','2026-07-10 11:57:29'),(101,6,'安全知识考核','/classrooms/2/safety-exams','ClassroomSafetyExamCenter',1,'2026-07-10 11:57:24','2026-07-10 11:57:24','2026-07-10 11:57:24'),(102,5,'试卷答题','/classrooms/1/exams/1/take','ClassroomExamTaking',13,'2026-07-11 10:02:30','2026-07-10 12:17:44','2026-07-11 10:02:30'),(103,5,'课堂学习路径','/classrooms/1/learn?module=exam&examTab=records','UnifiedClassroomLearning',38,'2026-07-11 15:38:06','2026-07-10 16:13:15','2026-07-11 15:38:06'),(104,5,'课堂学习路径','/classrooms/1/learn?module=report&examTab=records','UnifiedClassroomLearning',10,'2026-07-11 13:10:26','2026-07-10 16:13:35','2026-07-11 13:10:26'),(105,5,'课堂学习路径','/classrooms/1/learn?module=discussion&examTab=records','UnifiedClassroomLearning',4,'2026-07-11 13:03:36','2026-07-10 16:13:35','2026-07-11 13:03:36'),(106,5,'课堂学习路径','/classrooms/1/learn?module=ai&examTab=records','UnifiedClassroomLearning',6,'2026-07-11 13:05:01','2026-07-10 16:13:36','2026-07-11 13:05:01'),(107,3,'考试管理','/teacher/courses/1/safety-exams?tab=papers&create=paper','TeacherCourseSafetyExamManager',5,'2026-07-11 09:39:25','2026-07-10 16:17:14','2026-07-11 09:39:25'),(108,5,'试卷答题','/classrooms/1/exams/2/take','ClassroomExamTaking',1,'2026-07-10 16:20:10','2026-07-10 16:20:10','2026-07-10 16:20:10'),(109,5,'课堂学习路径','/classrooms/1/learn?module=chapters&examTab=records','UnifiedClassroomLearning',6,'2026-07-11 13:03:35','2026-07-10 16:21:35','2026-07-11 13:03:35'),(110,5,'课堂学习路径','/classrooms/1/learn?module=tasks&examTab=records','UnifiedClassroomLearning',9,'2026-07-11 13:05:01','2026-07-10 16:21:41','2026-07-11 13:05:01'),(111,5,'课堂学习路径','/classrooms/1/learn?module=reservation&examTab=records','UnifiedClassroomLearning',10,'2026-07-11 12:55:44','2026-07-10 16:21:46','2026-07-11 12:55:44'),(112,5,'试卷回看','/classrooms/1/exams/records/8','ClassroomExamReview',2,'2026-07-10 18:47:42','2026-07-10 18:47:35','2026-07-10 18:47:42'),(113,5,'试卷答题','/classrooms/1/exams/1/take?isContinue=1','ClassroomExamTaking',1,'2026-07-10 18:52:26','2026-07-10 18:52:26','2026-07-10 18:52:26'),(114,5,'试卷回看','/classrooms/1/exams/records/11','ClassroomExamReview',2,'2026-07-10 19:34:27','2026-07-10 18:54:17','2026-07-10 19:34:27'),(115,5,'试卷回看','/classrooms/1/exams/records/2','ClassroomExamReview',6,'2026-07-10 19:36:59','2026-07-10 18:54:22','2026-07-10 19:36:59'),(116,5,'课堂学习路径','/classrooms/1/learn?module=resources&examTab=records','UnifiedClassroomLearning',7,'2026-07-11 12:55:43','2026-07-10 18:54:49','2026-07-11 12:55:43'),(117,5,'课堂学习路径','/classrooms/1/learn?module=records&examTab=records','UnifiedClassroomLearning',4,'2026-07-11 12:55:45','2026-07-10 19:35:19','2026-07-11 12:55:45'),(118,5,'试卷回看','/classrooms/1/exams/records/12','ClassroomExamReview',2,'2026-07-10 19:37:07','2026-07-10 19:36:42','2026-07-10 19:37:07'),(119,5,'试卷回看','/classrooms/1/exams/records/1','ClassroomExamReview',1,'2026-07-10 19:36:53','2026-07-10 19:36:53','2026-07-10 19:36:53'),(120,5,'个人中心','/profile','ProfileCenter',1,'2026-07-10 21:22:46','2026-07-10 21:22:46','2026-07-10 21:22:46'),(121,3,'试卷编辑','/teacher/courses/1/safety-exams/papers/1/edit','TeacherExamPaperEditor',15,'2026-07-11 15:32:30','2026-07-10 21:50:25','2026-07-11 15:32:30'),(122,3,'题库管理','/teacher/courses/1/question-bank','TeacherCourseQuestionBank',3,'2026-07-11 10:05:23','2026-07-10 21:51:25','2026-07-11 10:05:23'),(123,5,'试卷回看','/classrooms/1/exams/records/14','ClassroomExamReview',1,'2026-07-11 09:41:53','2026-07-11 09:41:53','2026-07-11 09:41:53'),(124,5,'试卷回看','/classrooms/1/exams/records/15','ClassroomExamReview',1,'2026-07-11 09:46:14','2026-07-11 09:46:14','2026-07-11 09:46:14'),(125,3,'试卷批改','/teacher/courses/1/safety-exams/papers/1/grading','TeacherExamPaperGrading',5,'2026-07-11 13:11:05','2026-07-11 10:07:32','2026-07-11 13:11:05'),(126,5,'试卷回看','/classrooms/1/exams/records/16','ClassroomExamReview',1,'2026-07-11 12:55:34','2026-07-11 12:55:34','2026-07-11 12:55:34'),(127,3,'试卷编辑','/teacher/courses/1/safety-exams/papers/6/edit','TeacherExamPaperEditor',1,'2026-07-11 15:32:38','2026-07-11 15:32:38','2026-07-11 15:32:38'),(128,5,'试卷答题','/classrooms/1/exams/6/take','ClassroomExamTaking',1,'2026-07-11 15:37:51','2026-07-11 15:37:51','2026-07-11 15:37:51'),(129,3,'试卷批改','/teacher/courses/1/safety-exams/papers/6/grading','TeacherExamPaperGrading',1,'2026-07-11 15:38:25','2026-07-11 15:38:25','2026-07-11 15:38:25'),(130,5,'试卷回看','/classrooms/1/exams/records/17','ClassroomExamReview',1,'2026-07-11 17:07:07','2026-07-11 17:07:07','2026-07-11 17:07:07');
+/*!40000 ALTER TABLE `t_recent_visit` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_recommend_record`
+--
+
+DROP TABLE IF EXISTS `t_recommend_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_recommend_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `resource_id` bigint NOT NULL,
+  `total_score` decimal(5,2) NOT NULL,
+  `score_breakdown` json NOT NULL,
+  `reason` varchar(500) NOT NULL,
+  `clicked` tinyint DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_recommend_student_experiment` (`student_id`,`experiment_id`),
+  KEY `idx_recommend_resource` (`resource_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_recommend_record`
+--
+
+LOCK TABLES `t_recommend_record` WRITE;
+/*!40000 ALTER TABLE `t_recommend_record` DISABLE KEYS */;
+/*!40000 ALTER TABLE `t_recommend_record` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_report`
+--
+
+DROP TABLE IF EXISTS `t_report`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_report` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `experiment_id` bigint NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `content` text NOT NULL,
+  `file_url` varchar(500) DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'DRAFT',
+  `submit_time` datetime DEFAULT NULL,
+  `latest_submit_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint DEFAULT '0',
+  `deleted` tinyint GENERATED ALWAYS AS (`is_deleted`) STORED,
+  PRIMARY KEY (`id`),
+  KEY `idx_report_student_status` (`student_id`,`status`),
+  KEY `idx_report_experiment` (`experiment_id`),
+  KEY `idx_report_student_experiment` (`student_id`,`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_report`
+--
+
+LOCK TABLES `t_report` WRITE;
+/*!40000 ALTER TABLE `t_report` DISABLE KEYS */;
+INSERT INTO `t_report` (`id`, `student_id`, `experiment_id`, `title`, `content`, `file_url`, `status`, `submit_time`, `latest_submit_time`, `create_time`, `update_time`, `is_deleted`) VALUES (1,5,1,'钻井液密度与流变性能测试报告','数据完整，结果满足目标窗口，需进一步关注读数误差。',NULL,'GRADED','2026-07-07 12:04:06','2026-07-07 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,6,3,'管输压降实验预报告','已完成指导书阅读，等待实验数据。',NULL,'DRAFT',NULL,NULL,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,5,2,'井控风险识别与关井流程演示报告','1111',NULL,'SUBMITTED','2026-07-11 17:09:37','2026-07-11 17:09:37','2026-07-11 17:09:37','2026-07-11 17:09:37',0);
+/*!40000 ALTER TABLE `t_report` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_report_rubric_item`
+--
+
+DROP TABLE IF EXISTS `t_report_rubric_item`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_report_rubric_item` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `experiment_id` bigint NOT NULL,
+  `item_name` varchar(100) NOT NULL,
+  `description` varchar(500) DEFAULT NULL,
+  `max_score` int NOT NULL,
+  `order_no` int NOT NULL DEFAULT '0',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_rubric_experiment` (`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_report_rubric_item`
+--
+
+LOCK TABLES `t_report_rubric_item` WRITE;
+/*!40000 ALTER TABLE `t_report_rubric_item` DISABLE KEYS */;
+INSERT INTO `t_report_rubric_item` VALUES (1,1,'数据与证据','数据完整、单位清晰、证据充分',40,1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,1,'分析与复盘','能解释现象并提出安全改进',60,2,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,3,'数据与证据','数据完整、单位清晰、证据充分',40,1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(4,3,'分析与复盘','能解释现象并提出安全改进',60,2,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(5,4,'数据与证据','数据完整、单位清晰、证据充分',40,1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(6,4,'分析与复盘','能解释现象并提出安全改进',60,2,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_report_rubric_item` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_report_score`
+--
+
+DROP TABLE IF EXISTS `t_report_score`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_report_score` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `report_id` bigint NOT NULL,
+  `teacher_id` bigint NOT NULL,
+  `score` int NOT NULL,
+  `comment` varchar(500) DEFAULT NULL,
+  `is_latest` tinyint DEFAULT '1',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `grade_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_report_score_report_latest` (`report_id`,`is_latest`),
+  KEY `idx_report_score_grade_time` (`grade_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_report_score`
+--
+
+LOCK TABLES `t_report_score` WRITE;
+/*!40000 ALTER TABLE `t_report_score` DISABLE KEYS */;
+INSERT INTO `t_report_score` VALUES (1,1,3,88,'数据完整，风险复盘可以再具体。',1,'2026-07-08 12:04:06','2026-07-08 12:04:06');
+/*!40000 ALTER TABLE `t_report_score` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_report_score_item`
+--
+
+DROP TABLE IF EXISTS `t_report_score_item`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_report_score_item` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `report_score_id` bigint NOT NULL,
+  `rubric_item_id` bigint NOT NULL,
+  `score` decimal(6,2) NOT NULL,
+  `comment` varchar(500) DEFAULT NULL,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_score_rubric` (`report_score_id`,`rubric_item_id`),
+  KEY `idx_score_item_score` (`report_score_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_report_score_item`
+--
+
+LOCK TABLES `t_report_score_item` WRITE;
+/*!40000 ALTER TABLE `t_report_score_item` DISABLE KEYS */;
+/*!40000 ALTER TABLE `t_report_score_item` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_report_template`
+--
+
+DROP TABLE IF EXISTS `t_report_template`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_report_template` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `experiment_id` bigint NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `schema_json` longtext NOT NULL,
+  `status` tinyint NOT NULL DEFAULT '1',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_report_template_experiment` (`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_report_template`
+--
+
+LOCK TABLES `t_report_template` WRITE;
+/*!40000 ALTER TABLE `t_report_template` DISABLE KEYS */;
+INSERT INTO `t_report_template` VALUES (1,1,'钻井液性能测试实验报告模板','{\"sections\": [\"实验目的\", \"数据记录\", \"结果分析\", \"风险复盘\"]}',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,3,'管输压降实验报告模板','{\"sections\": [\"实验目的\", \"数据记录\", \"结果分析\", \"风险复盘\"]}',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,4,'HSE事故案例复盘报告模板','{\"sections\": [\"实验目的\", \"数据记录\", \"结果分析\", \"风险复盘\"]}',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_report_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_reservation`
+--
+
+DROP TABLE IF EXISTS `t_reservation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_reservation` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `time_slot_id` bigint NOT NULL,
+  `lab_id` bigint NOT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `purpose` varchar(500) DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'PENDING',
+  `teacher_id` bigint DEFAULT NULL,
+  `review_comment` varchar(500) DEFAULT NULL,
+  `review_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_reservation_student_status` (`student_id`,`status`),
+  KEY `idx_reservation_slot_status` (`time_slot_id`,`status`),
+  KEY `idx_reservation_experiment` (`experiment_id`),
+  KEY `idx_reservation_student_exp_status` (`student_id`,`experiment_id`,`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_reservation`
+--
+
+LOCK TABLES `t_reservation` WRITE;
+/*!40000 ALTER TABLE `t_reservation` DISABLE KEYS */;
+INSERT INTO `t_reservation` VALUES (1,5,1,101,1,'完成钻井液性能测试实验','APPROVED',3,'准入已通过，按时到场。','2026-07-07 12:04:06','2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,6,2,102,3,'管输压降实验预约','PENDING',3,NULL,NULL,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,5,3,2,2,'钻井液性能测试实验课堂 - 井控风险识别与关井流程演示','APPROVED',3,'同意预约','2026-07-11 17:09:12','2026-07-11 17:08:42','2026-07-11 17:08:41',0);
+/*!40000 ALTER TABLE `t_reservation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_resource`
+--
+
+DROP TABLE IF EXISTS `t_resource`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_resource` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint DEFAULT NULL,
+  `experiment_id` bigint DEFAULT NULL,
+  `title` varchar(150) NOT NULL,
+  `resource_type` varchar(20) DEFAULT NULL,
+  `business_category` varchar(40) NOT NULL DEFAULT 'OTHER',
+  `knowledge_point` varchar(150) DEFAULT NULL,
+  `risk_type` varchar(100) DEFAULT NULL,
+  `tags` varchar(300) DEFAULT NULL,
+  `category` varchar(30) NOT NULL DEFAULT 'EXTENSION',
+  `description` text,
+  `file_path` varchar(500) NOT NULL,
+  `original_filename` varchar(255) DEFAULT NULL,
+  `content_type` varchar(100) DEFAULT NULL,
+  `file_size` bigint DEFAULT '0',
+  `required_flag` tinyint DEFAULT '0',
+  `completion_rule` varchar(30) NOT NULL DEFAULT 'CONFIRM',
+  `min_study_seconds` int NOT NULL DEFAULT '0',
+  `min_progress` int NOT NULL DEFAULT '100',
+  `open_time` datetime DEFAULT NULL,
+  `close_time` datetime DEFAULT NULL,
+  `open_scope` varchar(30) NOT NULL DEFAULT 'COURSE',
+  `invalid_flag` tinyint NOT NULL DEFAULT '0',
+  `invalid_check_time` datetime DEFAULT NULL,
+  `view_count` int DEFAULT '0',
+  `download_count` int NOT NULL DEFAULT '0',
+  `favorite_count` int NOT NULL DEFAULT '0',
+  `like_count` int NOT NULL DEFAULT '0',
+  `comment_count` int NOT NULL DEFAULT '0',
+  `rating_avg` decimal(3,2) NOT NULL DEFAULT '0.00',
+  `rating_count` int NOT NULL DEFAULT '0',
+  `status` tinyint DEFAULT '1',
+  `sort` int DEFAULT '0',
+  `upload_user_id` bigint DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_resource_experiment_type_status` (`experiment_id`,`resource_type`,`status`),
+  KEY `idx_resource_public_course` (`status`,`invalid_flag`,`open_scope`,`course_id`),
+  KEY `idx_resource_public_type_time` (`open_scope`,`status`,`invalid_flag`,`resource_type`,`create_time`),
+  KEY `idx_resource_course_type_sort` (`course_id`,`status`,`invalid_flag`,`resource_type`,`sort`),
+  CONSTRAINT `chk_resource_scope` CHECK ((`open_scope` in (_utf8mb4'PUBLIC',_utf8mb4'COURSE'))),
+  CONSTRAINT `chk_resource_type` CHECK ((`resource_type` in (_utf8mb4'VIDEO',_utf8mb4'DOCUMENT',_utf8mb4'IMAGE',_utf8mb4'AUDIO')))
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_resource`
+--
+
+LOCK TABLES `t_resource` WRITE;
+/*!40000 ALTER TABLE `t_resource` DISABLE KEYS */;
+INSERT INTO `t_resource` VALUES (1,1,1,'钻井液性能测试沉浸视频','DOCUMENT','TEACHING_VIDEO','钻井液密度','飞溅,滑倒','钻井液密度,飞溅,滑倒,油气实验','PREVIEW','钻井液性能测试沉浸视频，用于理解实验目标、设备和风险节点。','unavailable/legacy-1',NULL,'video/mp4',0,1,'PROGRESS_TIME',300,85,NULL,NULL,'COURSE',1,NULL,34,1,2,4,0,4.60,3,1,1,3,'2026-07-08 12:04:06','2026-07-11 16:59:37',1),(2,1,2,'井控关井流程动画','DOCUMENT','TEACHING_VIDEO','井控关井','高压,误操作','井控关井,高压,误操作,油气实验','PREVIEW','井控关井流程动画，用于理解实验目标、设备和风险节点。','unavailable/legacy-2',NULL,'video/mp4',0,1,'PROGRESS_TIME',300,85,NULL,NULL,'COURSE',1,NULL,25,2,3,5,0,4.60,3,1,2,3,'2026-07-08 12:04:06','2026-07-11 16:59:39',1),(3,2,3,'管输压降实验指导书','DOCUMENT','OTHER','管输压降','压力,机械','管输压降,压力,机械,油气实验','PREVIEW','管输压降实验指导书，用于理解实验目标、设备和风险节点。','unavailable/legacy-3',NULL,'video/mp4',0,1,'PROGRESS_TIME',300,85,NULL,NULL,'COURSE',1,NULL,23,3,4,6,0,4.60,3,0,3,3,'2026-07-08 12:04:06','2026-07-11 16:30:05',0),(4,3,4,'油气实验室事故案例开放课','DOCUMENT','OTHER','事故链分析','HSE','事故链分析,HSE,油气实验','EXTENSION','油气实验室事故案例开放课，用于理解实验目标、设备和风险节点。','unavailable/legacy-4',NULL,'text/html',0,0,'CONFIRM',0,100,NULL,NULL,'PUBLIC',1,NULL,28,4,5,7,0,4.60,3,0,4,3,'2026-07-08 12:04:06','2026-07-11 16:30:05',0),(5,1,1,'马氏漏斗操作图解','DOCUMENT','OTHER','漏斗黏度','玻璃器皿','漏斗黏度,玻璃器皿,油气实验','EXTENSION','马氏漏斗操作图解，用于理解实验目标、设备和风险节点。','unavailable/legacy-5',NULL,'video/mp4',0,0,'CONFIRM',0,100,NULL,NULL,'PUBLIC',1,NULL,29,5,6,8,0,4.60,3,0,5,3,'2026-07-08 12:04:06','2026-07-11 16:30:05',0);
+/*!40000 ALTER TABLE `t_resource` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_resource_interaction`
+--
+
+DROP TABLE IF EXISTS `t_resource_interaction`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_resource_interaction` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `resource_id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `favorite_flag` tinyint NOT NULL DEFAULT '0',
+  `like_flag` tinyint NOT NULL DEFAULT '0',
+  `rating` decimal(2,1) DEFAULT NULL,
+  `comment` varchar(500) DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_resource_user_deleted` (`resource_id`,`user_id`,`deleted`),
+  KEY `idx_resource_interaction_resource` (`resource_id`),
+  KEY `idx_resource_interaction_user` (`user_id`,`favorite_flag`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_resource_interaction`
+--
+
+LOCK TABLES `t_resource_interaction` WRITE;
+/*!40000 ALTER TABLE `t_resource_interaction` DISABLE KEYS */;
+INSERT INTO `t_resource_interaction` VALUES (1,1,5,1,1,4.5,'视频步骤清楚。','2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_resource_interaction` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_resource_submission`
+--
+
+DROP TABLE IF EXISTS `t_resource_submission`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_resource_submission` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `submitter_id` bigint NOT NULL,
+  `title` varchar(180) NOT NULL,
+  `resource_type` varchar(40) NOT NULL,
+  `business_category` varchar(40) NOT NULL DEFAULT 'OTHER',
+  `knowledge_point` varchar(200) DEFAULT NULL,
+  `risk_type` varchar(120) DEFAULT NULL,
+  `tags` varchar(255) DEFAULT NULL,
+  `description` varchar(1000) DEFAULT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `original_filename` varchar(255) DEFAULT NULL,
+  `content_type` varchar(120) DEFAULT NULL,
+  `file_size` bigint NOT NULL DEFAULT '0',
+  `status` varchar(30) NOT NULL DEFAULT 'PENDING',
+  `reviewer_id` bigint DEFAULT NULL,
+  `review_comment` varchar(500) DEFAULT NULL,
+  `review_time` datetime DEFAULT NULL,
+  `public_resource_id` bigint DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_submission_status_time` (`status`,`create_time`,`deleted`),
+  KEY `idx_submission_submitter` (`submitter_id`,`status`,`deleted`),
+  CONSTRAINT `chk_submission_type` CHECK ((`resource_type` in (_utf8mb4'VIDEO',_utf8mb4'DOCUMENT',_utf8mb4'IMAGE',_utf8mb4'AUDIO')))
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='公共资源投稿';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_resource_submission`
+--
+
+LOCK TABLES `t_resource_submission` WRITE;
+/*!40000 ALTER TABLE `t_resource_submission` DISABLE KEYS */;
+INSERT INTO `t_resource_submission` VALUES (1,8,'井筒压力平衡公开动画','DOCUMENT','OTHER','油气工程','HSE','油气,HSE,公开资源','井筒压力平衡公开动画演示投稿。','unavailable/legacy-submission-1',NULL,'text/html',0,'APPROVED',3,'资源适合公开学习，审核通过','2026-07-08 12:04:06',NULL,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(2,9,'海上平台HSE短视频合集','DOCUMENT','OTHER','油气工程','HSE','油气,HSE,公开资源','海上平台HSE短视频合集演示投稿。','unavailable/legacy-submission-2',NULL,'text/html',0,'REJECTED',NULL,'系统已停止外链资源，请重新上传本地文件','2026-07-11 16:30:34',NULL,'2026-07-08 12:04:06','2026-07-11 16:30:34',0),(3,6,'无关娱乐网站链接','DOCUMENT','OTHER','油气工程','HSE','油气,HSE,公开资源','无关娱乐网站链接演示投稿。','unavailable/legacy-submission-3',NULL,'text/html',0,'REJECTED',1,'与油气工程学习无关','2026-07-08 12:04:06',NULL,'2026-07-08 12:04:06','2026-07-11 16:30:34',0);
+/*!40000 ALTER TABLE `t_resource_submission` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_resource_timeline_note`
+--
+
+DROP TABLE IF EXISTS `t_resource_timeline_note`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_resource_timeline_note` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `resource_id` bigint NOT NULL COMMENT '资源ID',
+  `experiment_id` bigint DEFAULT NULL COMMENT '实验ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `position_seconds` int NOT NULL DEFAULT '0' COMMENT '资源时间点秒数',
+  `note_type` varchar(20) NOT NULL DEFAULT 'NOTE' COMMENT 'NOTE/QUESTION/RISK',
+  `content` varchar(1000) NOT NULL COMMENT '笔记或问题内容',
+  `visibility` varchar(20) NOT NULL DEFAULT 'PRIVATE' COMMENT 'PRIVATE/COURSE',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_resource_position` (`resource_id`,`position_seconds`,`deleted`),
+  KEY `idx_experiment_type` (`experiment_id`,`note_type`,`deleted`),
+  KEY `idx_user_resource` (`user_id`,`resource_id`,`deleted`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='资源时间点笔记与问题';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_resource_timeline_note`
+--
+
+LOCK TABLES `t_resource_timeline_note` WRITE;
+/*!40000 ALTER TABLE `t_resource_timeline_note` DISABLE KEYS */;
+INSERT INTO `t_resource_timeline_note` VALUES (1,1,1,5,180,'QUESTION','密度计读数前气泡如何快速排除？','COURSE',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_resource_timeline_note` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_role`
+--
+
+DROP TABLE IF EXISTS `t_role`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_role` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `role_name` varchar(50) NOT NULL COMMENT '角色名称',
+  `role_code` varchar(50) NOT NULL COMMENT '角色编码',
+  `description` varchar(200) DEFAULT NULL COMMENT '描述',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `role_code` (`role_code`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_role`
+--
+
+LOCK TABLES `t_role` WRITE;
+/*!40000 ALTER TABLE `t_role` DISABLE KEYS */;
+INSERT INTO `t_role` VALUES (1,'普通用户','USER','公共资源学习、交流、投稿和加入课堂','2026-07-08 12:04:06'),(5,'系统管理员','ADMIN','平台治理、权限、审核与日志','2026-07-08 12:04:06');
+/*!40000 ALTER TABLE `t_role` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_role_permission`
+--
+
+DROP TABLE IF EXISTS `t_role_permission`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_role_permission` (
+  `role_id` bigint NOT NULL,
+  `permission_id` bigint NOT NULL,
+  PRIMARY KEY (`role_id`,`permission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_role_permission`
+--
+
+LOCK TABLES `t_role_permission` WRITE;
+/*!40000 ALTER TABLE `t_role_permission` DISABLE KEYS */;
+INSERT INTO `t_role_permission` VALUES (1,1),(1,2),(1,3),(1,5),(1,6),(1,8),(1,9),(1,18),(1,20),(1,24),(1,28),(1,30),(1,31),(1,37),(1,40),(1,55),(1,57),(5,1),(5,2),(5,3),(5,4),(5,5),(5,6),(5,7),(5,8),(5,9),(5,10),(5,11),(5,12),(5,13),(5,14),(5,15),(5,16),(5,17),(5,18),(5,19),(5,20),(5,21),(5,22),(5,23),(5,24),(5,25),(5,26),(5,27),(5,28),(5,29),(5,30),(5,31),(5,32),(5,33),(5,34),(5,35),(5,36),(5,37),(5,38),(5,39),(5,40),(5,41),(5,42),(5,43),(5,44),(5,45),(5,46),(5,47),(5,48),(5,49),(5,50),(5,55),(5,56),(5,58),(5,59),(5,60),(5,61),(5,62),(5,63),(5,64),(5,65);
+/*!40000 ALTER TABLE `t_role_permission` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_step_learning_record`
+--
+
+DROP TABLE IF EXISTS `t_step_learning_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_step_learning_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `student_id` bigint NOT NULL,
+  `step_id` bigint NOT NULL,
+  `experiment_id` bigint NOT NULL,
+  `complete_time` datetime NOT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_step_learning_student_step_deleted` (`student_id`,`step_id`,`deleted`),
+  KEY `idx_step_learning_student_experiment` (`student_id`,`experiment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_step_learning_record`
+--
+
+LOCK TABLES `t_step_learning_record` WRITE;
+/*!40000 ALTER TABLE `t_step_learning_record` DISABLE KEYS */;
+INSERT INTO `t_step_learning_record` VALUES (1,5,2,1,'2026-07-11 10:35:54','2026-07-11 10:35:54','2026-07-11 10:35:54',0),(2,5,4,2,'2026-07-11 10:35:57','2026-07-11 10:35:57','2026-07-11 10:35:57',0),(3,5,9,1,'2026-07-11 16:53:18','2026-07-11 16:53:18','2026-07-11 16:53:18',0),(4,5,10,1,'2026-07-11 16:53:19','2026-07-11 16:53:19','2026-07-11 16:53:19',0),(5,5,3,2,'2026-07-11 16:53:22','2026-07-11 16:53:22','2026-07-11 16:53:22',0);
+/*!40000 ALTER TABLE `t_step_learning_record` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_teacher_certification`
+--
+
+DROP TABLE IF EXISTS `t_teacher_certification`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_teacher_certification` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `school` varchar(120) NOT NULL,
+  `employee_no` varchar(80) NOT NULL,
+  `education_email` varchar(120) NOT NULL,
+  `status` varchar(30) NOT NULL DEFAULT 'PENDING',
+  `reviewer_id` bigint DEFAULT NULL,
+  `review_comment` varchar(500) DEFAULT NULL,
+  `review_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_teacher_cert_user_status` (`user_id`,`status`,`deleted`),
+  KEY `idx_teacher_cert_status_time` (`status`,`create_time`,`deleted`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='教师认证申请';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_teacher_certification`
+--
+
+LOCK TABLES `t_teacher_certification` WRITE;
+/*!40000 ALTER TABLE `t_teacher_certification` DISABLE KEYS */;
+INSERT INTO `t_teacher_certification` VALUES (1,3,'中国石油大学','T2026001','wanghf@cupk.edu.cn','APPROVED',1,'教师身份核验通过','2026-06-18 12:04:06','2026-06-17 12:04:06','2026-07-08 12:04:06',0),(2,4,'中国石油大学','T2026002','licx@cupk.edu.cn','APPROVED',1,'教师身份核验通过','2026-06-20 12:04:06','2026-06-19 12:04:06','2026-07-08 12:04:06',0),(3,9,'西部能源学院','EN202612','guest@edu.cn','PENDING',NULL,NULL,NULL,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_teacher_certification` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_teaching_class`
+--
+
+DROP TABLE IF EXISTS `t_teaching_class`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_teaching_class` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `course_id` bigint NOT NULL,
+  `class_name` varchar(100) NOT NULL,
+  `teacher_id` bigint NOT NULL,
+  `assistant_id` bigint DEFAULT NULL,
+  `admin_class` varchar(200) DEFAULT NULL,
+  `semester` varchar(20) DEFAULT NULL,
+  `status` tinyint NOT NULL DEFAULT '1',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_teaching_class_course` (`course_id`,`deleted`),
+  KEY `idx_teaching_class_teacher` (`teacher_id`,`assistant_id`,`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_teaching_class`
+--
+
+LOCK TABLES `t_teaching_class` WRITE;
+/*!40000 ALTER TABLE `t_teaching_class` DISABLE KEYS */;
+INSERT INTO `t_teaching_class` VALUES (1,1,'钻井液实验1班',3,4,'油工2301','2026秋',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(2,2,'集输实验2班',3,NULL,'储运2302','2026秋',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0),(3,3,'HSE案例研讨班',4,NULL,'安工2301','2026秋',1,'2026-07-08 12:04:06','2026-07-08 12:04:06',0);
+/*!40000 ALTER TABLE `t_teaching_class` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_token`
+--
+
+DROP TABLE IF EXISTS `t_token`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_token` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `token` varchar(64) NOT NULL,
+  `expire_time` datetime NOT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token` (`token`)
+) ENGINE=InnoDB AUTO_INCREMENT=154 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='令牌表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_token`
+--
+
+LOCK TABLES `t_token` WRITE;
+/*!40000 ALTER TABLE `t_token` DISABLE KEYS */;
+INSERT INTO `t_token` VALUES (122,6,'434b39b40200464698d8a287a85b8ed5','2026-07-12 15:28:23','2026-07-11 15:28:22');
+/*!40000 ALTER TABLE `t_token` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_user`
+--
+
+DROP TABLE IF EXISTS `t_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL COMMENT '学号/工号',
+  `password` varchar(64) NOT NULL COMMENT 'MD5加密密码',
+  `real_name` varchar(50) DEFAULT NULL COMMENT '真实姓名',
+  `phone` varchar(20) DEFAULT NULL COMMENT '电话',
+  `avatar_url` varchar(500) DEFAULT NULL,
+  `major` varchar(100) DEFAULT NULL,
+  `class_name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `status` tinyint DEFAULT '1' COMMENT '1启用 0禁用',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_user`
+--
+
+LOCK TABLES `t_user` WRITE;
+/*!40000 ALTER TABLE `t_user` DISABLE KEYS */;
+INSERT INTO `t_user` VALUES (1,'admin','e10adc3949ba59abbe56e057f20f883e','系统管理员','13800000001',NULL,'平台治理中心',NULL,'admin@cupk.edu.cn',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(3,'teacher_wang','e10adc3949ba59abbe56e057f20f883e','王海峰','13800000003',NULL,'石油工程学院',NULL,'wanghf@cupk.edu.cn',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(4,'teacher_li','e10adc3949ba59abbe56e057f20f883e','李晨曦','13800000004',NULL,'安全工程学院',NULL,'licx@cupk.edu.cn',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(5,'student_zhang','e10adc3949ba59abbe56e057f20f883e','张雨辰','13800000005',NULL,'石油工程','油工2301','zhangyc@example.com',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(6,'student_li','e10adc3949ba59abbe56e057f20f883e','李思源','13800000006',NULL,'油气储运','储运2302','lisy@example.com',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(7,'student_chen','e10adc3949ba59abbe56e057f20f883e','陈若冰','13800000007',NULL,'安全工程','安工2301','chenrb@example.com',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(8,'user_oilfan','e10adc3949ba59abbe56e057f20f883e','赵一鸣','13800000008',NULL,'油气工程兴趣用户','公开学习者','oilfan@example.com',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(9,'user_guest','e10adc3949ba59abbe56e057f20f883e','周晓禾','13800000009',NULL,'跨专业学习','公开学习者','guest@example.com',1,'2026-07-08 12:04:06','2026-07-08 12:04:06');
+/*!40000 ALTER TABLE `t_user` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_user_role`
+--
+
+DROP TABLE IF EXISTS `t_user_role`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_user_role` (
+  `user_id` bigint NOT NULL,
+  `role_id` bigint NOT NULL,
+  PRIMARY KEY (`user_id`,`role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户角色关联表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_user_role`
+--
+
+LOCK TABLES `t_user_role` WRITE;
+/*!40000 ALTER TABLE `t_user_role` DISABLE KEYS */;
+INSERT INTO `t_user_role` VALUES (1,5),(3,1),(4,1),(5,1),(6,1),(7,1),(8,1),(9,1);
+/*!40000 ALTER TABLE `t_user_role` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_user_shortcut`
+--
+
+DROP TABLE IF EXISTS `t_user_shortcut`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_user_shortcut` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `title` varchar(80) NOT NULL,
+  `path` varchar(255) NOT NULL,
+  `icon` varchar(50) DEFAULT NULL,
+  `sort` int DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_shortcut_user_sort` (`user_id`,`sort`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_user_shortcut`
+--
+
+LOCK TABLES `t_user_shortcut` WRITE;
+/*!40000 ALTER TABLE `t_user_shortcut` DISABLE KEYS */;
+INSERT INTO `t_user_shortcut` VALUES (1,5,'我的课堂','/classrooms','classroom',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(2,8,'资源学习','/resources','resource',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(3,3,'课堂管理','/teacher/courses','course',1,'2026-07-08 12:04:06','2026-07-08 12:04:06'),(4,1,'教师认证审核','/admin/teacher-certifications','admin',1,'2026-07-08 12:04:06','2026-07-08 12:04:06');
+/*!40000 ALTER TABLE `t_user_shortcut` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-07-11 17:29:11

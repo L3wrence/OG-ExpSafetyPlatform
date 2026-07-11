@@ -3,6 +3,7 @@ package com.cupk.pojo;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.cupk.common.BasePojo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,6 +26,8 @@ public class LabCourse extends BasePojo {
     private String coverOriginalFilename;
     private String coverContentType;
     private Long coverFileSize;
+    @TableField(exist = false)
+    private String coverUrl;
     private String tagline;     //课程短标语
     private String highlightTags; //课程亮点标签
     private String visualTheme;  //视觉主题
