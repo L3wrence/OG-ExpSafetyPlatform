@@ -84,10 +84,11 @@ public class ExamPaperController {
     @PostMapping("/{id}/questions")
     public Result<?> addQuestions(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
-        List<Long> questionIds = ((List<Integer>) body.get("questionIds")).stream()
-                .map(Integer::longValue).toList();
+        List<Long> questionIds = ((List<?>) body.get("questionIds")).stream()
+                .map(value -> Long.valueOf(value.toString())).toList();
         @SuppressWarnings("unchecked")
-        List<Integer> scores = (List<Integer>) body.get("scores");
+        List<Integer> scores = body.get("scores") == null ? null : ((List<?>) body.get("scores")).stream()
+                .map(value -> Integer.valueOf(value.toString())).toList();
         examPaperService.addQuestions(id, questionIds, scores);
         return Result.success();
     }
@@ -97,6 +98,22 @@ public class ExamPaperController {
     @DeleteMapping("/{id}/questions/{qid}")
     public Result<?> removeQuestion(@PathVariable Long id, @PathVariable Long qid) {
         examPaperService.removeQuestion(id, qid);
+        return Result.success();
+    }
+
+    @RequirePermission("exam:update")
+    @PutMapping("/{id}/questions/{qid}/score")
+    public Result<?> updateQuestionScore(@PathVariable Long id,
+                                         @PathVariable Long qid,
+                                         @RequestBody Map<String, Object> body) {
+        examPaperService.updateQuestionScore(id, qid, Integer.valueOf(body.get("score").toString()));
+        return Result.success();
+    }
+
+    @RequirePermission("exam:update")
+    @PostMapping("/{id}/subjective-questions")
+    public Result<?> addSubjectiveQuestion(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        examPaperService.addSubjectiveQuestion(id, body);
         return Result.success();
     }
 

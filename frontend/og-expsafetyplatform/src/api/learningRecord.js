@@ -11,3 +11,11 @@ export function getMyLearningRecords(config = {}) {
 export function getExperimentLearningProgress(experimentId, config = {}) {
   return request.get(`/learning-records/experiments/${experimentId}/progress`, config)
 }
+
+export function getMyStepLearningRecords(config = {}) {
+  return request.get('/learning-records/steps/my', config)
+}
+
+export function completeStepLearning(stepId) {
+  return request.put(`/learning-records/steps/${stepId}/complete`)
+}

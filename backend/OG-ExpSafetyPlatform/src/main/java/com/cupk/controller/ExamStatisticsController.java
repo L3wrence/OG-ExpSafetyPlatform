@@ -59,6 +59,22 @@ public class ExamStatisticsController {
         return Result.success(examService.getPendingGradingRecords(pageNum, pageSize, paperId));
     }
 
+    /** 指定试卷的全部学生提交记录 */
+    @RequirePermission("exam:statistics")
+    @GetMapping("/submissions")
+    public Result<?> submissions(@RequestParam(defaultValue = "1") int pageNum,
+                                 @RequestParam(defaultValue = "10") int pageSize,
+                                 @RequestParam Long paperId) {
+        return Result.success(examService.getPaperSubmissionRecords(pageNum, pageSize, paperId));
+    }
+
+    /** 教师查看完整学生答卷 */
+    @RequirePermission("exam:statistics")
+    @GetMapping("/grading-records/{recordId}")
+    public Result<?> gradingRecord(@PathVariable Long recordId) {
+        return Result.success(examService.getGradingRecordDetail(recordId));
+    }
+
     /** 批改简答题 */
     @RequirePermission("exam:statistics")
     @PutMapping("/grade-short-answer")

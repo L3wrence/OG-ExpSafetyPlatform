@@ -60,31 +60,47 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     @Transactional
     public ExperimentAdmission issueOnPassedExam(ExamRecord record, ExamPaper paper) {
-        if (record == null || paper == null || record.getExperimentId() == null
-                || record.getPassed() == null || record.getPassed() != 1) {
+        if (record == null || paper == null || record.getPassed() == null || record.getPassed() != 1) {
+            return null;
+        }
+        List<Experiment> targetExperiments = experimentMapper.selectList(new LambdaQueryWrapper<Experiment>()
+                .eq(Experiment::getAdmissionPaperId, paper.getId()));
+        if (targetExperiments.isEmpty() && record.getExperimentId() != null) {
+            Experiment experiment = experimentMapper.selectById(record.getExperimentId());
+            if (experiment != null) {
+                targetExperiments = List.of(experiment);
+            }
+        }
+        if (targetExperiments.isEmpty()) {
             return null;
         }
         Date now = new Date();
         Date validUntil = validityEnd(now, paper.getAdmissionValidityDays());
-        admissionMapper.update(null, new LambdaUpdateWrapper<ExperimentAdmission>()
-                .eq(ExperimentAdmission::getStudentId, record.getStudentId())
-                .eq(ExperimentAdmission::getExperimentId, record.getExperimentId())
-                .eq(ExperimentAdmission::getStatus, "VALID")
-                .eq(ExperimentAdmission::getDeleted, 0)
-                .set(ExperimentAdmission::getStatus, "REPLACED"));
+        ExperimentAdmission firstAdmission = null;
+        for (Experiment experiment : targetExperiments) {
+            admissionMapper.update(null, new LambdaUpdateWrapper<ExperimentAdmission>()
+                    .eq(ExperimentAdmission::getStudentId, record.getStudentId())
+                    .eq(ExperimentAdmission::getExperimentId, experiment.getId())
+                    .eq(ExperimentAdmission::getStatus, "VALID")
+                    .eq(ExperimentAdmission::getDeleted, 0)
+                    .set(ExperimentAdmission::getStatus, "REPLACED"));
 
-        ExperimentAdmission admission = new ExperimentAdmission();
-        admission.setStudentId(record.getStudentId());
-        admission.setExperimentId(record.getExperimentId());
-        admission.setPaperId(record.getPaperId());
-        admission.setRecordId(record.getId());
-        admission.setStatus("VALID");
-        admission.setIssuedTime(now);
-        admission.setValidUntil(validUntil);
-        admission.setCreateTime(now);
-        admission.setDeleted(0);
-        admissionMapper.insert(admission);
-        return admission;
+            ExperimentAdmission admission = new ExperimentAdmission();
+            admission.setStudentId(record.getStudentId());
+            admission.setExperimentId(experiment.getId());
+            admission.setPaperId(record.getPaperId());
+            admission.setRecordId(record.getId());
+            admission.setStatus("VALID");
+            admission.setIssuedTime(now);
+            admission.setValidUntil(validUntil);
+            admission.setCreateTime(now);
+            admission.setDeleted(0);
+            admissionMapper.insert(admission);
+            if (firstAdmission == null) {
+                firstAdmission = admission;
+            }
+        }
+        return firstAdmission;
     }
 
     @Override
@@ -110,14 +126,15 @@ public class AdmissionServiceImpl implements AdmissionService {
         boolean studentInCourse = experiment != null && studentInCourse(studentId, experiment.getCourseId());
         List<Map<String, Object>> missingTasks = missingRequiredTasks(studentId, experimentId);
         boolean tasksCompleted = missingTasks.isEmpty();
-        ExperimentAdmission admission = latestAdmission(studentId, experimentId);
+        Long requiredPaperId = experiment == null ? null : experiment.getAdmissionPaperId();
+        ExperimentAdmission admission = latestAdmission(studentId, experimentId, requiredPaperId);
         Date now = new Date();
         boolean examPassed = admission != null;
         boolean notRevoked = admission != null && "VALID".equals(admission.getStatus());
         boolean notExpired = admission != null && (admission.getValidUntil() == null || !admission.getValidUntil().before(now));
         boolean experimentOpen = experiment != null && Integer.valueOf(1).equals(experiment.getStatus());
         boolean courseOpen = course != null && !Integer.valueOf(2).equals(course.getStatus());
-        boolean qualified = studentInCourse && tasksCompleted && examPassed && notRevoked && notExpired && experimentOpen && courseOpen;
+        boolean qualified = studentInCourse && examPassed && notRevoked && notExpired && experimentOpen && courseOpen;
 
         Map<String, Object> result = new HashMap<>();
         result.put("qualified", qualified);
@@ -132,6 +149,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         result.put("status", admission == null ? "NONE" : admission.getStatus());
         result.put("validUntil", admission == null ? null : admission.getValidUntil());
         result.put("admissionId", admission == null ? null : admission.getId());
+        result.put("requiredPaperId", requiredPaperId);
         if (!qualified) {
             result.put("reason", reason(studentInCourse, tasksCompleted, examPassed, notExpired, notRevoked,
                     experimentOpen, courseOpen, missingTasks.size()));
@@ -192,10 +210,11 @@ public class AdmissionServiceImpl implements AdmissionService {
         return count != null && count > 0;
     }
 
-    private ExperimentAdmission latestAdmission(Long studentId, Long experimentId) {
+    private ExperimentAdmission latestAdmission(Long studentId, Long experimentId, Long requiredPaperId) {
         return admissionMapper.selectOne(new LambdaQueryWrapper<ExperimentAdmission>()
                 .eq(ExperimentAdmission::getStudentId, studentId)
                 .eq(ExperimentAdmission::getExperimentId, experimentId)
+                .eq(requiredPaperId != null, ExperimentAdmission::getPaperId, requiredPaperId)
                 .eq(ExperimentAdmission::getDeleted, 0)
                 .orderByDesc(ExperimentAdmission::getIssuedTime)
                 .last("LIMIT 1"));
@@ -213,7 +232,6 @@ public class AdmissionServiceImpl implements AdmissionService {
         if (!studentInCourse) return "学生未加入该实验所属课程";
         if (!courseOpen) return "课程已归档，不能新增预约";
         if (!experimentOpen) return "实验未开放或已关闭";
-        if (!tasksCompleted) return "仍有 " + missingCount + " 项必做学习任务未完成";
         if (!examPassed) return "正式安全考试未通过";
         if (!notExpired) return "准入资格已过期";
         if (!notRevoked) return "准入资格已撤销";

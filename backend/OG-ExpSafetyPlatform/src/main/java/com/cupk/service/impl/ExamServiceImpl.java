@@ -74,9 +74,15 @@ public class ExamServiceImpl implements ExamService {
             return empty;
         }
         LambdaQueryWrapper<ExamPaper> wrapper = new LambdaQueryWrapper<>();
+        List<Long> passedPaperIds = examRecordMapper.selectList(new LambdaQueryWrapper<ExamRecord>()
+                        .select(ExamRecord::getPaperId)
+                        .eq(ExamRecord::getStudentId, studentId)
+                        .eq(ExamRecord::getPassed, 1))
+                .stream().map(ExamRecord::getPaperId).distinct().toList();
         Date now = new Date();
         wrapper.eq(ExamPaper::getStatus, "PUBLISHED")
                .in(ExamPaper::getCourseId, enrolledCourseIds)
+               .notIn(!passedPaperIds.isEmpty(), ExamPaper::getId, passedPaperIds)
                .eq(courseId != null, ExamPaper::getCourseId, courseId)
                .and(w -> w.isNull(ExamPaper::getStartTime).or().le(ExamPaper::getStartTime, now))
                .and(w -> w.isNull(ExamPaper::getEndTime).or().ge(ExamPaper::getEndTime, now))
@@ -124,6 +130,9 @@ public class ExamServiceImpl implements ExamService {
         assertStudentInCourse(UserContext.getUserId(), paper.getCourseId());
 
         Long studentId = UserContext.getUserId();
+        if (hasPassedExam(studentId, paperId)) {
+            throw new BusinessException(409, "该考试已通过，无需重复考试");
+        }
         ExamRecord inProgress = findInProgressRecord(studentId, paperId);
         if (inProgress != null) {
             if (timedOut(inProgress)) {
@@ -305,9 +314,9 @@ public class ExamServiceImpl implements ExamService {
         record.setObjectiveScore(objectiveScore);
         record.setTotalScore(objectiveScore);
         record.setPassed(hasShortAnswer ? null : (objectiveScore >= paper.getPassScore() ? 1 : 0));
-        record.setStatus(autoSubmit || timedOut(record)
-                ? ExamRecordStatus.EXPIRED.name()
-                : (hasShortAnswer ? ExamRecordStatus.PENDING_REVIEW.name() : ExamRecordStatus.GRADED.name()));
+        record.setStatus(hasShortAnswer
+                ? ExamRecordStatus.PENDING_REVIEW.name()
+                : (autoSubmit || timedOut(record) ? ExamRecordStatus.EXPIRED.name() : ExamRecordStatus.GRADED.name()));
         record.setSubmitTime(new Date());
         record.setFinalGradeTime(hasShortAnswer ? null : record.getSubmitTime());
         record.setAutoSubmitFlag(autoSubmit ? 1 : timedOut(record) ? 1 : 0);
@@ -389,6 +398,7 @@ public class ExamServiceImpl implements ExamService {
             item.put("isCorrect", ans.getIsCorrect());
             item.put("analysis", showAnswers && snapshot != null ? snapshot.get("analysis") : null);
             item.put("score", ans.getScore());
+            item.put("gradingComment", ans.getGradingComment());
             answerList.add(item);
         }
 
@@ -670,6 +680,93 @@ public class ExamServiceImpl implements ExamService {
     // ===== 绠€绛旈鎵规敼锛堟暀甯堢锛?=====
 
     @Override
+    public Page<Map<String, Object>> getPaperSubmissionRecords(int pageNum, int pageSize, Long paperId) {
+        ExamPaper paper = examPaperMapper.selectById(paperId);
+        assertPaperTeacherOrAdmin(paper);
+        Page<ExamRecord> recordPage = examRecordMapper.selectPage(new Page<>(pageNum, pageSize),
+                new LambdaQueryWrapper<ExamRecord>()
+                        .eq(ExamRecord::getPaperId, paperId)
+                        .ne(ExamRecord::getStatus, ExamRecordStatus.IN_PROGRESS.name())
+                        .orderByDesc(ExamRecord::getSubmitTime));
+        Page<Map<String, Object>> result = new Page<>(pageNum, pageSize, recordPage.getTotal());
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (ExamRecord record : recordPage.getRecords()) {
+            canonicalizeLegacyStatus(record);
+            User student = userMapper.selectById(record.getStudentId());
+            Long pendingCount = examAnswerMapper.selectCount(new LambdaQueryWrapper<ExamAnswer>()
+                    .eq(ExamAnswer::getRecordId, record.getId())
+                    .isNull(ExamAnswer::getIsCorrect));
+            Map<String, Object> item = new HashMap<>();
+            item.put("recordId", record.getId());
+            item.put("studentId", record.getStudentId());
+            item.put("studentName", student == null ? null : student.getRealName());
+            item.put("studentUsername", student == null ? null : student.getUsername());
+            item.put("objectiveScore", record.getObjectiveScore());
+            item.put("subjectiveScore", record.getSubjectiveScore());
+            item.put("totalScore", record.getTotalScore());
+            item.put("status", record.getStatus());
+            item.put("passed", record.getPassed() == null ? null : record.getPassed() == 1);
+            item.put("submitTime", record.getSubmitTime());
+            item.put("finalGradeTime", record.getFinalGradeTime());
+            item.put("pendingCount", pendingCount == null ? 0 : pendingCount);
+            items.add(item);
+        }
+        result.setRecords(items);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getGradingRecordDetail(Long recordId) {
+        ExamRecord record = examRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new BusinessException(404, "考试记录不存在");
+        }
+        if (ExamRecordStatus.IN_PROGRESS.name().equals(record.getStatus())) {
+            throw new BusinessException(400, "学生尚未交卷");
+        }
+        canonicalizeLegacyStatus(record);
+        ExamPaper paper = examPaperMapper.selectById(record.getPaperId());
+        assertPaperTeacherOrAdmin(paper);
+        User student = userMapper.selectById(record.getStudentId());
+        List<Map<String, Object>> snapshots = loadSnapshot(record);
+        Map<Long, ExamAnswer> answerMap = examAnswerMapper.selectList(new LambdaQueryWrapper<ExamAnswer>()
+                        .eq(ExamAnswer::getRecordId, recordId))
+                .stream().collect(Collectors.toMap(ExamAnswer::getQuestionId, answer -> answer, (first, ignored) -> first));
+        List<Map<String, Object>> answers = new ArrayList<>();
+        int pendingCount = 0;
+        for (Map<String, Object> snapshot : snapshots) {
+            Long questionId = numberValue(snapshot.get("id")).longValue();
+            ExamAnswer answer = answerMap.get(questionId);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("answerId", answer == null ? null : answer.getId());
+            item.put("questionId", questionId);
+            item.put("type", snapshot.get("type"));
+            item.put("content", snapshot.get("content"));
+            item.put("options", snapshot.get("options"));
+            item.put("maxScore", intValue(snapshot.get("score")));
+            item.put("orderNum", snapshot.get("orderNum"));
+            item.put("studentAnswer", answer == null ? null : answer.getStudentAnswer());
+            item.put("referenceAnswer", snapshot.get("answer"));
+            item.put("analysis", snapshot.get("analysis"));
+            item.put("isCorrect", answer == null || answer.getIsCorrect() == null ? null : answer.getIsCorrect() == 1);
+            item.put("score", answer == null ? 0 : answer.getScore());
+            item.put("gradingComment", answer == null ? null : answer.getGradingComment());
+            if (answer != null && answer.getIsCorrect() == null) {
+                pendingCount++;
+            }
+            answers.add(item);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("paper", paper);
+        result.put("record", record);
+        result.put("studentName", student == null ? null : student.getRealName());
+        result.put("studentUsername", student == null ? null : student.getUsername());
+        result.put("answers", answers);
+        result.put("pendingCount", pendingCount);
+        return result;
+    }
+
+    @Override
     public Page<Map<String, Object>> getPendingGradingRecords(int pageNum, int pageSize, Long paperId) {
         // 鏌ユ壘鍚湁绠€绛旈锛坕sCorrect IS NULL锛夌殑宸叉彁浜よ€冭瘯璁板綍
         LambdaQueryWrapper<ExamAnswer> answerWrapper = new LambdaQueryWrapper<>();
@@ -749,6 +846,7 @@ public class ExamServiceImpl implements ExamService {
         item.put("analysis", snapshotValue(snapshot, question, "analysis"));
         item.put("maxScore", maxScore(snapshot, question));
         item.put("score", answer.getScore());
+        item.put("gradingComment", answer.getGradingComment());
         item.put("orderNum", snapshot == null ? 0 : snapshot.getOrDefault("orderNum", 0));
         return item;
     }
@@ -805,6 +903,7 @@ public class ExamServiceImpl implements ExamService {
             answer.setIsCorrect(score > 0 ? 1 : 0);
             answer.setCorrectFlag(score > 0 ? 1 : 0);
             answer.setScore(score);
+            answer.setGradingComment(g.get("comment") == null ? null : String.valueOf(g.get("comment")));
             examAnswerMapper.updateById(answer);
         }
 
@@ -1213,6 +1312,7 @@ public class ExamServiceImpl implements ExamService {
             detail.put("correctAnswer", showAnswers && snapshot != null ? snapshot.get("answer") : null);
             detail.put("isCorrect", answer.getIsCorrect() == null ? null : answer.getIsCorrect() == 1);
             detail.put("analysis", showAnswers && snapshot != null ? snapshot.get("analysis") : null);
+            detail.put("gradingComment", answer.getGradingComment());
             answerDetails.add(detail);
         }
         Map<String, Object> result = new HashMap<>();
@@ -1252,6 +1352,14 @@ public class ExamServiceImpl implements ExamService {
                 .eq(ExamRecord::getPaperId, paperId)
                 .in(ExamRecord::getStatus, "IN_PROGRESS", "PENDING_REVIEW", "GRADED", "EXPIRED", "SUBMITTED", "REVIEWED"));
         return count == null ? 0 : count.intValue();
+    }
+
+    private boolean hasPassedExam(Long studentId, Long paperId) {
+        Long count = examRecordMapper.selectCount(new LambdaQueryWrapper<ExamRecord>()
+                .eq(ExamRecord::getStudentId, studentId)
+                .eq(ExamRecord::getPaperId, paperId)
+                .eq(ExamRecord::getPassed, 1));
+        return count != null && count > 0;
     }
 
     private Number numberValue(Object value) {

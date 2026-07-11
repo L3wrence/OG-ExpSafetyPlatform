@@ -121,6 +121,13 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         assertCourseWritable(paper.getCourseId());
         assertCourseNotArchived(paper.getCourseId());
         applyDefaults(paper);
+        Map<String, Integer> summary = paperScoreSummary(id);
+        if (summary.get("objective") > paper.getObjectiveScore()) {
+            throw new BusinessException(400, "已选客观题分值总和不能超过设定的客观题分数");
+        }
+        if (summary.get("subjective") > paper.getSubjectiveScore()) {
+            throw new BusinessException(400, "主观题分值总和不能超过设定的主观题分数");
+        }
         paper.setId(id);
         paper.setTeacherId(current.getTeacherId());
         examPaperMapper.updateById(paper);
@@ -141,12 +148,15 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         ExamPaper existing = requirePaper(id);
         assertCourseWritable(existing.getCourseId());
         if ("PUBLISHED".equals(status)) {
-            boolean randomReady = Integer.valueOf(1).equals(existing.getRandomEnabled())
-                    && existing.getRandomCount() != null && existing.getRandomCount() > 0;
-            Long questionCount = examPaperQuestionMapper.selectCount(new LambdaQueryWrapper<ExamPaperQuestion>()
-                    .eq(ExamPaperQuestion::getPaperId, id));
-            if (!randomReady && (questionCount == null || questionCount == 0)) {
-                throw new BusinessException(400, "发布试卷前必须配置题目或启用随机抽题");
+            Map<String, Integer> summary = paperScoreSummary(id);
+            int objectiveTarget = existing.getObjectiveScore() == null ? 0 : existing.getObjectiveScore();
+            int subjectiveTarget = existing.getSubjectiveScore() == null ? 0 : existing.getSubjectiveScore();
+            if (summary.get("total") == 0) {
+                throw new BusinessException(400, "发布试卷前必须配置题目");
+            }
+            if (summary.get("objective") != objectiveTarget || summary.get("subjective") != subjectiveTarget
+                    || summary.get("total") != existing.getTotalScore()) {
+                throw new BusinessException(400, "题目分值合计必须与客观题、主观题和试卷总分一致");
             }
         }
         ExamPaper paper = new ExamPaper();
@@ -163,32 +173,48 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         if (questionIds == null || questionIds.isEmpty()) {
             throw new BusinessException(400, "请选择试题");
         }
-        // 先获取当前最大排序号
-        LambdaQueryWrapper<ExamPaperQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ExamPaperQuestion::getPaperId, paperId)
-               .orderByDesc(ExamPaperQuestion::getOrderNum)
-               .last("LIMIT 1");
-        ExamPaperQuestion last = examPaperQuestionMapper.selectOne(wrapper);
-        int nextOrder = (last != null) ? last.getOrderNum() + 1 : 1;
-
-        for (int i = 0; i < questionIds.size(); i++) {
-            Question question = questionMapper.selectById(questionIds.get(i));
+        Set<Long> existingQuestionIds = examPaperQuestionMapper.selectList(new LambdaQueryWrapper<ExamPaperQuestion>()
+                        .eq(ExamPaperQuestion::getPaperId, paperId))
+                .stream().map(ExamPaperQuestion::getQuestionId).collect(java.util.stream.Collectors.toSet());
+        List<Question> questionsToAdd = new ArrayList<>();
+        Set<Long> batchQuestionIds = new HashSet<>();
+        int addedScore = 0;
+        for (Long questionId : questionIds) {
+            if (existingQuestionIds.contains(questionId) || !batchQuestionIds.add(questionId)) {
+                continue;
+            }
+            Question question = questionMapper.selectById(questionId);
             if (question == null) {
-                throw new BusinessException(404, "题目不存在：" + questionIds.get(i));
+                throw new BusinessException(404, "题目不存在：" + questionId);
             }
             if (!paper.getCourseId().equals(question.getCourseId())) {
-                throw new BusinessException(403, "不能向试卷加入其他课程的题目：" + questionIds.get(i));
+                throw new BusinessException(403, "不能向试卷加入其他课程的题目：" + questionId);
             }
-            ExamPaperQuestion eq = new ExamPaperQuestion();
-            eq.setPaperId(paperId);
-            eq.setQuestionId(questionIds.get(i));
-            eq.setScore(scores != null && i < scores.size() ? scores.get(i) : 0);
-            eq.setOrderNum(nextOrder + i);
-            examPaperQuestionMapper.insert(eq);
+            if (!Set.of("SINGLE", "MULTIPLE", "JUDGE").contains(question.getType())) {
+                throw new BusinessException(400, "客观题只能从题库中的单选题、多选题或判断题选择");
+            }
+            if (question.getScore() == null || question.getScore() <= 0) {
+                throw new BusinessException(400, "题库题目必须设置有效的默认分值：" + questionId);
+            }
+            questionsToAdd.add(question);
+            addedScore += question.getScore();
+        }
+        int objectiveTarget = paper.getObjectiveScore() == null ? 0 : paper.getObjectiveScore();
+        if (paperScoreSummary(paperId).get("objective") + addedScore > objectiveTarget) {
+            throw new BusinessException(400, "所选客观题分值总和超过设定的客观题分数");
         }
 
-        // 重新计算试卷总分
-        recalcTotalScore(paperId);
+        int nextOrder = nextQuestionOrder(paperId);
+        int added = 0;
+        for (Question question : questionsToAdd) {
+            ExamPaperQuestion eq = new ExamPaperQuestion();
+            eq.setPaperId(paperId);
+            eq.setQuestionId(question.getId());
+            eq.setScore(question.getScore());
+            eq.setOrderNum(nextOrder + added);
+            examPaperQuestionMapper.insert(eq);
+            added++;
+        }
     }
 
     @Override
@@ -200,7 +226,89 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         wrapper.eq(ExamPaperQuestion::getPaperId, paperId)
                .eq(ExamPaperQuestion::getQuestionId, questionId);
         examPaperQuestionMapper.delete(wrapper);
-        recalcTotalScore(paperId);
+    }
+
+    @Override
+    @Transactional
+    public void updateQuestionScore(Long paperId, Long questionId, Integer score) {
+        ExamPaper paper = requirePaper(paperId);
+        assertCourseWritable(paper.getCourseId());
+        if (score == null || score < 0) {
+            throw new BusinessException(400, "题目分值不能小于0");
+        }
+        Question question = questionMapper.selectById(questionId);
+        if (question == null) {
+            throw new BusinessException(404, "题目不存在");
+        }
+        boolean subjective = "SHORT_ANSWER".equals(question.getType());
+        if (!subjective && !Objects.equals(score, question.getScore())) {
+            throw new BusinessException(400, "客观题必须使用题库默认分值，不能在试卷中修改");
+        }
+        ExamPaperQuestion current = examPaperQuestionMapper.selectOne(new LambdaQueryWrapper<ExamPaperQuestion>()
+                .eq(ExamPaperQuestion::getPaperId, paperId)
+                .eq(ExamPaperQuestion::getQuestionId, questionId));
+        if (current == null) {
+            throw new BusinessException(404, "试卷中不存在该题目");
+        }
+        Map<String, Integer> summary = paperScoreSummary(paperId);
+        int updatedCategoryScore = summary.get(subjective ? "subjective" : "objective")
+                - (current.getScore() == null ? 0 : current.getScore()) + score;
+        int target = subjective
+                ? (paper.getSubjectiveScore() == null ? 0 : paper.getSubjectiveScore())
+                : (paper.getObjectiveScore() == null ? 0 : paper.getObjectiveScore());
+        if (updatedCategoryScore > target) {
+            throw new BusinessException(400, subjective
+                    ? "主观题分值总和不能超过设定的主观题分数"
+                    : "客观题分值总和不能超过设定的客观题分数");
+        }
+        ExamPaperQuestion eq = new ExamPaperQuestion();
+        eq.setScore(score);
+        int updated = examPaperQuestionMapper.update(eq, new LambdaQueryWrapper<ExamPaperQuestion>()
+                .eq(ExamPaperQuestion::getPaperId, paperId)
+                .eq(ExamPaperQuestion::getQuestionId, questionId));
+        if (updated == 0) {
+            throw new BusinessException(404, "试卷中不存在该题目");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void addSubjectiveQuestion(Long paperId, Map<String, Object> payload) {
+        ExamPaper paper = requirePaper(paperId);
+        assertCourseWritable(paper.getCourseId());
+        String content = stringRule(payload, "content");
+        if (!StringUtils.hasText(content)) {
+            throw new BusinessException(400, "主观题题干不能为空");
+        }
+        int score = intRule(payload, "score", 0);
+        if (score <= 0) {
+            throw new BusinessException(400, "主观题分值必须大于0");
+        }
+        int subjectiveTarget = paper.getSubjectiveScore() == null ? 0 : paper.getSubjectiveScore();
+        if (paperScoreSummary(paperId).get("subjective") + score > subjectiveTarget) {
+            throw new BusinessException(400, "主观题分值总和不能超过设定的主观题分数");
+        }
+        Question question = new Question();
+        question.setType("SHORT_ANSWER");
+        question.setContent(content);
+        String answer = stringRule(payload, "answer");
+        question.setAnswer(answer == null ? "" : answer);
+        question.setAnalysis(stringRule(payload, "analysis"));
+        question.setScore(score);
+        question.setKnowledgePoint(StringUtils.hasText(stringRule(payload, "knowledgePoint"))
+                ? stringRule(payload, "knowledgePoint") : "主观题");
+        question.setDifficulty(StringUtils.hasText(stringRule(payload, "difficulty"))
+                ? stringRule(payload, "difficulty") : "MEDIUM");
+        question.setCourseId(paper.getCourseId());
+        question.setExperimentId(paper.getExperimentId());
+        question.setCreateBy(UserContext.getUserId());
+        questionMapper.insert(question);
+        ExamPaperQuestion eq = new ExamPaperQuestion();
+        eq.setPaperId(paperId);
+        eq.setQuestionId(question.getId());
+        eq.setScore(score);
+        eq.setOrderNum(nextQuestionOrder(paperId));
+        examPaperQuestionMapper.insert(eq);
     }
 
     @Override
@@ -222,17 +330,34 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         }
     }
 
-    /** 重新计算试卷总分 */
-    private void recalcTotalScore(Long paperId) {
+    private Map<String, Integer> paperScoreSummary(Long paperId) {
         LambdaQueryWrapper<ExamPaperQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ExamPaperQuestion::getPaperId, paperId);
         List<ExamPaperQuestion> eqList = examPaperQuestionMapper.selectList(wrapper);
+        int objective = 0;
+        int subjective = 0;
+        for (ExamPaperQuestion eq : eqList) {
+            Question question = questionMapper.selectById(eq.getQuestionId());
+            int score = eq.getScore() == null ? 0 : eq.getScore();
+            if (question != null && "SHORT_ANSWER".equals(question.getType())) {
+                subjective += score;
+            } else {
+                objective += score;
+            }
+        }
+        Map<String, Integer> result = new HashMap<>();
+        result.put("objective", objective);
+        result.put("subjective", subjective);
+        result.put("total", objective + subjective);
+        return result;
+    }
 
-        int total = eqList.stream().mapToInt(ExamPaperQuestion::getScore).sum();
-        ExamPaper paper = new ExamPaper();
-        paper.setId(paperId);
-        paper.setTotalScore(total);
-        examPaperMapper.updateById(paper);
+    private int nextQuestionOrder(Long paperId) {
+        ExamPaperQuestion last = examPaperQuestionMapper.selectOne(new LambdaQueryWrapper<ExamPaperQuestion>()
+                .eq(ExamPaperQuestion::getPaperId, paperId)
+                .orderByDesc(ExamPaperQuestion::getOrderNum)
+                .last("LIMIT 1"));
+        return last == null ? 1 : last.getOrderNum() + 1;
     }
 
     private void assertCourseNotArchived(Long courseId) {
@@ -251,8 +376,8 @@ public class ExamPaperServiceImpl implements ExamPaperService {
         ExamPaper paper = requirePaper(paperId);
         assertCourseWritable(paper.getCourseId());
         int count = intRule(rule, "count", 10);
-        int score = intRule(rule, "score", 5);
-        if (count <= 0 || count > 200) {
+        Integer targetScore = stringRule(rule, "targetScore") == null ? null : intRule(rule, "targetScore", 0);
+        if (targetScore == null && (count <= 0 || count > 200)) {
             throw new BusinessException(400, "抽题数量必须在1到200之间");
         }
         LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<>();
@@ -264,19 +389,68 @@ public class ExamPaperServiceImpl implements ExamPaperService {
                 .eq(StringUtils.hasText(stringRule(rule, "knowledgePoint")), Question::getKnowledgePoint, stringRule(rule, "knowledgePoint"))
                 .in(Question::getType, List.of("SINGLE", "MULTIPLE", "JUDGE"));
         List<Question> candidates = questionMapper.selectList(wrapper);
+        Set<Long> existingQuestionIds = examPaperQuestionMapper.selectList(new LambdaQueryWrapper<ExamPaperQuestion>()
+                        .eq(ExamPaperQuestion::getPaperId, paperId))
+                .stream().map(ExamPaperQuestion::getQuestionId).collect(java.util.stream.Collectors.toSet());
+        candidates.removeIf(question -> existingQuestionIds.contains(question.getId()));
         Collections.shuffle(candidates);
         if (candidates.isEmpty()) {
             throw new BusinessException(400, "当前条件下没有可用于组卷的题目");
         }
-        int actual = Math.min(count, candidates.size());
-        List<Long> questionIds = candidates.stream().limit(actual).map(Question::getId).toList();
-        List<Integer> scores = questionIds.stream().map(id -> score).toList();
+        List<Question> picked;
+        if (targetScore != null) {
+            if (targetScore <= 0) {
+                throw new BusinessException(400, "随机抽题目标分值必须大于0");
+            }
+            int remainingScore = (paper.getObjectiveScore() == null ? 0 : paper.getObjectiveScore())
+                    - paperScoreSummary(paperId).get("objective");
+            if (targetScore > remainingScore) {
+                throw new BusinessException(400, "随机抽题目标分值超过客观题剩余分数");
+            }
+            picked = pickExactScore(candidates, targetScore);
+            if (picked.isEmpty()) {
+                throw new BusinessException(400, "当前题库默认分值无法组合出目标客观题分数");
+            }
+        } else {
+            int actual = Math.min(count, candidates.size());
+            picked = candidates.stream().limit(actual).toList();
+        }
+        List<Long> questionIds = picked.stream().map(Question::getId).toList();
+        List<Integer> scores = picked.stream().map(q -> q.getScore() == null ? 0 : q.getScore()).toList();
         addQuestions(paperId, questionIds, scores);
         Map<String, Object> result = new HashMap<>();
         result.put("requestedCount", count);
-        result.put("actualCount", actual);
+        result.put("actualCount", picked.size());
+        result.put("actualScore", scores.stream().mapToInt(Integer::intValue).sum());
         result.put("candidateCount", candidates.size());
         return result;
+    }
+
+    private List<Question> pickExactScore(List<Question> candidates, int targetScore) {
+        List<Question> valid = candidates.stream()
+                .filter(q -> q.getScore() != null && q.getScore() > 0 && q.getScore() <= targetScore)
+                .limit(120)
+                .toList();
+        return pickExactScore(valid, targetScore, 0, new ArrayList<>());
+    }
+
+    private List<Question> pickExactScore(List<Question> candidates, int remaining, int index, List<Question> current) {
+        if (remaining == 0) {
+            return new ArrayList<>(current);
+        }
+        if (remaining < 0 || index >= candidates.size()) {
+            return List.of();
+        }
+        for (int i = index; i < candidates.size(); i++) {
+            Question question = candidates.get(i);
+            current.add(question);
+            List<Question> result = pickExactScore(candidates, remaining - question.getScore(), i + 1, current);
+            if (!result.isEmpty()) {
+                return result;
+            }
+            current.remove(current.size() - 1);
+        }
+        return List.of();
     }
 
     private ExamPaper requirePaper(Long id) {
@@ -329,6 +503,11 @@ public class ExamPaperServiceImpl implements ExamPaperService {
 
     private void applyDefaults(ExamPaper paper) {
         paper.setTotalScore(paper.getTotalScore() == null ? 100 : paper.getTotalScore());
+        paper.setObjectiveScore(paper.getObjectiveScore() == null ? paper.getTotalScore() : paper.getObjectiveScore());
+        paper.setSubjectiveScore(paper.getSubjectiveScore() == null ? Math.max(0, paper.getTotalScore() - paper.getObjectiveScore()) : paper.getSubjectiveScore());
+        if (paper.getObjectiveScore() + paper.getSubjectiveScore() != paper.getTotalScore()) {
+            throw new BusinessException(400, "客观题分数和主观题分数之和必须等于总分");
+        }
         paper.setPassScore(paper.getPassScore() == null ? 60 : paper.getPassScore());
         paper.setDuration(paper.getDuration() == null || paper.getDuration() <= 0 ? 30 : paper.getDuration());
         paper.setAttemptLimit(paper.getAttemptLimit() == null || paper.getAttemptLimit() <= 0 ? 1 : paper.getAttemptLimit());

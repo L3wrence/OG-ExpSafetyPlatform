@@ -32,6 +32,14 @@ export function removePaperQuestion(id, questionId) {
   return request.delete(`/exams/papers/${id}/questions/${questionId}`)
 }
 
+export function updatePaperQuestionScore(id, questionId, score) {
+  return request.put(`/exams/papers/${id}/questions/${questionId}/score`, { score })
+}
+
+export function addSubjectiveQuestion(id, data) {
+  return request.post(`/exams/papers/${id}/subjective-questions`, data)
+}
+
 export function reorderPaperQuestions(id, data) {
   return request.put(`/exams/papers/${id}/questions/order`, data)
 }

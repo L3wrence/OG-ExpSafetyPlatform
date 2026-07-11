@@ -35,6 +35,12 @@ public interface ExamPaperService {
     /** 从试卷移除题目 */
     void removeQuestion(Long paperId, Long questionId);
 
+    /** 调整试卷内题目分值 */
+    void updateQuestionScore(Long paperId, Long questionId, Integer score);
+
+    /** 创建并加入主观题 */
+    void addSubjectiveQuestion(Long paperId, Map<String, Object> payload);
+
     /** 调整题目排序 */
     void updateQuestionOrder(Long paperId, List<Map<String, Integer>> orders);
 

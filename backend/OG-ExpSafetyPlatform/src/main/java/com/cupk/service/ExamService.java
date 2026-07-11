@@ -61,6 +61,12 @@ public interface ExamService {
     /** 待批改简答题的考试记录列表 */
     Page<Map<String, Object>> getPendingGradingRecords(int pageNum, int pageSize, Long paperId);
 
+    /** 指定试卷的学生提交记录 */
+    Page<Map<String, Object>> getPaperSubmissionRecords(int pageNum, int pageSize, Long paperId);
+
+    /** 教师查看学生完整答卷及批改状态 */
+    Map<String, Object> getGradingRecordDetail(Long recordId);
+
     /** 逐题批改简答题，批完后重算总分和通过状态 */
     Map<String, Object> gradeShortAnswer(Long recordId, List<Map<String, Object>> grades);
 }

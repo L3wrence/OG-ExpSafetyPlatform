@@ -31,4 +31,5 @@ public class ExamAnswer {
 
     /** 该题实际得分 */
     private Integer score;
+    private String gradingComment;
 }

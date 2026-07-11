@@ -86,6 +86,7 @@ public class ExperimentServiceImpl implements ExperimentService {
         checkCode(dto.getCourseId(), dto.getExpCode(), null);
         validateRisk(dto.getRiskLevel());
         validateStatus(dto.getStatus());
+        validateAdmissionPaper(dto.getCourseId(), dto.getAdmissionPaperId());
         Experiment entity = new Experiment();
         BeanUtils.copyProperties(dto, entity);
         entity.setStatus(dto.getStatus() == null ? STATUS_CLOSED : dto.getStatus());
@@ -109,6 +110,7 @@ public class ExperimentServiceImpl implements ExperimentService {
         checkCode(dto.getCourseId(), dto.getExpCode(), id);
         validateRisk(dto.getRiskLevel());
         validateStatus(dto.getStatus());
+        validateAdmissionPaper(dto.getCourseId(), dto.getAdmissionPaperId());
         BeanUtils.copyProperties(dto, current);
         fillDirectionFromCourse(current, targetCourse);
         if (current.getStatus() != null && current.getStatus() == STATUS_OPEN) {
@@ -285,6 +287,24 @@ public class ExperimentServiceImpl implements ExperimentService {
                     || experiment.getSafetyPassScore() <= 0) {
                 throw new BusinessException(400, "高风险实验必须配置准入考试和最低通过分数");
             }
+        }
+        if (Integer.valueOf(1).equals(experiment.getReservationEnabled())
+                && Integer.valueOf(1).equals(experiment.getExamRequired())
+                && experiment.getAdmissionPaperId() == null) {
+            throw new BusinessException(400, "开放预约前必须绑定准入考试");
+        }
+    }
+
+    private void validateAdmissionPaper(Long courseId, Long paperId) {
+        if (paperId == null) {
+            return;
+        }
+        ExamPaper paper = examPaperMapper.selectById(paperId);
+        if (paper == null || paper.getIsDeleted() != null && paper.getIsDeleted() == 1) {
+            throw new BusinessException(404, "准入考试试卷不存在");
+        }
+        if (!paper.getCourseId().equals(courseId)) {
+            throw new BusinessException(400, "准入考试必须属于当前课堂");
         }
     }
 

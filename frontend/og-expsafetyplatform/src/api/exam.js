@@ -44,6 +44,14 @@ export function getPendingGradingRecords(params, config = {}) {
   return request.get('/exams/statistics/pending-grading', { ...config, params })
 }
 
+export function getPaperSubmissionRecords(params, config = {}) {
+  return request.get('/exams/statistics/submissions', { ...config, params })
+}
+
+export function getGradingRecordDetail(recordId, config = {}) {
+  return request.get(`/exams/statistics/grading-records/${recordId}`, config)
+}
+
 export function gradeShortAnswers(recordId, data) {
   return request.put('/exams/statistics/grade-short-answer', data, { params: { recordId } })
 }

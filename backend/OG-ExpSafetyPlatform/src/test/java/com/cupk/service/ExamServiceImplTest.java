@@ -132,6 +132,24 @@ class ExamServiceImplTest {
     }
 
     @Test
+    void autoSubmit_shouldRemainPendingReview_whenPaperHasShortAnswer() {
+        ExamRecord record = inProgressRecord();
+        record.setQuestionSnapshotJson(shortAnswerSnapshot());
+
+        when(examRecordMapper.selectById(100L)).thenReturn(record);
+        when(examPaperMapper.selectById(1L)).thenReturn(paper());
+        when(examAnswerMapper.selectList(any())).thenReturn(List.of());
+
+        Map<String, Object> result = examService.submitExam(
+                100L, List.of(Map.of("questionId", 2L, "answer", "主观答案")), true);
+
+        assertEquals("PENDING_REVIEW", result.get("status"));
+        assertNull(result.get("passed"));
+        assertEquals(Boolean.TRUE, result.get("autoSubmit"));
+        verify(admissionService, never()).issueOnPassedExam(any(), any());
+    }
+
+    @Test
     void finalReview_shouldGrantAdmission_whenFinalScorePasses() {
         UserContext.set(new UserSession(20L, List.of("ADMIN"), List.of("exam:statistics")));
         ExamRecord record = inProgressRecord();

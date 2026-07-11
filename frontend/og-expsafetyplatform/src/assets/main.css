@@ -1,98 +1,79 @@
- /* ========================================
-   Global Styles - Oil and Gas Experiment Teaching Platform
-    ======================================== */
- 
- :root {
-   --el-color-primary: #177e89;
-   --topbar-height: 64px;
- }
- 
- * {
-   margin: 0;
-   padding: 0;
-   box-sizing: border-box;
- }
- 
- html, body {
-   width: 100%;
-   height: 100%;
-   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
-   font-size: 14px;
-   color: #333;
-   background: #f0f2f5;
-   -webkit-font-smoothing: antialiased;
-   -moz-osx-font-smoothing: grayscale;
- }
- 
- #app {
-   width: 100%;
-   height: 100vh;
- }
- 
- /* Scrollbar */
- ::-webkit-scrollbar {
-   width: 6px;
-   height: 6px;
- }
- ::-webkit-scrollbar-track {
-   background: transparent;
- }
- ::-webkit-scrollbar-thumb {
-   background: #d0d5dd;
-   border-radius: 3px;
- }
- ::-webkit-scrollbar-thumb:hover {
-   background: #b0b5bd;
- }
- 
- /* Element Plus Overrides */
- .el-menu {
-   border-right: none !important;
- }
- .el-menu:not(.top-nav) .el-menu-item {
-   height: 44px !important;
-   line-height: 44px !important;
-   margin: 2px 8px !important;
-   border-radius: 8px !important;
-   width: auto !important;
- }
- .el-menu:not(.top-nav) .el-menu-item:hover {
-   background: rgba(255,255,255,0.08) !important;
- }
- .el-menu:not(.top-nav) .el-menu-item.is-active {
-   background: rgba(64,158,255,0.2) !important;
- }
- .el-sub-menu__title {
-   height: 44px !important;
-   line-height: 44px !important;
- }
- .el-progress-bar__outer {
-   background: rgba(255,255,255,0.2) !important;
- }
- .el-card {
-   border-radius: 12px !important;
-   border: 1px solid #f0f0f0 !important;
- }
- .el-table th.el-table__cell {
-   background: #fafafa !important;
-   color: #666 !important;
-   font-weight: 500 !important;
- }
- .el-tag--small {
-   padding: 0 8px;
-   height: 22px;
-   line-height: 22px;
- }
- .el-breadcrumb__inner {
-   color: #999 !important;
- }
- .el-breadcrumb__inner a, .el-breadcrumb__inner.is-link {
-   color: #409eff !important;
- }
- .el-dialog {
-   border-radius: 12px !important;
- }
- .el-timeline-item__timestamp {
-   font-size: 12px !important;
-   color: #999 !important;
- }
+/* ========================================
+   Global Styles - 油气工程实验教学平台
+   主色：枣红 — 中国石油大学（北京）克拉玛依校区
+   ======================================== */
+
+:root {
+  /* 枣红主色 */
+  --cupk-red:        #7B2D3B;
+  --cupk-red-light:  #8E3E4C;
+  --cupk-red-dark:   #5E1F2A;
+  --cupk-red-deep:   #3D111A;
+
+  /* 辅助色 */
+  --cupk-gold:       #B8863E;
+  --cupk-gray:       #666;
+  --cupk-light-bg:   #F5F5F5;
+  --cupk-border:     #E5E5E5;
+
+  /* Element Plus 覆盖 */
+  --el-color-primary:            var(--cupk-red);
+  --el-color-primary-light-3:    var(--cupk-red-light);
+  --el-color-primary-light-5:    #B86E78;
+  --el-color-primary-light-7:    #D4A8AE;
+  --el-color-primary-light-8:    #E8CCD0;
+  --el-color-primary-light-9:    #F3E4E6;
+  --el-color-primary-dark-2:     var(--cupk-red-dark);
+  --el-color-success:            #4A8C5C;
+  --el-color-warning:            #B8863E;
+  --el-color-danger:             #C44536;
+
+  --topbar-height: 64px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+  font-size: 14px; color: #333; background: #F5F5F5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+
+#app { width: 100%; height: 100vh; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+.el-menu { border-right: none !important; }
+.el-menu:not(.top-nav) .el-menu-item {
+  height: 44px !important; line-height: 44px !important;
+  margin: 2px 8px !important; border-radius: 6px !important; width: auto !important;
+}
+.el-menu:not(.top-nav) .el-menu-item:hover { background: rgba(123,45,59,0.06) !important; }
+.el-menu:not(.top-nav) .el-menu-item.is-active { background: rgba(123,45,59,0.1) !important; color: var(--cupk-red) !important; }
+.el-sub-menu__title { height: 44px !important; line-height: 44px !important; }
+.el-card { border-radius: 8px !important; border: 1px solid var(--cupk-border) !important; }
+.el-table th.el-table__cell { background: #fafafa !important; color: #666 !important; font-weight: 500 !important; }
+.el-tag--small { padding: 0 8px; height: 22px; line-height: 22px; }
+.el-breadcrumb__inner { color: #999 !important; }
+.el-breadcrumb__inner a, .el-breadcrumb__inner.is-link { color: var(--cupk-red) !important; }
+.el-dialog { border-radius: 10px !important; }
+.el-timeline-item__timestamp { font-size: 12px !important; color: #999 !important; }
+
+/* 表格操作列按钮对齐 */
+.table-actions {
+  display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;
+}
+.table-actions .el-button + .el-button { margin-left: 0 !important; }
+
+.el-button--primary {
+  --el-button-bg-color: var(--cupk-red);
+  --el-button-border-color: var(--cupk-red);
+  --el-button-hover-bg-color: var(--cupk-red-light);
+  --el-button-hover-border-color: var(--cupk-red-light);
+  --el-button-active-bg-color: var(--cupk-red-dark);
+  --el-button-active-border-color: var(--cupk-red-dark);
+}

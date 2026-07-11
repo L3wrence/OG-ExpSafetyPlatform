@@ -16,6 +16,8 @@ public class PaperCreateDTO {
     private Long courseId;
     private Long experimentId;
     private Integer totalScore;
+    private Integer objectiveScore;
+    private Integer subjectiveScore;
     private Integer passScore;
     private Integer duration;
     private Integer attemptLimit;

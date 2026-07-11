@@ -31,6 +31,8 @@ public class ExamPaper {
 
     /** 试卷总分 */
     private Integer totalScore;
+    private Integer objectiveScore;
+    private Integer subjectiveScore;
 
     /** 及格分数线 */
     private Integer passScore;

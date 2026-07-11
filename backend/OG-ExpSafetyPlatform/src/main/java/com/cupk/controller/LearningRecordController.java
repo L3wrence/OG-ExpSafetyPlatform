@@ -6,6 +6,7 @@ import com.cupk.dto.LearningProgressDTO;
 import com.cupk.interceptor.UserContext;
 import com.cupk.pojo.LearningRecord;
 import com.cupk.service.LearningRecordService;
+import com.cupk.service.StepLearningRecordService;
 import com.cupk.vo.LearningProgressVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +17,12 @@ import java.util.List;
 @RequestMapping("/api/learning-records")
 public class LearningRecordController {
     private final LearningRecordService learningRecordService;
+    private final StepLearningRecordService stepLearningRecordService;
 
-    public LearningRecordController(LearningRecordService learningRecordService) {
+    public LearningRecordController(LearningRecordService learningRecordService,
+                                    StepLearningRecordService stepLearningRecordService) {
         this.learningRecordService = learningRecordService;
+        this.stepLearningRecordService = stepLearningRecordService;
     }
 
     @PutMapping("/progress")
@@ -32,6 +36,19 @@ public class LearningRecordController {
     @RequirePermission("learning:update:self")
     public Result<List<LearningRecord>> myRecords() {
         return Result.success(learningRecordService.myRecords());
+    }
+
+    @GetMapping("/steps/my")
+    @RequirePermission("learning:update:self")
+    public Result<List<com.cupk.pojo.StepLearningRecord>> myStepRecords() {
+        return Result.success(stepLearningRecordService.myRecords());
+    }
+
+    @PutMapping("/steps/{stepId}/complete")
+    @RequirePermission("learning:update:self")
+    public Result<Void> completeStep(@PathVariable Long stepId) {
+        stepLearningRecordService.complete(stepId);
+        return Result.success();
     }
 
     @GetMapping("/experiments/{experimentId}/progress")

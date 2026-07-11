@@ -88,7 +88,8 @@
                 v-for="node in chapterNodes(experiment)"
                 :key="node.key"
                 type="button"
-                @click="openChapter(experiment.id)"
+                :class="{ done: node.done }"
+                @click="openChapter(experiment.id, node.target)"
               >
                 <span class="node-state" :class="{ done: node.done }">
                   <el-icon><Check /></el-icon>
@@ -177,6 +178,13 @@
               <el-input :model-value="courseTitle" disabled placeholder="当前课堂" />
               <el-button type="primary" :icon="Search" @click="loadAvailableExams">查询</el-button>
             </div>
+            <div v-if="inProgressExams.length" class="exam-alert">
+              <div>
+                <strong>有 {{ inProgressExams.length }} 场考核正在进行</strong>
+                <span>请优先继续作答，超时后系统将自动交卷。</span>
+              </div>
+              <el-button type="primary" :icon="VideoPlay" @click="continueExam(inProgressExams[0])">继续答题</el-button>
+            </div>
             <el-table v-loading="examLoading" :data="availableExams" stripe>
               <el-table-column prop="title" label="试卷名称" min-width="180" />
               <el-table-column prop="description" label="说明" min-width="220" />
@@ -186,7 +194,7 @@
               <el-table-column prop="remainingAttempts" label="剩余次数" width="100" />
               <el-table-column label="操作" width="130" fixed="right">
                 <template #default="{ row }">
-                  <el-button type="primary" :icon="VideoPlay" @click="router.push(`/classrooms/${courseId}/exams/${row.id}/take`)">
+                  <el-button type="primary" :icon="VideoPlay" @click="openExam(row)">
                     {{ row.inProgress ? '继续答题' : '开始考核' }}
                   </el-button>
                 </template>
@@ -194,29 +202,28 @@
             </el-table>
           </el-tab-pane>
           <el-tab-pane label="考核记录" name="records">
-            <el-table v-loading="examLoading" :data="examRecords" stripe>
+            <el-table
+              v-loading="examLoading"
+              :data="examRecords"
+              stripe
+              class="exam-record-table"
+              @row-click="openExamRecordReview"
+            >
               <el-table-column label="试卷" min-width="160">
-                <template #default="{ row }">{{ examPaperTitle(row.paperId) }}</template>
+                <template #default="{ row }">{{ row.paperTitle || examPaperTitle(row.paperId) }}</template>
               </el-table-column>
               <el-table-column prop="totalScore" label="得分" width="90" />
               <el-table-column label="状态" width="120">
                 <template #default="{ row }"><el-tag :type="examStatus(row.status).type">{{ examStatus(row.status).label }}</el-tag></template>
               </el-table-column>
               <el-table-column label="是否通过" width="100">
-                <template #default="{ row }"><el-tag :type="row.passed ? 'success' : 'danger'">{{ row.passed ? '通过' : '未通过' }}</el-tag></template>
+                <template #default="{ row }"><el-tag :type="examResult(row).type">{{ examResult(row).label }}</el-tag></template>
               </el-table-column>
               <el-table-column prop="submitTime" label="提交时间" min-width="160" />
-            </el-table>
-          </el-tab-pane>
-          <el-tab-pane label="错题解析" name="wrong">
-            <el-table v-loading="examLoading" :data="wrongQuestions" stripe>
-              <el-table-column label="题目" min-width="220">
-                <template #default="{ row }">{{ row.question?.content || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="wrongAnswer" label="我的答案" min-width="120" />
-              <el-table-column prop="correctAnswer" label="正确答案" min-width="120" />
-              <el-table-column label="解析" min-width="220">
-                <template #default="{ row }">{{ row.analysis || row.question?.analysis || '暂无解析' }}</template>
+              <el-table-column label="操作" width="110" fixed="right">
+                <template #default="{ row }">
+                  <el-button text type="primary" :icon="View" @click.stop="openExamRecordReview(row)">查看试卷</el-button>
+                </template>
               </el-table-column>
             </el-table>
           </el-tab-pane>
@@ -286,7 +293,7 @@
               v-if="reservationAdmission && !reservationAdmission.qualified"
               type="warning"
               :closable="false"
-              title="请完成相关安全知识考核"
+              :title="reservationAdmission.reason || '请完成相关安全知识考核'"
             />
             <el-empty v-if="!reservationAdmission?.qualified" description="请选择已完成安全考核的实验" />
             <el-table v-else v-loading="slotLoading" :data="availableSlots" stripe>
@@ -384,9 +391,9 @@ import { askAi } from '@/api/ai'
 import { getCourseDetail } from '@/api/course'
 import { getExperimentDetail } from '@/api/experiment'
 import { createDiscussion, getDiscussionDetail, getDiscussions, replyDiscussion } from '@/api/discussion'
-import { getAvailableExams, getExamRecords, getWrongQuestions } from '@/api/exam'
+import { getAvailableExams, getExamRecords } from '@/api/exam'
 import { getLearningPath } from '@/api/learningTask'
-import { getMyLearningRecords } from '@/api/learningRecord'
+import { getMyLearningRecords, getMyStepLearningRecords } from '@/api/learningRecord'
 import { createReport, getMyReports, submitReport, updateReport } from '@/api/report'
 import { createReservation, getAvailableSlots, getMyReservations } from '@/api/reservation'
 import { createResource, getResources, uploadResource } from '@/api/resource'
@@ -403,6 +410,7 @@ const experimentDetails = reactive({})
 const taskPaths = reactive({})
 const reports = ref([])
 const records = ref([])
+const stepRecords = ref([])
 const reservations = ref([])
 const resources = ref([])
 const selectedExperimentId = ref(null)
@@ -423,11 +431,11 @@ const discussionForm = reactive({ experimentId: null, title: '', content: '', is
 const reportSaving = ref(false)
 const reportSubmitting = ref(false)
 const reportForm = reactive({ id: null, title: '', content: '', fileUrl: '', status: '' })
-const examTab = ref(String(route.query.examTab || 'available'))
+const examTab = ref(normalizeExamTab(route.query.examTab))
 const examLoading = ref(false)
 const availableExams = ref([])
+const inProgressExams = ref([])
 const examRecords = ref([])
-const wrongQuestions = ref([])
 const resourceSaving = ref(false)
 const resourceFile = ref(null)
 const resourceForm = reactive({ experimentId: null, title: '', resourceType: 'DOCUMENT', url: '' })
@@ -443,7 +451,7 @@ const menuItems = [
   { name: 'chapters', label: '章节', desc: '只展示本课堂实验章节目录。', icon: Reading },
   { name: 'discussion', label: '讨论', desc: '本课堂内的问题讨论和教师答疑。', icon: ChatLineRound },
   { name: 'report', label: '报告提交', desc: '提交实验报告正文或文件链接。', icon: Document },
-  { name: 'exam', label: '安全知识考核', desc: '参加本课堂安全准入考核并查看错题解析。', icon: EditPen },
+  { name: 'exam', label: '安全知识考核', desc: '参加本课堂安全准入考核并查看考试记录。', icon: EditPen },
   { name: 'resources', label: '资料', desc: '本课堂学习资料，区别于公共资源学习区。', icon: Folder },
   { name: 'reservation', label: '实验预约', desc: '通过安全考核后预约实验时段。', icon: Calendar },
   { name: 'records', label: '学习记录', desc: '可视化查看学习进度和任务完成情况。', icon: Collection },
@@ -511,7 +519,7 @@ watch(() => route.query.module, (value) => {
   if (value && value !== activeModule.value) activeModule.value = String(value)
 })
 watch(() => route.query.examTab, (value) => {
-  if (value) examTab.value = String(value)
+  if (value) examTab.value = normalizeExamTab(value)
 })
 
 watch(activeModule, () => reloadModule())
@@ -534,6 +542,7 @@ async function loadClassroom() {
     loadTaskPaths(),
     loadReports(),
     loadRecords(),
+    loadStepRecords(),
     loadResources(),
     loadDiscussions(),
     loadExamTab(),
@@ -583,6 +592,7 @@ async function loadReservations() {
 }
 
 async function reloadModule() {
+  if (activeModule.value === 'chapters') await Promise.all([loadExperimentDetails(), loadStepRecords()])
   if (activeModule.value === 'discussion') await loadDiscussions()
   if (activeModule.value === 'exam') await loadExamTab()
   if (activeModule.value === 'resources') await loadResources()
@@ -596,6 +606,14 @@ function switchModule(name) {
   activeModule.value = name
 }
 
+async function loadStepRecords() {
+  stepRecords.value = await getMyStepLearningRecords({ silent: true }).catch(() => [])
+}
+
+function normalizeExamTab(value) {
+  return ['available', 'records'].includes(String(value)) ? String(value) : 'available'
+}
+
 function toggleChapter(id) {
   expandedChapters.value = expandedChapters.value.includes(id)
     ? expandedChapters.value.filter((item) => item !== id)
@@ -606,7 +624,7 @@ function chapterNodes(experiment) {
   const detail = experimentDetails[experiment.id]
   const steps = detail?.steps || []
   if (!steps.length) {
-    return [{ key: `exp-${experiment.id}`, title: '暂无实验步骤，点击进入章节详情', done: experimentProgress(experiment) >= 100 }]
+    return [{ key: `exp-${experiment.id}`, title: '暂无实验步骤，点击进入章节详情', done: false, target: '' }]
   }
   return steps
     .slice()
@@ -614,12 +632,16 @@ function chapterNodes(experiment) {
     .map((step) => ({
       key: `step-${step.id || step.stepNo}`,
       title: `${step.stepNo || ''} ${step.title || '实验步骤'}`.trim(),
-      done: experimentProgress(experiment) >= 100,
+      done: stepRecords.value.some((record) => Number(record.stepId) === Number(step.id)),
+      target: `step-${step.stepNo || step.id}`,
     }))
 }
 
-async function openChapter(experimentId) {
-  await router.push(`/classrooms/${courseId.value}/chapters/${experimentId}`)
+async function openChapter(experimentId, step = '') {
+  await router.push({
+    path: `/classrooms/${courseId.value}/chapters/${experimentId}`,
+    query: step ? { step } : {},
+  })
 }
 
 async function openTask(item) {
@@ -792,7 +814,6 @@ async function submitCurrentReport() {
 async function loadExamTab() {
   if (examTab.value === 'available') await loadAvailableExams()
   if (examTab.value === 'records') await loadExamRecords()
-  if (examTab.value === 'wrong') await loadWrongQuestions()
 }
 
 async function loadAvailableExams() {
@@ -800,9 +821,19 @@ async function loadAvailableExams() {
   try {
     const result = await getAvailableExams({ pageNum: 1, pageSize: 100, courseId: courseId.value })
     availableExams.value = result?.records || []
+    inProgressExams.value = availableExams.value.filter((item) => item.inProgress)
   } finally {
     examLoading.value = false
   }
+}
+
+function openExam(exam) {
+  const query = exam.inProgress ? '?isContinue=1' : ''
+  router.push(`/classrooms/${courseId.value}/exams/${exam.id}/take${query}`)
+}
+
+function continueExam(exam) {
+  openExam({ ...exam, id: exam.id || exam.paperId, inProgress: true })
 }
 
 async function loadExamRecords() {
@@ -815,14 +846,9 @@ async function loadExamRecords() {
   }
 }
 
-async function loadWrongQuestions() {
-  examLoading.value = true
-  try {
-    const result = await getWrongQuestions({ pageNum: 1, pageSize: 100, courseId: courseId.value })
-    wrongQuestions.value = result?.records || []
-  } finally {
-    examLoading.value = false
-  }
+function openExamRecordReview(row) {
+  if (!row?.id) return
+  router.push(`/classrooms/${courseId.value}/exams/records/${row.id}`)
 }
 
 function examPaperTitle(paperId) {
@@ -873,7 +899,7 @@ async function chooseReservationExperiment(experiment) {
   reservationAdmission.value = await getAdmissionStatus(experiment.id).catch(() => null)
   availableSlots.value = []
   if (!reservationAdmission.value?.qualified) {
-    ElMessage.warning('请完成相关安全知识考核')
+    ElMessage.warning(reservationAdmission.value?.reason || '请完成相关安全知识考核')
     return
   }
   await loadSlots()
@@ -971,6 +997,11 @@ function examStatus(status) {
   }[status] || { label: status || '未知', type: 'info' }
 }
 
+function examResult(row) {
+  if (row?.status === 'PENDING_REVIEW' || row?.passed === null || row?.passed === undefined) return { label: '待批改', type: 'warning' }
+  return row.passed ? { label: '通过', type: 'success' } : { label: '未通过', type: 'danger' }
+}
+
 </script>
 
 <style scoped>
@@ -1011,7 +1042,8 @@ function examStatus(status) {
 .chapter-nodes button { display: flex; align-items: center; gap: 14px; border: 0; border-radius: 6px; background: #fff; padding: 12px 8px; color: #13233a; cursor: pointer; font-size: 15px; text-align: left; }
 .chapter-nodes button:hover { background: #eef6ff; color: #1f6feb; }
 .node-state { width: 24px; height: 24px; border-radius: 50%; background: #cfd8e3; color: #fff; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.node-state.done { background: #4cc96f; }
+.node-state.done { background: #36b867; }
+.chapter-nodes button.done { color: #23864a; }
 .discussion-grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 14px; }
 .topic-list, .topic-detail { border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; min-height: 460px; }
 .topic-list { display: grid; align-content: start; gap: 10px; }
@@ -1027,6 +1059,11 @@ function examStatus(status) {
 .report-guide { display: grid; gap: 6px; background: #f8fafc; border: 1px solid #edf1f5; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
 .toolbar, .resource-create { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
 .toolbar .el-input, .resource-create .el-input, .resource-create .el-select { max-width: 220px; }
+.exam-alert { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #D4A8AE; border-radius: 8px; background: #F3E4E6; color: #7B2D3B; }
+.exam-alert div { display: grid; gap: 3px; }
+.exam-alert strong { font-size: 14px; }
+.exam-alert span { color: #8E3E4C; font-size: 12px; }
+.exam-record-table :deep(.el-table__row) { cursor: pointer; }
 .reservation-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 14px; }
 .experiment-list { display: grid; gap: 10px; align-content: start; }
 .experiment-list button { text-align: left; border: 1px solid #edf1f5; border-radius: 8px; background: #fff; padding: 12px; cursor: pointer; }
@@ -1048,6 +1085,7 @@ function examStatus(status) {
 @media (max-width: 760px) {
   .module-head, .panel-title, .chapter-toolbar { align-items: stretch; flex-direction: column; }
   .chapter-toolbar .el-input, .toolbar .el-input, .resource-create .el-input, .resource-create .el-select { width: 100%; max-width: none; }
+  .exam-alert { align-items: stretch; flex-direction: column; }
   .task-card, .resource-card, .record-timeline article, .record-summary { grid-template-columns: 1fr; }
   .classroom-sidebar { grid-template-columns: 1fr; }
 }

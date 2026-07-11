@@ -97,6 +97,12 @@
         meta: { title: '试卷答题', permission: 'exam:take' },
       },
       {
+        path: 'classrooms/:courseId/exams/records/:recordId',
+        name: 'ClassroomExamReview',
+        component: () => import('@/views/student/ExamReview.vue'),
+        meta: { title: '试卷回看', permission: 'exam:take' },
+      },
+      {
         path: 'classrooms/:courseId/safety-exams',
         name: 'ClassroomSafetyExamCenter',
         redirect: (to) => `/classrooms/${to.params.courseId}/learn?module=exam`,
@@ -156,8 +162,25 @@
       {
         path: 'teacher/courses/:courseId/safety-exams',
         name: 'TeacherCourseSafetyExamManager',
-        component: () => import('@/views/teacher/SafetyExamManager.vue'),
-        meta: { title: '课堂题库与组卷', role: 'user', permission: 'question:view' },
+        redirect: (to) => `/teacher/courses/${to.params.courseId}/edit?step=exam`,
+      },
+      {
+        path: 'teacher/courses/:courseId/question-bank',
+        name: 'TeacherCourseQuestionBank',
+        component: () => import('@/views/teacher/QuestionBankManager.vue'),
+        meta: { title: '题库管理', role: 'user', permission: 'question:view' },
+      },
+      {
+        path: 'teacher/courses/:courseId/safety-exams/papers/:paperId/edit',
+        name: 'TeacherExamPaperEditor',
+        component: () => import('@/views/teacher/ExamPaperEditor.vue'),
+        meta: { title: '试卷编辑', role: 'user', permission: 'exam-paper:view' },
+      },
+      {
+        path: 'teacher/courses/:courseId/safety-exams/papers/:paperId/grading',
+        name: 'TeacherExamPaperGrading',
+        component: () => import('@/views/teacher/ExamPaperGrading.vue'),
+        meta: { title: '试卷批改', role: 'user', permission: 'exam:statistics' },
       },
       {
         path: 'teacher/resources',

@@ -35,6 +35,7 @@ public class Experiment extends BasePojo {
     private String prerequisiteKnowledge; //前置知识
     private String safetyRequirement; //安全要求
     private Integer examRequired; //是否要求准入考试
+    private Long admissionPaperId; //预约准入绑定试卷ID
     private Integer durationMinutes;   //实验时长
     private Integer safetyPassScore;   //安全考试及格分
     private String dataRecordRequirement; //数据记录要求

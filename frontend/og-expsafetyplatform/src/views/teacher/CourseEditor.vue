@@ -141,8 +141,8 @@
           <div class="section-title">
             <h2>考试管理</h2>
             <div class="section-actions">
-              <el-button :icon="Document" @click="router.push(`/teacher/courses/${courseId}/safety-exams`)">题库管理</el-button>
-              <el-button type="primary" :icon="Plus" @click="router.push(`/teacher/courses/${courseId}/safety-exams?tab=papers&create=paper`)">创建试卷</el-button>
+              <el-button :icon="Document" @click="router.push(`/teacher/courses/${courseId}/question-bank`)">题库管理</el-button>
+              <el-button type="primary" :icon="Plus" @click="openExamCreate">创建试卷</el-button>
             </div>
           </div>
           <div class="inline-toolbar">
@@ -167,9 +167,10 @@
                 <el-tag :type="paperStatusMeta(row.status).type">{{ paperStatusMeta(row.status).label }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="220" fixed="right">
+            <el-table-column label="操作" width="280" fixed="right">
               <template #default="{ row }">
-                <el-button text type="primary" :icon="Edit" @click="openExamEdit(row)">编辑</el-button>
+                <el-button text type="primary" :icon="Edit" @click="router.push(`/teacher/courses/${courseId}/safety-exams/papers/${row.id}/edit`)">编辑</el-button>
+                <el-button text type="primary" :icon="Checked" @click="router.push(`/teacher/courses/${courseId}/safety-exams/papers/${row.id}/grading`)">批改</el-button>
                 <el-button text :type="row.status === 'PUBLISHED' ? 'warning' : 'success'" @click="toggleExamStatus(row)">
                   {{ row.status === 'PUBLISHED' ? '关闭' : '发布' }}
                 </el-button>
@@ -648,6 +649,11 @@
         <el-form-item label="准入分数">
           <el-input-number v-model="reservationExperimentForm.safetyPassScore" :min="0" :max="100" />
         </el-form-item>
+        <el-form-item label="准入考试" required>
+          <el-select v-model="reservationExperimentForm.admissionPaperId" filterable placeholder="请选择当前课堂考试">
+            <el-option v-for="item in examPapers" :key="item.id" :label="item.title" :value="item.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="报告模板">
           <el-input v-model="reservationExperimentForm.reportTemplateUrl" placeholder="报告模板链接，可选" />
         </el-form-item>
@@ -764,6 +770,7 @@ import {
   Calendar,
   ChatDotRound,
   Check,
+  Checked,
   DataAnalysis,
   Delete,
   Document,
@@ -1564,6 +1571,7 @@ async function openReservationExperimentEdit(row) {
     location: source.location || '',
     applicableClasses: source.applicableClasses || '',
     safetyPassScore: source.safetyPassScore || 60,
+    admissionPaperId: source.admissionPaperId || '',
     reportTemplateUrl: source.reportTemplateUrl || '',
     reservationEnabled: source.reservationEnabled !== 0,
     hazardSources: source.hazardSources || '',
@@ -1582,6 +1590,10 @@ async function openReservationExperimentEdit(row) {
 
 async function saveReservationExperiment() {
   if (!reservationEditingExperiment.value?.id) return
+  if (!reservationExperimentForm.admissionPaperId) {
+    ElMessage.warning('请选择准入考试')
+    return
+  }
   const source = reservationEditingExperiment.value
   reservationSaving.value = true
   try {
@@ -1608,6 +1620,7 @@ async function saveReservationExperiment() {
       prerequisiteKnowledge: reservationExperimentForm.prerequisiteKnowledge || undefined,
       safetyRequirement: reservationExperimentForm.safetyRequirement || undefined,
       examRequired: source.examRequired ?? 1,
+      admissionPaperId: Number(reservationExperimentForm.admissionPaperId),
       durationMinutes: Number(source.durationMinutes || 60),
       safetyPassScore: Number(reservationExperimentForm.safetyPassScore || 60),
       dataRecordRequirement: reservationExperimentForm.dataRecordRequirement || undefined,
@@ -1625,6 +1638,7 @@ async function saveReservationExperiment() {
       location: reservationExperimentForm.location || '',
       applicableClasses,
       safetyPassScore: Number(reservationExperimentForm.safetyPassScore || 60),
+      admissionPaperId: Number(reservationExperimentForm.admissionPaperId),
       reportTemplateUrl: reservationExperimentForm.reportTemplateUrl || '',
       reservationEnabled: reservationExperimentForm.reservationEnabled ? 1 : 0,
       hazardSources: reservationExperimentForm.hazardSources || '',
@@ -1963,6 +1977,7 @@ function defaultReservationExperimentForm() {
     location: '',
     applicableClasses: '',
     safetyPassScore: 60,
+    admissionPaperId: '',
     reportTemplateUrl: '',
     reservationEnabled: true,
     hazardSources: '',
@@ -2004,6 +2019,7 @@ function experimentReadiness(item) {
   if (!item.objective && !item.description && !item.scenarioIntro) missing.push('工程情境')
   if (!item.hazardSources && !item.riskTypes && !item.safetyRequirement) missing.push('风险认知')
   if (item.examRequired !== 0 && !item.safetyPassScore) missing.push('准入分数')
+  if (item.examRequired !== 0 && !item.admissionPaperId) missing.push('准入考试')
   if (item.reservationEnabled !== 1) missing.push('预约')
   if (!item.gradingCriteria && !item.reportTemplateUrl) missing.push('报告标准')
   return { ready: missing.length === 0, missing }

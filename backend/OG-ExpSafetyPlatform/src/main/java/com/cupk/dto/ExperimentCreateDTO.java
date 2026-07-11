@@ -33,6 +33,7 @@ public class ExperimentCreateDTO {
     private String prerequisiteKnowledge;
     private String safetyRequirement;
     private Integer examRequired = 1;
+    private Long admissionPaperId;
     @Min(value = 1, message = "实验时长必须大于0")
     private Integer durationMinutes;
     @Min(0) @Max(100)
